@@ -54,7 +54,7 @@ Create a virtual Environment and activate.
                 <image_tag> <plater_build_tag>
 
  
- ### Linking to Automat Server \[Optional\]
+ ### Linking to [Automat Server](https://github.com/RENCI-AUTOMAT/Automat-server/) \[Optional\]
  You can also serve several instances of plater through a common gateway(Automat). By 
  passing `-a <automat_address>` to `main.py`. Usage: 
  
