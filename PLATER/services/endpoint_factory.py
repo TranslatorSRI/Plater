@@ -520,7 +520,7 @@ class EndpointFactory:
             GI_MOCK.run_cypher = run
             GI_MOCK.convert_to_dict = lambda x,y :  [db_returns]
             q = Question(example_question)
-            answer_eg = await q.answer(GI_MOCK(), yank=False)
+            answer_eg = await q.answer(GI_MOCK()) #, yank=False)
             answer_eg[Question.KNOWLEDGE_GRAPH_KEY] = {}
             answer_eg[Question.KNOWLEDGE_GRAPH_KEY][Question.NODES_LIST_KEY] = [db_returns[node_id] for node_id in
                                                                                 node_ids]
