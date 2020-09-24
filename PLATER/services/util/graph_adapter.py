@@ -265,7 +265,7 @@ class GraphInterface:
             :return: value of the node in neo4j.
             :rtype: list
             """
-            query = f"MATCH (c:{node_type}{{id: '{curie}'}}) return c"
+            query = f"MATCH (c:`{node_type}`{{id: '{curie}'}}) return c"
             response = await self.driver.run(query)
 
             data = response.get('results',[{}])[0].get('data', [])
@@ -296,10 +296,10 @@ class GraphInterface:
             :rtype: list
             """
 
-            query = f'MATCH (c:{source_type}{{id: \'{curie}\'}})-[e]->(b:{target_type}) return distinct c , e, b'
+            query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})-[e]->(b:`{target_type}`) return distinct c , e, b'
             response = await self.driver.run(query)
             rows = list(map(lambda data: data['row'], response['results'][0]['data']))
-            query = f'MATCH (c:{source_type}{{id: \'{curie}\'}})<-[e]-(b:{target_type}) return distinct b , e, c'
+            query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})<-[e]-(b:`{target_type}`) return distinct b , e, c'
             response = await self.driver.run(query)
             rows += list(map(lambda data: data['row'], response['results'][0]['data']))
 
