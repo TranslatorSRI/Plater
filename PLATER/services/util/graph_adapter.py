@@ -29,7 +29,6 @@ class Neo4jHTTPDriver:
         # ping and raise error if neo4j doesn't respond.
         logger.debug('PINGING NEO4J')
         self.ping()
-        self.make_indexes(config.get('edge_index_name', 'edge_id_index'))
         logger.debug('CHECKING IF NEO4J SUPPORTS APOC')
         self.check_apoc_support()
         logger.debug(f'SUPPORTS APOC : {self._supports_apoc}')
@@ -138,50 +137,6 @@ class Neo4jHTTPDriver:
                             new_row[col_name] = col_value
                         array.append(new_row)
         return array
-
-    def make_indexes(self, index_name='edge_id_index'):
-        """
-        Generate indexes in neo4j if it doesn't exist.
-        :param index_name: Edge index name.
-        :return: None
-        """
-
-        logger.info(f'Checking for edge index `{index_name}`.')
-
-        # first lookup for list of available indexes
-        index_query = 'CALL db.indexes()'
-        index_type = 'relationship_fulltext'
-        results = self.convert_to_dict(self.run_sync(index_query))
-        # check if index provided exists for edge type
-        filtered_index = [index for index in results if index['indexName'] == index_name]
-        if not filtered_index:
-
-            logger.warn(f'Missing edge index {index_name}')
-
-            # index doesn't exist create it for every edge type
-            # grab edge types and make index for them.
-            logger.debug(f'Edge index `{index_name}` not found. Creating ....')
-            edge_types_query = 'CALL db.relationshipTypes()'
-            rows = self.convert_to_dict(self.run_sync(edge_types_query))
-            edge_types = [row['relationshipType'] for row in rows]
-            create_index_query = f"""CALL db.index.fulltext.createRelationshipIndex(
-                                        'edge_id_index', 
-                                        [{', '.join(f"'{predicate}'" for predicate in edge_types)}], 
-                                        ['id'], {{analyzer: 'whitespace', eventually_consistent: 'true'}})
-                                  """
-            # run index creation query
-            response = self.run_sync(create_index_query)
-
-        else:
-            # make sure it's the right type
-
-            logger.info(f'Edge index {index_name} found.')
-
-            tp = filtered_index[0]['type']
-            assert tp == index_type, f'Neo4j reports Index with ' \
-                f'name {index_name} exists, but its a different type ({tp}).' \
-                f'It needs to of type {index_type}'
-        return results
 
     def check_apoc_support(self):
         apoc_version_query = 'call apoc.help("meta")'
@@ -310,7 +265,7 @@ class GraphInterface:
             :return: value of the node in neo4j.
             :rtype: list
             """
-            query = f"MATCH (c:{node_type}{{id: '{curie}'}}) return c"
+            query = f"MATCH (c:`{node_type}`{{id: '{curie}'}}) return c"
             response = await self.driver.run(query)
 
             data = response.get('results',[{}])[0].get('data', [])
@@ -341,10 +296,10 @@ class GraphInterface:
             :rtype: list
             """
 
-            query = f'MATCH (c:{source_type}{{id: \'{curie}\'}})-[e]->(b:{target_type}) return distinct c , e, b'
+            query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})-[e]->(b:`{target_type}`) return distinct c , e, b'
             response = await self.driver.run(query)
             rows = list(map(lambda data: data['row'], response['results'][0]['data']))
-            query = f'MATCH (c:{source_type}{{id: \'{curie}\'}})<-[e]-(b:{target_type}) return distinct b , e, c'
+            query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})<-[e]-(b:`{target_type}`) return distinct b , e, c'
             response = await self.driver.run(query)
             rows += list(map(lambda data: data['row'], response['results'][0]['data']))
 
