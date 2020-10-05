@@ -73,7 +73,26 @@ Create a virtual Environment and activate.
                --network=<docker_network_neo4j_is_running_at> \    
                 <image_tag> -a <automat_address> <plater_build_tag>
     
+ ##### Miscellaneous
+ ###### `/about` Endpoint 
+ The `/about` endpoint can be used to present meta-data about the current PLATER instance. 
+ This meta-data is served from `<repo-root>/PLATER/about.json` file. One can edit the contents of
+ this file to suite needs. In containerized environment we recommend mounting this file as a volume.
+ 
+ Eg:
+ ```bash
+docker run -p 0.0.0.0:8999:8080  \
+               --env NEO4J_HOST=<your_neo_host> \
+               --env NEO4J_HTTP_PORT=<your_neo4j_http_port> \
+               --env NEO4J_USERNAME=neo4j\
+               --env NEO4J_PASSWORD=<neo4j_password> \
+               --env WEB_HOST=0.0.0.0 \
+               -v <your-custom-about>:/<path-to-plater-repo-home>/plater/about.json \
+               --network=<docker_network_neo4j_is_running_at> \    
+                <image_tag> -a <automat_address> <plater_build_tag>
     
+``` 
+ 
    
     
     
