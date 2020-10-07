@@ -170,18 +170,33 @@ class GraphInterface:
             self.schema_raw_result = {}
             if self.schema is None:
                 query = """
-                           MATCH (a)-[x]->(b) WITH
-                               filter(la in labels(a) where not la in ['Concept']) as las,
-                               filter(lb in labels(b) where not lb in ['Concept']) as lbs,
-                           type(x) as predicate
-                           UNWIND las as source_label
-                           UNWIND lbs as target_label 
-                           RETURN DISTINCT source_label, predicate, target_label
+                           MATCH (a)-[x]->(b)
+                           WHERE not a:Concept and not b:Concept                                                          
+                           RETURN DISTINCT labels(a) as source_labels, type(x) as predicate, labels(b) as target_labels
                            """
+                logger.info(f"starting query {query} on graph... this might take a few")
                 result = self.driver.run_sync(query)
+                logger.info(f"completed query, preparing initial schema")
                 structured = self.convert_to_dict(result)
                 self.schema_raw_result = structured
                 schema_bag = {}
+                # permituate source labels and target labels array
+                # replacement for unwind for previous cypher
+                structured_expanded = []
+                for triplet in structured:
+                    source_labels, predicate, target_labels = triplet['source_labels'], \
+                                                              triplet['predicate'], \
+                                                              triplet['target_labels']
+                    for source_label in source_labels:
+                        for target_label in target_labels:
+                            structured_expanded.append(
+                                {
+                                    'source_label': source_label,
+                                    'target_label': target_label,
+                                    'predicate': predicate
+                                }
+                            )
+                structured = structured_expanded
                 for triplet in structured:
                     subject = triplet['source_label']
                     predicate = triplet['predicate']
@@ -200,15 +215,14 @@ class GraphInterface:
                     if predicate not in schema_bag[objct][subject]:
                         schema_bag[objct][subject].append(predicate)
                 self.schema = schema_bag
+                logger.info("schema done.")
                 if not self.summary:
-                    logger.info('generating graph summary')
                     query = """
                     MATCH (c) RETURN DISTINCT labels(c) as types, count(c) as count                
                     """
+                    logger.info(f'generating graph summary: {query}')
                     raw = self.convert_to_dict(self.driver.run_sync(query))
-                    summary = {
-
-                    }
+                    summary = {}
                     for node in raw:
                         labels = node['types']
                         count = node['count']
