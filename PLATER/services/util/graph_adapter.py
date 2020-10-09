@@ -68,7 +68,7 @@ class Neo4jHTTPDriver:
             logger.debug(traceback.print_exc())
             raise RuntimeError('Connection to Neo4j could not be established.')
 
-    async def run(self, query):
+    async def run(self, query, return_errors=False):
         """
         Runs a neo4j query async.
         :param query: Cypher query.
@@ -88,6 +88,8 @@ class Neo4jHTTPDriver:
         response = await self.post_request_json(payload)
         errors = response.get('errors')
         if errors:
+            if return_errors:
+                return response
             logger.error(f'Neo4j returned `{errors}` for cypher {query}.')
             raise RuntimeWarning(f'Error running cypher {query}.')
         return response
@@ -305,7 +307,7 @@ class GraphInterface:
 
             return rows
 
-        async def run_cypher(self, cypher: str) -> list:
+        async def run_cypher(self, cypher: str, **kwargs) -> list:
             """
             Runs cypher directly.
             :param cypher: cypher query.
@@ -313,7 +315,7 @@ class GraphInterface:
             :return: unprocessed neo4j response.
             :rtype: list
             """
-            return await self.driver.run(cypher)
+            return await self.driver.run(cypher, **kwargs)
 
         async def get_sample(self, node_type):
             """

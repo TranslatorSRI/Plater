@@ -10,3 +10,5 @@ Jinja2==2.11.1
 git+https://github.com/NCATS-Tangerine/kgx.git@0025e3f90b4ba73d14485fd5c9a3244176bd75cc
 networkx
 git+https://github.com/ranking-agent/reasoner.git
+git+https://github.com/ranking-agent/reasoner-pydantic#egg=reasoner-pydantic
+git+https://github.com/patrickkwang/fastapi#egg=fastapi

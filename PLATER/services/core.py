@@ -7,7 +7,6 @@ import requests
 import uvicorn
 
 from PLATER.services.config import config
-from PLATER.services.endpoint_factory import EndpointFactory
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.logutil import LoggingUtil
 from PLATER.validators.plater_validators import PLATER_Validator
@@ -42,7 +41,6 @@ class Plater:
             is_valid_graph = validator.validate(report_to_file=True)
             if not is_valid_graph:
                 logger.warning('There were some errors with graph see logs above.')
-        self.endpoint_factory = EndpointFactory(self.graph_adapter)
 
     def run_web_server(self, automat_host=None):
         """
@@ -50,9 +48,6 @@ class Plater:
         Expects neo4j to be up.
         """
         logger.debug('[0] Starting web server')
-        app = self.endpoint_factory.create_app(self.build_tag)
-        web_server_host = self.config.get('WEB_HOST', '127.0.0.1')
-        web_server_port: int = int(self.config.get('WEB_PORT', 8080))
         if automat_host:
             logger.debug(f'Running in clustered mode about to join {automat_host}')
             import threading
@@ -63,7 +58,6 @@ class Plater:
                 daemon=True
             )
             heart_beat_thread.start()
-        uvicorn.run(app, host=web_server_host, port=web_server_port)
 
     @staticmethod
     def send_heart_beat(automat_host, build_tag):
