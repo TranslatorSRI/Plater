@@ -286,23 +286,16 @@ APP.add_api_route(
 )
 
 
-node_types = tuple(get_graph_interface().get_schema())
-NodeType = Enum("NodeType", {
-    node_type: node_type
-    for idx, node_type in enumerate(node_types)
-})
-
-
 async def one_hop(
-        source_type: NodeType,
-        target_type: NodeType,
+        source_type: str,
+        target_type: str,
         curie: str,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> List[Dict]:
     """Handle one-hop."""
     return await graph_interface.get_single_hops(
-        source_type.value,
-        target_type.value,
+        source_type,
+        target_type,
         curie,
     )
 
@@ -325,13 +318,13 @@ APP.add_api_route(
 
 
 async def node(
-        node_type: NodeType,
+        node_type: str,
         curie: str,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> List[List[Dict]]:
     """Handle node lookup."""
     return await graph_interface.get_node(
-        node_type.value,
+        node_type,
         curie,
     )
 
