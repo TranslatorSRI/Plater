@@ -5,9 +5,9 @@ ARG GID=1000
 RUN groupadd -o -g $GID plater
 RUN useradd -m -u $UID -g $GID -s /bin/bash plater
 WORKDIR /home/plater
-RUN git clone https://github.com/TranslatorIIPrototypes/KITCHEN.git
-WORKDIR /home/plater/KITCHEN/KITCHEN/PLATER
-ENV PYTHONPATH=/home/plater/KITCHEN/KITCHEN/
+RUN git clone https://github.com/TranslatorSRI/Plater.git
+WORKDIR /home/plater/Plater/PLATER
+ENV PYTHONPATH=/home/plater/Plater
 
 RUN pip install -r requirements.txt
 EXPOSE 8080
