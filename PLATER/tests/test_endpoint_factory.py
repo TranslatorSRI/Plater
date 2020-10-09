@@ -1,11 +1,12 @@
 import asyncio
+from httpx import AsyncClient
 import pytest
 import json
 from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.endpoint_factory import EndpointFactory
-from starlette.testclient import TestClient
 import os
+
+from PLATER.services.app import APP, get_graph_interface
 
 
 class MockGraphInterface(GraphInterface):
@@ -41,17 +42,18 @@ class MockGraphInterface(GraphInterface):
     async def get_node(self, node_type, curie):
         node_list_file_path = os.path.join(os.path.dirname(__file__), 'data', 'node_list.json')
         with open(node_list_file_path) as j_file:
-            return json.load(j_file)[0]
+            return json.load(j_file)
 
     async def get_single_hops(self, source_type, target_type, curie):
         single_hop_triplets_file_path = os.path.join(os.path.dirname(__file__), 'data', 'single_hop_triplets.json')
         with open(single_hop_triplets_file_path) as j_file:
             return json.load(j_file)
 
-    async def run_cypher(self, cypher):
+    async def run_cypher(self, cypher, return_errors=False):
 
         return {
-            'cypher': cypher
+            'results': [],
+            "errors": []
         }
 
     async def get_examples(self, source, target=None):
@@ -61,130 +63,62 @@ class MockGraphInterface(GraphInterface):
         return reduce(lambda x, y: x + [y[0]], triplets, [])
 
 
-@pytest.fixture()
-def graph_interface():
+def _graph_interface():
     return MockGraphInterface('host', 'port', ('neo4j', 'pass'))
 
 
 @pytest.fixture()
-def endpoint_factory(graph_interface):
-    return EndpointFactory(graph_interface)
+def graph_interface():
+    return _graph_interface()
 
 
-@pytest.fixture()
-def client(endpoint_factory):
-    return TestClient(endpoint_factory.create_app('test-app'))
+APP.dependency_overrides[get_graph_interface] = _graph_interface
 
 
-def test_node_endpoint_creation(endpoint_factory):
-    route = endpoint_factory.create_endpoint(EndpointFactory.NODE_ENDPOINT_TYPE, **{
-        'node_type': 'chemical_substance'
-    })
-    assert route.path == '/chemical_substance/{curie}'
-
-
-def test_node_response(client, graph_interface):
-    response = client.get('/chemical_substance/curie')
+@pytest.mark.asyncio
+async def test_node_response(graph_interface):
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        response = await ac.get("/chemical_substance/curie")
     assert response.status_code == 200
-    event_loop = asyncio.get_event_loop()
-    graph_response = event_loop.run_until_complete(graph_interface.get_node('chemical_substance', 'curie'))
+    graph_response = await graph_interface.get_node('chemical_substance', 'curie')
     assert response.json() == graph_response
 
 
-def test_one_hop_endpoint_creation(endpoint_factory):
-    route = endpoint_factory.create_endpoint(EndpointFactory.HOP_ENDPOINT_TYPE, **{
-        'source_type': 'chemical_substance',
-        'target_type': 'gene',
-    })
-    assert route.path == '/chemical_substance/gene/{curie}'
-
-
-def test_one_hop_response(client, graph_interface):
-    response = client.get('/chemical_substance/gene/CHEBI:11492')
+@pytest.mark.asyncio
+async def test_one_hop_response(graph_interface):
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        response = await ac.get("/chemical_substance/gene/CHEBI:11492")
     assert response.status_code == 200
-    event_loop = asyncio.get_event_loop()
-    graph_response = event_loop.run_until_complete(graph_interface.get_single_hops('chemical_substance', 'gene', 'CHEBI:11492'))
+    graph_response = await graph_interface.get_single_hops('chemical_substance', 'gene', 'CHEBI:11492')
     assert response.json() == graph_response
 
 
-def test_open_api_schema_endpoint_creation(endpoint_factory):
-    route = endpoint_factory.create_endpoint(EndpointFactory.OPEN_API_ENDPOINT_TYPE, **{
-        'build_tag': 'test-tag'
-    })
-    assert route.path == '/openapi.json'
-
-
-def test_open_api_schema_response(client, graph_interface):
-    openapi_path = '/openapi.json'
-    response = client.get(openapi_path)
+@pytest.mark.asyncio
+async def test_cypher_response(graph_interface):
+    query = 'MATCH (n) return n limit 1'
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        response = await ac.post("/cypher", json={
+            "query": query
+        })
     assert response.status_code == 200
-    open_spec = response.json()
-    schema = graph_interface.get_schema()
-    assert f'/{{node_type}}/{{curie}}' in open_spec['paths']
-    assert f'/{{source_node_type}}/{{target_node_type}}/{{curie}}' in open_spec['paths']
-    assert '/simple_spec' in open_spec['paths']
-    assert '/reasonerapi' in open_spec['paths']
-    assert '/cypher' in open_spec['paths']
-    assert '/graph/schema' in open_spec['paths']
-
-
-def test_cypher_endpoint_creation(endpoint_factory):
-    route = endpoint_factory.create_endpoint(EndpointFactory.CYPHER_ENDPOINT_TYPE, **{
-        'build_tag': 'test-tag'
-    })
-    assert route.path == '/cypher'
-
-
-def test_cypher_response(client, graph_interface):
-    query = f'MATCH (n) return n limit 1'
-    response = client.post('/cypher', headers={
-        'Content-Type': 'application/json'
-    }, json={
-        'query': query
-    })
-    assert response.status_code == 200
-    ev_loop = asyncio.get_event_loop()
-    graph_resp = ev_loop.run_until_complete(graph_interface.run_cypher(query))
+    graph_resp = await graph_interface.run_cypher(query)
     assert response.json() == graph_resp
 
 
-def test_graph_schema_endpoint_creation(endpoint_factory):
-    route = endpoint_factory.create_endpoint(EndpointFactory.GRAPH_SCHEMA_ENDPOINT_TYPE, **{
-        'build_tag': 'test-tag'
-    })
-    assert route.path == '/graph/schema'
-
-
-def test_graph_schema_response(client, graph_interface):
-    response = client.get(
-        '/graph/schema'
-    )
+@pytest.mark.asyncio
+async def test_graph_schema_response(graph_interface):
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        response = await ac.get("/graph/schema")
     assert response.status_code == 200
     assert response.json() == graph_interface.get_schema()
 
 
-def test_swagger_ui_endpoint_creation(endpoint_factory):
-    route = endpoint_factory.create_endpoint(EndpointFactory.SWAGGER_UI_ENDPOINT, **{
-        'build_tag': 'test-tag'
-    })
-    assert route.path == '/apidocs'
-
-
-def test_swagger_ui_endpoint_response(client, graph_interface):
-    response = client.get('/apidocs')
-    assert response.status_code == 200
-    assert response.headers.get('content-type') == 'text/html; charset=utf-8'
-
-
-def test_create_simple_one_hop_endpoint_creation(endpoint_factory):
-    route = endpoint_factory.create_endpoint(EndpointFactory.SIMPLE_ONE_HOP_SPEC, **{})
-    assert route.path == '/simple_spec'
-
-
-def test_simple_one_hop_spec_response(client, graph_interface):
+@pytest.mark.asyncio
+async def test_simple_one_hop_spec_response(graph_interface):
     # with out parameters it should return all the questions based on that
     # send source parameter, target parameter
-    response = client.get('/simple_spec')
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        response = await ac.get("/simple_spec")
     assert response.status_code == 200
     specs = response.json()
     schema = graph_interface.get_schema()
@@ -202,7 +136,11 @@ def test_simple_one_hop_spec_response(client, graph_interface):
 
     # test source param
     source_type = list(schema.keys())[0]
-    response = client.get(f'/simple_spec?source=SOME:CURIE')
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        response = await ac.get("/simple_spec?source=SOME:CURIE")
+    # response = client.get(f'/simple_spec?source=SOME:CURIE')
     assert response.status_code == 200
-    response = client.get(f'/simple_spec?target=SOME:CURIE')
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        response = await ac.get("/simple_spec?source=SOME:CURIE")
+    # response = client.get(f'/simple_spec?target=SOME:CURIE')
     assert response.status_code == 200
