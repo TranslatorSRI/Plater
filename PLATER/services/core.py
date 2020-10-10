@@ -3,7 +3,7 @@
 #
 #
 ####################
-import requests
+import httpx
 import uvicorn
 
 from PLATER.services.config import config
@@ -77,7 +77,7 @@ class Plater:
         }
         while True:
             try:
-                resp = requests.post(automat_heart_beat_url, json=payload, timeout=0.5)
+                resp = httpx.post(automat_heart_beat_url, json=payload, timeout=0.5)
                 logger.debug(f'heartbeat to {automat_host} returned {resp.status_code}')
             except Exception as e:
                 logger.error(f'[X] Error contacting automat server {e}')

@@ -1,6 +1,6 @@
-import aiohttp
 import asyncio
 from functools import reduce
+import httpx
 from PLATER.services.config import config
 
 
@@ -10,12 +10,12 @@ class BLHelper:
 
     @staticmethod
     async def make_request(url):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    return None
+        async with httpx.AsyncClient() as session:
+            response = await session.get(url)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return None
 
     async def get_most_specific_concept(self, concept_list: list) -> list:
         """

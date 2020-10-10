@@ -1,8 +1,7 @@
 import base64
 import traceback
 
-import aiohttp
-import requests
+import httpx
 
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
@@ -34,15 +33,14 @@ class Neo4jHTTPDriver:
         logger.debug(f'SUPPORTS APOC : {self._supports_apoc}')
 
     async def post_request_json(self, payload):
-        tcp_connector = aiohttp.TCPConnector(limit=60)
-        async with aiohttp.ClientSession(connector=tcp_connector) as session:
-            async with session.post(self._full_transaction_path, json=payload, headers=self._header) as response:
-                if response.status != 200:
-                    logger.error(f"[x] Problem contacting Neo4j server {self._host}:{self._port} -- {response.status}")
-                    txt = await response.text()
-                    logger.debug(f"[x] Server responded with {txt}")
-                else:
-                    return await response.json()
+        async with httpx.AsyncClient() as session:
+            response = await session.post(self._full_transaction_path, json=payload, headers=self._header)
+            if response.status_code != 200:
+                logger.error(f"[x] Problem contacting Neo4j server {self._host}:{self._port} -- {response.status_code}")
+                txt = response.text
+                logger.debug(f"[x] Server responded with {txt}")
+            else:
+                return response.json()
 
     def ping(self):
         """
@@ -55,7 +53,7 @@ class Neo4jHTTPDriver:
         try:
             import time
             now = time.time()
-            response = requests.get(ping_url, headers=self._header)
+            response = httpx.get(ping_url, headers=self._header)
             later = time.time()
             time_taken = later - now
             logger.debug(f'Contacting neo4j took {time_taken} seconds.')
@@ -107,7 +105,7 @@ class Neo4jHTTPDriver:
                 }
             ]
         }
-        response = requests.post(
+        response = httpx.post(
             self._full_transaction_path,
             headers=self._header,
             json=payload).json()
