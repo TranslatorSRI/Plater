@@ -1,5 +1,4 @@
 """FastAPI app."""
-from enum import Enum
 import json
 import os
 from typing import Any, Dict, List
@@ -13,11 +12,18 @@ from PLATER.services.models import (
 from PLATER.services.config import config
 from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.question import Question
+from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.util.overlay import Overlay
+from PLATER.services.util.question import Question
 
-TITLE = os.environ.get('PLATER_TITLE', 'Plater API')
+TITLE = config.get('PLATER_TITLE', 'Plater API')
 VERSION = os.environ.get('PLATER_VERSION', '1.0.0')
+
+logger = LoggingUtil.init_logging(
+    __name__,
+    config.get('logging_level'),
+    config.get('logging_format'),
+)
 
 APP = FastAPI(
     title=TITLE,
@@ -44,7 +50,12 @@ def get_bl_helper():
 
 def get_example(operation: str):
     """Get example for operation."""
-    with open(f"PLATER/examples/{operation}.json", "r") as stream:
+    with open(os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "examples",
+        f"{operation}.json",
+    )) as stream:
         return json.load(stream)
 
 
