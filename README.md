@@ -12,28 +12,39 @@ There are some restrictions on the data structure of the Neo4j backend to be ful
 
 To run the web server directly:
 
-Create a virtual Environment and activate.
+#### Create a virtual Environment and activate.
 
     cd <PLATER-ROOT>
     python<version> -m venv venv
     source venv/bin/activate
     
- Install dependencies
+#### Install dependencies
     
-    pip install -r requirements.txt
+    pip install -r PLATER/requirements.txt
     
  
- Configure NEO4J Host settings
- 
-    export NEO4J_HOST=localhost
-    export NEO4J_HTTP_PORT=7474
-    export NEO4J_USERNAME=neo4j
-    export NEO4J_PASSOWORD=neo4j
-    export WEB_HOST=0.0.0.0 # <Ip to use Uvicorn web server host>
-    export WEB_PORT=8080 <PORT for the web server >
-    export PLATER_TITLE="My Plater"
+#### Configure PLATER settings
+   
+   Populate `.env-template` file with settings and save as `.env` in repo root dir.
+   
+   ```bash   
+    WEB_HOST=0.0.0.0
+    WEB_PORT=8080
+    NEO4J_HOST=neo4j
+    NEO4J_USERNAME=neo4j
+    NEO4J_PASSWORD=<change_me>    
+    NEO4J_HTTP_PORT=7474
+    PLATER_TITLE='Plater'
+    PLATER_VERSION='1.0.0'
+    
+    # Optional config for integration with an Automat server. 
+    # Please refer to linking with automat section for more.
+    PLATER_SERVICE_ADDRESS=<host_name>
+    AUTOMAT_HOST=<http://automat.host>
+   ```
+   
   
-  Run Script
+#### Run Script
   
     ./main.sh
  
@@ -41,40 +52,30 @@ Create a virtual Environment and activate.
  ### DOCKER 
    Or build an image and run it. 
   
+  ```bash
+    cd PLATER
     docker build --tag <image_tag> .
-    
-    docker run 
-   
-    docker run -p 0.0.0.0:8999:8080  \
-               --env NEO4J_HOST=<your_neo_host> \
-               --env NEO4J_HTTP_PORT=<your_neo4j_http_port> \
-               --env NEO4J_USERNAME=neo4j\
-               --env NEO4J_PASSWORD=<neo4j_password> \
-               --env WEB_HOST=0.0.0.0 \
-               --network=<docker_network_neo4j_is_running_at> \    
-                <image_tag> <plater_build_tag>
+    cd ../
+  ```
+  
+  ```bash
+   docker run --env-file .env\
+    --name plater\
+    -p 8080:8080\
+    --network <network_where_neo4j_is_running>\
+    plater-tst
 
+  ```
  
  ### Linking to [Automat Server](https://github.com/RENCI-AUTOMAT/Automat-server/) \[Optional\]
- You can also serve several instances of plater through a common gateway(Automat). By 
- passing `-a <automat_address>` to `main.py`. Usage: 
+ You can also serve several instances of plater through a common gateway(Automat). By setting `AUTOMAT_HOST` 
+ and `PLATER_SERVICE_ADDRESS` variables.
+ `AUTOMAT_HOST` is the full url of the automat server eg. http://automat:8080
+ `PLATER_SERVICE_ADDRESS` is the host name of where plater is so Automat server can get to it. 
+  
  
- #####Python 
-    
-    python main.py -a <automat_address> <plater_build_tag>
-    
- #####Docker
-    
-    docker run -p 0.0.0.0:8999:8080  \
-               --env NEO4J_HOST=<your_neo_host> \
-               --env NEO4J_HTTP_PORT=<your_neo4j_http_port> \
-               --env NEO4J_USERNAME=neo4j\
-               --env NEO4J_PASSWORD=<neo4j_password> \
-               --env WEB_HOST=0.0.0.0 \
-               --network=<docker_network_neo4j_is_running_at> \    
-                <image_tag> -a <automat_address> <plater_build_tag>
-    
- ##### Miscellaneous
+
+ ### Miscellaneous
  ###### `/about` Endpoint 
  The `/about` endpoint can be used to present meta-data about the current PLATER instance. 
  This meta-data is served from `<repo-root>/PLATER/about.json` file. One can edit the contents of
