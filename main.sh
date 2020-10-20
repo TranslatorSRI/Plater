@@ -16,12 +16,15 @@ function webServer {
 
 function heartbeat {
     if [[ ! -z "${AUTOMAT_HOST}" ]]; then
+        echo "Contacting Automat"
         testEndpoint=${PLATER_SERVICE_ADDRESS}:${WEB_PORT}/predicates
         response=$(curl --write-out %{http_code} --silent --output /dev/null ${testEndpoint})
         until [ $response = "200" ]; do
             response=$(curl --write-out %{http_code} --silent --output /dev/null ${testEndpoint})
+            echo "Plater not ready sleeping... "
             sleep 1
         done
+        echo "Plater ready starting heartbeat ..."
         python PLATER/services/heartbeat.py -a ${AUTOMAT_HOST}
     fi
     $*
