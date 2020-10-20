@@ -31,10 +31,11 @@ Create a virtual Environment and activate.
     export NEO4J_PASSOWORD=neo4j
     export WEB_HOST=0.0.0.0 # <Ip to use Uvicorn web server host>
     export WEB_PORT=8080 <PORT for the web server >
+    export PLATER_TITLE="My Plater"
   
   Run Script
   
-    python main.py <plater_build_tag>
+    ./main.sh
  
     
  ### DOCKER 

@@ -1,0 +1,98 @@
+{
+    "query_graph": {
+        "nodes": [
+            {
+                "id": "n1",
+                "type": "named_thing",
+                "curie": "NCBIGene:93034"
+            },
+            {
+                "id": "n2",
+                "type": "named_thing"
+            }
+        ],
+        "edges": [
+            {
+                "id": "e0",
+                "source_id": "n1",
+                "target_id": "n2"
+            }
+        ]
+    },
+    "knowledge_graph": {
+        "nodes": [
+            {
+                "synonyms": [],
+                "name": "NT5C1B",
+                "id": "NCBIGene:93034",
+                "equivalent_identifiers": [
+                    "NCBIGene:93034",
+                    "HGNC:17818",
+                    "UniProtKB:Q96P26",
+                    "ENSEMBL:ENSG00000185013",
+                    "NCBIGene:93034",
+                    "IUPHAR:1235"
+                ],
+                "type": [
+                    "named_thing",
+                    "biological_entity",
+                    "molecular_entity",
+                    "gene",
+                    "gene_or_gene_product",
+                    "macromolecular_machine",
+                    "genomic_entity"
+                ]
+            },
+            {
+                "name": "",
+                "id": "CHEBI:14648",
+                "equivalent_identifiers": [
+                    "PUBCHEM:14181",
+                    "CHEBI:14648",
+                    "INCHIKEY:DAYLJWODMCOQEW-TURQNECASA-O",
+                    "HMDB:HMDB0059645"
+                ],
+                "type": [
+                    "named_thing",
+                    "biological_entity",
+                    "chemical_substance",
+                    "molecular_entity"
+                ]
+            }
+        ],
+        "edges": [
+            {
+                "predicate_id": "RO:0002434",
+                "relation_label": "interacts with",
+                "edge_source": "hmdb.enzyme_to_metabolite",
+                "target_id": "NCBIGene:93034",
+                "source_id": "CHEBI:14648",
+                "id": "b80d",
+                "type": "interacts_with",
+                "source_database": "hmdb",
+                "relation": "RO:0002434",
+                "publications": []
+            }
+        ]
+    },
+    "results": [
+        {
+            "edge_bindings": [
+                {
+                    "kg_id": "b80d",
+                    "qg_id": "e0"
+                }
+            ],
+            "node_bindings": [
+                {
+                    "kg_id": "NCBIGene:93034",
+                    "qg_id": "n1"
+                },
+                {
+                    "kg_id": "CHEBI:14648",
+                    "qg_id": "n2"
+                }
+            ]
+        }
+    ]
+}

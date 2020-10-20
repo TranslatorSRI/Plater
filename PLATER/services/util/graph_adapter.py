@@ -1,8 +1,7 @@
 import base64
 import traceback
 
-import aiohttp
-import requests
+import httpx
 
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
@@ -34,15 +33,14 @@ class Neo4jHTTPDriver:
         logger.debug(f'SUPPORTS APOC : {self._supports_apoc}')
 
     async def post_request_json(self, payload):
-        tcp_connector = aiohttp.TCPConnector(limit=60)
-        async with aiohttp.ClientSession(connector=tcp_connector) as session:
-            async with session.post(self._full_transaction_path, json=payload, headers=self._header) as response:
-                if response.status != 200:
-                    logger.error(f"[x] Problem contacting Neo4j server {self._host}:{self._port} -- {response.status}")
-                    txt = await response.text()
-                    logger.debug(f"[x] Server responded with {txt}")
-                else:
-                    return await response.json()
+        async with httpx.AsyncClient() as session:
+            response = await session.post(self._full_transaction_path, json=payload, headers=self._header)
+            if response.status_code != 200:
+                logger.error(f"[x] Problem contacting Neo4j server {self._host}:{self._port} -- {response.status_code}")
+                txt = response.text
+                logger.debug(f"[x] Server responded with {txt}")
+            else:
+                return response.json()
 
     def ping(self):
         """
@@ -55,7 +53,7 @@ class Neo4jHTTPDriver:
         try:
             import time
             now = time.time()
-            response = requests.get(ping_url, headers=self._header)
+            response = httpx.get(ping_url, headers=self._header)
             later = time.time()
             time_taken = later - now
             logger.debug(f'Contacting neo4j took {time_taken} seconds.')
@@ -68,7 +66,7 @@ class Neo4jHTTPDriver:
             logger.debug(traceback.print_exc())
             raise RuntimeError('Connection to Neo4j could not be established.')
 
-    async def run(self, query):
+    async def run(self, query, return_errors=False):
         """
         Runs a neo4j query async.
         :param query: Cypher query.
@@ -88,6 +86,8 @@ class Neo4jHTTPDriver:
         response = await self.post_request_json(payload)
         errors = response.get('errors')
         if errors:
+            if return_errors:
+                return response
             logger.error(f'Neo4j returned `{errors}` for cypher {query}.')
             raise RuntimeWarning(f'Error running cypher {query}.')
         return response
@@ -105,7 +105,7 @@ class Neo4jHTTPDriver:
                 }
             ]
         }
-        response = requests.post(
+        response = httpx.post(
             self._full_transaction_path,
             headers=self._header,
             json=payload).json()
@@ -319,7 +319,7 @@ class GraphInterface:
 
             return rows
 
-        async def run_cypher(self, cypher: str) -> list:
+        async def run_cypher(self, cypher: str, **kwargs) -> list:
             """
             Runs cypher directly.
             :param cypher: cypher query.
@@ -327,7 +327,7 @@ class GraphInterface:
             :return: unprocessed neo4j response.
             :rtype: list
             """
-            return await self.driver.run(cypher)
+            return await self.driver.run(cypher, **kwargs)
 
         async def get_sample(self, node_type):
             """

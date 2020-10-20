@@ -1,0 +1,13 @@
+{
+    "message": {
+        "query_graph": {
+            "nodes": [
+                {
+                    "id": "n0",
+                    "type": "biolink:Cell"
+                }
+            ],
+            "edges": []
+        }
+    }
+}
