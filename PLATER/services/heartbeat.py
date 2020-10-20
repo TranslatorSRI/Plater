@@ -1,6 +1,5 @@
 """Plater heartbeat."""
 import argparse
-import threading
 import time
 
 import httpx
@@ -57,14 +56,7 @@ def send_heart_beat(automat_host):
 def beat(automat_host):
     """Start beating."""
     logger.debug(f'Running in clustered mode about to join {automat_host}')
-
-    # start heart beat thread.
-    heart_beat_thread = threading.Thread(
-        target=send_heart_beat,
-        args=(automat_host),
-        daemon=True
-    )
-    heart_beat_thread.start()
+    send_heart_beat(automat_host)
 
 
 if __name__ == "__main__":
@@ -77,12 +69,11 @@ if __name__ == "__main__":
         help=(
             'Needs to be a full http/https url. Eg. '
             'http://<automat_location>:<automat_port>. If you have an Automat '
-            '(https://github.com/TranslatorIIPrototypes/KITCHEN/tree/master/KITCHEN/Automat) '
+            '(https://https://github.com/renci-automat/automat-server) '
             'cluster and you\'d like this instance to be accessible via the '
             'Automat interface. Needs PLATER_SERVICE_ADDRESS env variable to '
             'the host name of where this instance is deployed.'
         ),
     )
-
     args = parser.parse_args()
     beat(args.automat_host)
