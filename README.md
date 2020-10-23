@@ -67,11 +67,9 @@ To run the web server directly:
 
   ```
  
- ### Linking to [Automat Server](https://github.com/RENCI-AUTOMAT/Automat-server/) \[Optional\]
- You can also serve several instances of plater through a common gateway(Automat). By setting `AUTOMAT_HOST` 
- and `PLATER_SERVICE_ADDRESS` variables.
- `AUTOMAT_HOST` is the full url of the automat server eg. http://automat:8080
- `PLATER_SERVICE_ADDRESS` is the host name of where plater is so Automat server can get to it. 
+ ### Clustering with [Automat Server](https://github.com/RENCI-AUTOMAT/Automat-server/) \[Optional\]
+ You can also serve several instances of plater through a common gateway(Automat). On specific instructions 
+ please refer to (AUTOMAT's readme)[https://github.com/RENCI-AUTOMAT/Automat-server/blob/master/README.md]
   
  
 
@@ -91,7 +89,7 @@ docker run -p 0.0.0.0:8999:8080  \
                --env WEB_HOST=0.0.0.0 \
                -v <your-custom-about>:/<path-to-plater-repo-home>/plater/about.json \
                --network=<docker_network_neo4j_is_running_at> \    
-                <image_tag> -a <automat_address> <plater_build_tag>
+                <image_tag>
     
 ``` 
  
