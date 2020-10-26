@@ -11,5 +11,3 @@ else
     uvicorn PLATER.services.app:APP --host ${WEB_HOST} --port ${WEB_PORT} --reload
 fi
 
-# Run the web server in the background
-webServer
