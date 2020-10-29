@@ -66,7 +66,7 @@ To run the web server directly:
  
  ### Clustering with [Automat Server](https://github.com/RENCI-AUTOMAT/Automat-server/) \[Optional\]
  You can also serve several instances of plater through a common gateway(Automat). On specific instructions 
- please refer to (AUTOMAT's readme)[https://github.com/RENCI-AUTOMAT/Automat-server/blob/master/README.md]
+ please refer to [AUTOMAT's readme](https://github.com/RENCI-AUTOMAT/Automat-server/blob/master/README.md)
   
  
 
