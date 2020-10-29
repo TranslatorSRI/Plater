@@ -37,10 +37,7 @@ To run the web server directly:
     PLATER_TITLE='Plater'
     PLATER_VERSION='1.0.0'
     
-    # Optional config for integration with an Automat server. 
-    # Please refer to linking with automat section for more.
-    PLATER_SERVICE_ADDRESS=<host_name>
-    AUTOMAT_HOST=<http://automat.host>
+
    ```
    
   
