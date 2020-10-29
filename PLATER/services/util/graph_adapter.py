@@ -33,7 +33,7 @@ class Neo4jHTTPDriver:
         logger.debug(f'SUPPORTS APOC : {self._supports_apoc}')
 
     async def post_request_json(self, payload):
-        async with httpx.AsyncClient() as session:
+        async with httpx.AsyncClient(timeout=600) as session:
             response = await session.post(self._full_transaction_path, json=payload, headers=self._header)
             if response.status_code != 200:
                 logger.error(f"[x] Problem contacting Neo4j server {self._host}:{self._port} -- {response.status_code}")
@@ -108,6 +108,7 @@ class Neo4jHTTPDriver:
         response = httpx.post(
             self._full_transaction_path,
             headers=self._header,
+            timeout=600,
             json=payload).json()
         errors = response.get('errors')
         if errors:
