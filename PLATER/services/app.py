@@ -378,7 +378,7 @@ def construct_open_api_schema():
         open_api_schema["info"]["contact"] = contact_config
 
     if terms_of_service:
-        open_api_schema["termsOfService"] = terms_of_service
+        open_api_schema["info"]["termsOfService"] = terms_of_service
 
     if servers_conf:
         open_api_schema["servers"] = servers_conf
@@ -397,7 +397,3 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("PLATER.services.app:APP", host="127.0.0.1", port=5000, log_level="info")
