@@ -1,12 +1,15 @@
 """FastAPI app."""
 import json
 import os
+import yaml
 from typing import Any, Dict, List
 
 from fastapi import Body, Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 
 from PLATER.services.models import (
-    Message, ReasonerRequest, CypherRequest, SimpleSpecResponse,
+    Message, ReasonerRequest, CypherRequest, SimpleSpecResponse, SimpleSpecElement,
     GraphSummaryResponse, CypherResponse, PredicatesResponse
 )
 from PLATER.services.config import config
@@ -25,10 +28,7 @@ logger = LoggingUtil.init_logging(
     config.get('logging_format'),
 )
 
-APP = FastAPI(
-    title=TITLE,
-    version=VERSION,
-)
+APP = FastAPI()
 
 
 def get_graph_interface():
@@ -183,22 +183,22 @@ async def simple_spec(
                         target_type,
                     ))
         minischema = list(set(minischema))  # remove dups
-        return list(map(lambda x: {
-            'source_type': x[0],
-            'target_type': x[2],
-            'edge_type': x[1],
-        }, minischema))
+        return list(map(lambda x: SimpleSpecElement(**{
+                'source_type': x[0],
+                'target_type': x[2],
+                'edge_type': x[1],
+            }), minischema))
     else:
         schema = graph_interface.get_schema()
         reformatted_schema = []
         for source_type in schema:
             for target_type in schema[source_type]:
                 for edge in schema[source_type][target_type]:
-                    reformatted_schema.append({
+                    reformatted_schema.append(SimpleSpecElement(**{
                         'source_type': source_type,
                         'target_type': target_type,
                         'edge_type': edge
-                    })
+                    }))
         return reformatted_schema
 
 
@@ -348,3 +348,56 @@ APP.add_api_route(
     summary="Find `node` by `curie`",
     description="Returns `node` matching `curie`.",
 )
+
+
+def construct_open_api_schema():
+
+    if APP.openapi_schema:
+        return APP.openapi_schema
+    open_api_schema = get_openapi(
+        title=TITLE,
+        version=VERSION,
+        description='',
+        routes=APP.routes
+    )
+
+    open_api_extended_file_path = config.get_resource_path('../openapi-config.yaml')
+    with open(open_api_extended_file_path) as open_api_file:
+        open_api_extended_spec = yaml.load(open_api_file, Loader=yaml.SafeLoader)
+
+    x_translator_extension = open_api_extended_spec.get("x-translator")
+    contact_config = open_api_extended_spec.get("contact")
+    terms_of_service = open_api_extended_spec.get("termsOfService")
+    servers_conf = open_api_extended_spec.get("servers")
+
+    if x_translator_extension:
+        # if x_translator_team is defined amends schema with x_translator extension
+        open_api_schema["info"]["x-translator"] = x_translator_extension
+
+    if contact_config:
+        open_api_schema["info"]["contact"] = contact_config
+
+    if terms_of_service:
+        open_api_schema["termsOfService"] = terms_of_service
+
+    if servers_conf:
+        open_api_schema["servers"] = servers_conf
+
+    return open_api_schema
+
+
+APP.openapi_schema = construct_open_api_schema()
+
+# CORS
+APP.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("PLATER.services.app:APP", host="127.0.0.1", port=5000, log_level="info")
