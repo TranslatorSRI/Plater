@@ -1,0 +1,13 @@
+# Adds more configs to default open api config
+x-translator:
+  component: KP
+  teams: [] # add teams
+contact:
+  email: "default@mail.org" # email
+  name: "default-name" # name
+  x-id: "default link" # link if available
+  x-role: "default-role" # role
+termsOfService: "" # link to terms of service
+servers:
+  - description: Default server
+    url: http://localhost:8080 # full url not this will be the url used when using openapi docs
