@@ -80,6 +80,7 @@ APP.add_api_route(
     response_model=Message,
     summary="Query Reasoner API",
     description="Given a question graph return question graph plus answers.",
+    tags=["translator"]
 )
 
 APP.add_api_route(
@@ -115,7 +116,7 @@ APP.add_api_route(
     summary="Run cypher query",
     description=(
         "Runs cypher query against the Neo4j instance, and returns an "
-        "equivalent response exepected from a Neo4j HTTP endpoint "
+        "equivalent response expected from a Neo4j HTTP endpoint "
         "(https://neo4j.com/docs/rest-docs/current/)."
     ),
 )
@@ -139,6 +140,7 @@ APP.add_api_route(
         "second level keys as targets. And the values of the second level "
         "keys is the type of possible edge typesthat connect these concepts."
     ),
+    tags=["translator"]
 )
 
 
@@ -277,7 +279,8 @@ APP.add_api_route(
         "Given a ReasonerAPI graph, add support edges for any nodes linked in "
         "result bindings."
     ),
-    summary="Overlay results with available connections between each node."
+    summary="Overlay results with available connections between each node.",
+    tags=["translator"]
 )
 
 
@@ -369,6 +372,12 @@ def construct_open_api_schema():
     contact_config = open_api_extended_spec.get("contact")
     terms_of_service = open_api_extended_spec.get("termsOfService")
     servers_conf = open_api_extended_spec.get("servers")
+    tags = open_api_extended_spec.get("tags")
+    title_override = open_api_extended_spec.get("title") or TITLE
+    description = open_api_extended_spec.get("description")
+
+    if tags:
+        open_api_schema['tags'] = tags
 
     if x_translator_extension:
         # if x_translator_team is defined amends schema with x_translator extension
@@ -379,6 +388,12 @@ def construct_open_api_schema():
 
     if terms_of_service:
         open_api_schema["info"]["termsOfService"] = terms_of_service
+
+    if description:
+        open_api_schema["info"]["description"] = description
+
+    if title_override:
+        open_api_schema["info"]["title"] = title_override
 
     if servers_conf:
         open_api_schema["servers"] = servers_conf
