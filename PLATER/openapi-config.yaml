@@ -8,6 +8,9 @@ contact:
   x-id: "default link" # link if available
   x-role: "default-role" # role
 termsOfService: "" # link to terms of service
+tags: [] # document wide tags
+description: "" # Description for the whole spec
+title: "" # title for the whole spec, overrides PLATER_TITLE env value
 servers:
   - description: Default server
     url: http://localhost:8080 # full url not this will be the url used when using openapi docs
