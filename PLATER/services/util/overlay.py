@@ -14,26 +14,31 @@ class Overlay:
         :return:
         """
         final_response = {}
-        # Set to keep track of edge_ids appended to knowledge_graph.edges
-        # so as not to add dup edges
-        added_edge_ids = set()
-        edges_to_add = list()
+        edges_to_add = dict()
         overlayed_answers = list()
         chunk_size = 1000
         chunked_answers = [reasoner_graph[Question.ANSWERS_KEY][start: start + chunk_size]
                            for start in range(0, len(reasoner_graph[Question.ANSWERS_KEY]), chunk_size)]
         for answer in chunked_answers:
             # 3. filter out kg ids
-            all_kg_nodes = set(
-                reduce(lambda a, b: a + b,
-                       map(lambda node_binding: node_binding[Question.KG_ID_KEY]
-                       if isinstance(node_binding[Question.KG_ID_KEY], list)
-                       # 3. convert every thing to array and reduce
-                       else [node_binding[Question.KG_ID_KEY]],
-                           # 2. merge them into single array
-                           reduce(lambda a, b: a + b,
-                                  # 1. get node bindings from all answers
-                                  map(lambda ans: ans[Question.NODE_BINDINGS_KEY], answer), [])), []))
+            all_kg_nodes = []
+            for ans in answer:
+                ans_nodes = ans[Question.NODE_BINDINGS_KEY]
+                for qid in ans_nodes:
+                    nodes = ans_nodes[qid]
+                    for n in nodes:
+                        all_kg_nodes.append(n['id'])
+
+            # all_kg_nodes = set(
+            #     reduce(lambda a, b: a + b,
+            #            map(lambda node_binding: node_binding[Question.KG_ID_KEY]
+            #            if isinstance(node_binding[Question.KG_ID_KEY], list)
+            #            # 3. convert every thing to array and reduce
+            #            else [node_binding[Question.KG_ID_KEY]],
+            #                # 2. merge them into single array
+            #                reduce(lambda a, b: a + b,
+            #                       # 1. get node bindings from all answers
+            #                       map(lambda ans: ans[Question.NODE_BINDINGS_KEY], answer), [])), []))
             # fun part summon APOC
             if self.graph_interface.supports_apoc():
                 all_kg_nodes = list(all_kg_nodes)
@@ -43,14 +48,13 @@ class Overlay:
                 for ans in answer:
                     support_id_suffix = 0
                     node_bindings = ans[Question.NODE_BINDINGS_KEY]
-                    ans_all_node_ids = set(
-                        reduce(lambda a, b: a + b,
-                               map(lambda x: x[Question.KG_ID_KEY]
-                               if isinstance(x[Question.KG_ID_KEY], list)
-                               else [x[Question.KG_ID_KEY]]
-                                   , node_bindings), []))
+                    ans_all_node_ids = set()
+                    for qid in node_bindings:
+                        nodes = node_bindings[qid]
+                        for n in nodes:
+                            ans_all_node_ids.add(n['id'])
                     for node_id in ans_all_node_ids:
-                        other_nodes = ans_all_node_ids.difference(set(node_id))
+                        other_nodes = ans_all_node_ids.difference(set([node_id]))
                         # lookup current node in apoc_result
                         current_node_relations = apoc_result.get(node_id, {})
                         for other_node_id in other_nodes:
@@ -60,22 +64,17 @@ class Overlay:
                                 q_graph_id = f's_{support_id_suffix}'
                                 support_id_suffix += 1
                                 k_graph_id = support_edge['id']
-                                ans['edge_bindings'].append(
-                                    {
-                                        Question.QG_ID_KEY: q_graph_id,
-                                        Question.KG_ID_KEY: k_graph_id
-                                    }
-                                )
-                                if k_graph_id not in added_edge_ids:
-                                    added_edge_ids.add(k_graph_id)
-                                    edges_to_add.append(support_edge)
+                                del support_edge['id']
+                                ans['edge_bindings'][q_graph_id] = [{"id": k_graph_id}]
+                                if k_graph_id not in edges_to_add:
+                                    edges_to_add[k_graph_id] = support_edge
                     overlayed_answers.append(ans)
                     # @TODO raise exception if apoc is not supported
 
         final_response[Question.QUERY_GRAPH_KEY] = reasoner_graph[Question.QUERY_GRAPH_KEY]
         final_response[Question.ANSWERS_KEY] = overlayed_answers
         final_response[Question.KNOWLEDGE_GRAPH_KEY] = reasoner_graph[Question.KNOWLEDGE_GRAPH_KEY]
-        final_response[Question.KNOWLEDGE_GRAPH_KEY][Question.EDGES_LIST_KEY] += edges_to_add
+        final_response[Question.KNOWLEDGE_GRAPH_KEY][Question.EDGES_LIST_KEY].update(edges_to_add)
         return final_response
 
     def structure_for_easy_lookup(self, result_set):
@@ -86,11 +85,17 @@ class Overlay:
         """
         result = {}
         for r in result_set:
-            source_id = r['source_id']
-            target_id = r['target_id']
-            edge = r['edge']
-            edge['source_id'] = source_id
-            edge['target_id'] = target_id
+            source_id = r['subject']
+            target_id = r['object']
+            edge = {}
+            edge['subject'] = source_id
+            edge['object'] = target_id
+            edge['predicate'] = r['predicate']
+            edge['id'] = r['edge']['id']
+            edge['attributes'] = [{
+                "type": "",
+                "value": r['edge']
+            }]
             m = result.get(source_id, {})
             n = m.get(target_id, list())
             n.append(edge)
@@ -98,160 +103,3 @@ class Overlay:
             result[source_id] = m
         return result
 
-
-if __name__ == '__main__':
-    gp = GraphInterface('localhost', '7474', ('neo4j', 'ncatsgamma'))
-    overlay = Overlay(gp)
-    resoner_jj = {
-        "query_graph": {
-            "nodes": [
-                {
-                    "id": "n1",
-                    "type": "named_thing"
-                },
-                {
-                    "id": "n2",
-                    "type": "biological_process_or_activity"
-                }
-            ],
-            "edges": [
-                {
-                    "id": "e0",
-                    "source_id": "n1",
-                    "target_id": "n2"
-                }
-            ]
-        },
-        "results": [
-            {
-                "edge_bindings": [
-                    {
-                        "kg_id": "1",
-                        "qg_id": "e0"
-                    }
-                ],
-                "node_bindings": [
-                    {
-                        "kg_id": "UBERON:0000463",
-                        "qg_id": "n1"
-                    },
-                    {
-                        "kg_id": "GO:0097099",
-                        "qg_id": "n2"
-                    }
-                ]
-            },
-            {
-                "edge_bindings": [
-                    {
-                        "kg_id": "2",
-                        "qg_id": "e0"
-                    }
-                ],
-                "node_bindings": [
-                    {
-                        "kg_id": "UBERON:0000465",
-                        "qg_id": "n1"
-                    },
-                    {
-                        "kg_id": "GO:0097099",
-                        "qg_id": "n2"
-                    }
-                ]
-            }
-        ],
-        "knowledge_graph": {
-            "nodes": [
-                {
-                    "name": "structural constituent of albumen",
-                    "id": "GO:0097099",
-                    "equivalent_identifiers": [
-                        "GO:0097099"
-                    ],
-                    "type": [
-                        "named_thing",
-                        "biological_entity",
-                        "molecular_activity",
-                        "biological_process_or_activity"
-                    ]
-                },
-                {
-                    "name": "organism substance",
-                    "id": "UBERON:0000463",
-                    "equivalent_identifiers": [
-                        "NCIT:C13236",
-                        "UBERON:0000463"
-                    ],
-                    "type": [
-                        "named_thing",
-                        "biological_entity",
-                        "anatomical_entity",
-                        "organismal_entity"
-                    ]
-                },
-                {
-                    "name": "material anatomical entity",
-                    "id": "UBERON:0000465",
-                    "equivalent_identifiers": [
-                        "UBERON:0000465"
-                    ],
-                    "type": [
-                        "named_thing",
-                        "biological_entity",
-                        "anatomical_entity",
-                        "organismal_entity"
-                    ]
-                }
-            ],
-            "edges": [
-                {
-                    "predicate_id": "biolink:subclass_of",
-                    "relation_label": [
-                        "subclass of"
-                    ],
-                    "edge_source": [
-                        "uberongraph.term_get_ancestors"
-                    ],
-                    "ctime": [
-                        1595956911.393211
-                    ],
-                    "target_id": "UBERON:0000465",
-                    "source_id": "GO:0097099",
-                    "id": "1",
-                    "type": "subclass_of",
-                    "source_database": [
-                        "uberongraph"
-                    ],
-                    "relation": [
-                        "rdfs:subClassOf"
-                    ],
-                    "publications": []
-                },
-                {
-                    "predicate_id": "biolink:subclass_of",
-                    "relation_label": [
-                        "subclass of"
-                    ],
-                    "edge_source": [
-                        "uberongraph.term_get_ancestors"
-                    ],
-                    "ctime": [
-                        1595956913.4062119
-                    ],
-                    "target_id": "UBERON:0000463",
-                    "source_id": "GO:0097099",
-                    "id": "2",
-                    "type": "subclass_of",
-                    "source_database": [
-                        "uberongraph"
-                    ],
-                    "relation": [
-                        "rdfs:subClassOf"
-                    ],
-                    "publications": []
-                }
-            ]
-        }
-    }
-
-    overlay.overlay_support_edges(resoner_jj)
