@@ -379,13 +379,14 @@ class GraphInterface:
             :return: dictionary of edges and source and target nodes ids
             """
             query = f"""
-                        MATCH (node:named_thing)
-                        USING INDEX node:named_thing(id)
+                        MATCH (node:`biolink:NamedThing`)
+                        USING INDEX node:`biolink:NamedThing`(id)
                         WHERE node.id in {ids}
                         WITH collect(node) as nodes
                         CALL apoc.algo.cover(nodes) yield rel
-                        WITH {{source_id: startNode(rel).id ,
-                               target_id: endNode(rel).id,
+                        WITH {{subject: startNode(rel).id ,
+                               object: endNode(rel).id,
+                               predicate: type(rel),
                                edge: rel }} as row
                         return collect(row) as result                                        
                         """
