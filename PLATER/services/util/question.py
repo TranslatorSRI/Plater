@@ -8,15 +8,16 @@ class Question:
 
     #SPEC VARS
     QUERY_GRAPH_KEY='query_graph'
-    KG_ID_KEY='kg_id'
-    QG_ID_KEY='qg_id'
+    KG_ID_KEY='id'
+    QG_ID_KEY='id'
     ANSWERS_KEY='results'
     KNOWLEDGE_GRAPH_KEY='knowledge_graph'
     NODES_LIST_KEY='nodes'
     EDGES_LIST_KEY='edges'
-    TYPE_KEY='type'
-    SOURCE_KEY='source_id'
-    TARGET_KEY='target_id'
+    NODE_TYPE_KEY='category'
+    EDGE_TYPE_KEY='predicate'
+    SOURCE_KEY='subject'
+    TARGET_KEY='object'
     NODE_BINDINGS_KEY='node_bindings'
     EDGE_BINDINGS_KEY='edge_bindings'
     CURIE_KEY = 'curie'
@@ -41,31 +42,27 @@ class Question:
         print(f'grabbing results took {end - s}')
         results_dict = graph_interface.convert_to_dict(results)
         self._question_json.update(results_dict[0])
+        self.add_type_to_attributes(self._question_json[Question.KNOWLEDGE_GRAPH_KEY][Question.NODES_LIST_KEY])
+        self.add_type_to_attributes(self._question_json[Question.KNOWLEDGE_GRAPH_KEY][Question.EDGES_LIST_KEY])
         return self._question_json
 
-    def __validate(self):
-        assert Question.QUERY_GRAPH_KEY in self._question_json, "No question graph in json."
-        question_graph = self._question_json[Question.QUERY_GRAPH_KEY]
-        assert Question.NODES_LIST_KEY in question_graph, "No nodes in query graph"
-        assert isinstance(question_graph[Question.NODES_LIST_KEY], list), "Expected nodes to be list"
-        assert Question.EDGES_LIST_KEY in question_graph, "No edges in query graph"
-        assert isinstance(question_graph[Question.EDGES_LIST_KEY], list), "Expected edges to be list"
-        for node in question_graph[Question.NODES_LIST_KEY]:
-            assert Question.TYPE_KEY in node , f"Expected {Question.TYPE_KEY} in {node}"
-            assert 'id' in node, f"Expected `id` in {node}"
-        for edge in question_graph[Question.EDGES_LIST_KEY]:
-            assert 'id' in edge, f"Expected `id` in {edge}"
-            assert Question.SOURCE_KEY in edge, f"Expected {Question.SOURCE_KEY} in {edge}"
-            assert Question.TARGET_KEY in edge, f"Expected {Question.TARGET_KEY} in {edge}"
-        # make sure everything mentioned in edges is actually refering something in the node list.
-        node_ids = list(map(lambda node: node['id'], question_graph[Question.NODES_LIST_KEY]))
-        mentions = reduce(lambda accu, value: accu + value,
-                          list(map(lambda edge: [
-                              edge[Question.SOURCE_KEY],
-                              edge[Question.TARGET_KEY]
-                          ], question_graph[Question.EDGES_LIST_KEY])), [])
-        assert reduce(lambda x, y: x and (y in node_ids), mentions, True), "Some edge mentions don't have matching " \
-                                                                           "nodes. Please check question graph."
+    def add_type_to_attributes(self, items):
+        """
+        Adds Data type curie to attributes
+        :param items: Nodes list or edges list
+        :return:
+        """
+        # basic python types to curie
+
+        for key in items:
+            item = items[key]
+            if 'attributes' in item:
+                for attribute in item['attributes']:
+                    value = attribute.get('value')
+                    if value:
+                        # Assigning type as associative array for now,
+                        # but needs to be more semantic (?) than just computer Data type.
+                        attribute['type'] = "WIKIDATA:Q80585"
 
     @staticmethod
     def transform_schema_to_question_template(graph_schema):
@@ -82,24 +79,21 @@ class Question:
            We would get
            {
             "question_graph": {
-                "nodes" : [
-                    {
-                        "qg_id": "n1",
-                        "type": "Type 1",
-                        "kg_id": "{{curie}}"
+                "nodes" : {
+                    "n1": {
+                        "id": "{{ curie }}",
+                        "category": "Type 1"
                     },
-                    {
-                        "qg_id" : "n2",
-                        "type": "Type 2",
-                        "kg_id": "{{curie}}"
+                    "n2": {
+                        "id" : "{{ curie }}",
+                        "category": "Type 2"
                     }
-                ],
-                "edges":[
-                    {
-                        "qg_id": "e1",
-                        "type": "edge 1",
-                        "source_id": "n1",
-                        "target_id": "n2"
+                },
+                "edges":{
+                    "e1": {
+                        "predicate": "edge 1",
+                        "subject": "n1",
+                        "object": "n2"
                     }
                 ]
             }
@@ -112,61 +106,27 @@ class Question:
             target_set = graph_schema[source_type]
             for target_type in target_set:
                 question_graph = {
-                    Question.NODES_LIST_KEY: [
-                        {
-                            'id': "n1",
-                            Question.TYPE_KEY: source_type,
+                    Question.NODES_LIST_KEY: {
+                        "n1": {
+                            'id': None,
+                            Question.NODE_TYPE_KEY: source_type,
                         },
-                        {
-                            'id': "n2",
-                            Question.TYPE_KEY: target_type,
+                        "n2": {
+                            'id': None,
+                            Question.NODE_TYPE_KEY: target_type,
                         }
-                    ],
+                    },
                     Question.EDGES_LIST_KEY: []
                 }
                 edge_set = target_set[target_type]
+                question_graph[Question.EDGES_LIST_KEY] = {}
                 for index, edge_type in enumerate(set(edge_set)):
                     edge_dict = {
-                        'id': f"e{index}",
                         Question.SOURCE_KEY: "n1",
                         Question.TARGET_KEY: "n2",
-                        Question.TYPE_KEY: edge_type
+                        Question.EDGE_TYPE_KEY: edge_type
                     }
-                    question_graph[Question.EDGES_LIST_KEY].append(edge_dict)
+                    question_graph[Question.EDGES_LIST_KEY][f"e{index}"] = edge_dict
             question_templates.append({Question.QUERY_GRAPH_KEY: question_graph})
         return question_templates
 
-
-if __name__ == '__main__':
-    schema  = {
-      "gene": {
-        "biological_process_or_activity": [
-          "actively_involved_in"
-        ],
-        "named_thing": [
-          "similar_to"
-        ]
-      },
-      "named_thing": {
-        "chemical_substance": [
-          "similar_to"
-        ],
-        "named_thing": [
-          "similar_to"
-        ]
-      }
-    }
-    import json
-    questions = Question.transform_schema_to_question_template(schema)
-    print(questions)
-    question = Question(questions[0])
-    # questions[0]['query_graph']['nodes'][1]['curie'] = ''
-    questions[0]['query_graph']['nodes'][1]['type'] = 'disease'
-    del questions[0]['query_graph']['edges'][0]['type']
-    questions[0]['query_graph']['nodes'][0]['type'] = 'information_content_entity'
-    q2 = Question(questions[0])
-    ans = q2.answer(graph_interface=GraphInterface('localhost','7474', ('neo4j', 'neo4jkp')))
-    import asyncio
-    event_loop = asyncio.get_event_loop()
-    result = event_loop.run_until_complete(ans)
-    print(json.dumps(result, indent=2))
