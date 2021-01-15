@@ -1,13 +1,15 @@
 {
-    "message": {
-        "query_graph": {
-            "nodes": [
-                {
-                    "id": "n0",
-                    "type": "biolink:Cell"
-                }
-            ],
-            "edges": []
-        }
-    }
+   "message":{
+      "query_graph":{
+         "nodes":{
+            "n0":{
+               "id":"GO:000001",
+               "type":"biolink:Cell"
+            }
+         },
+         "edges":[
+
+         ]
+      }
+   }
 }

@@ -1,98 +1,216 @@
 {
-    "query_graph": {
-        "nodes": [
-            {
-                "id": "n1",
-                "type": "named_thing",
-                "curie": "NCBIGene:93034"
-            },
-            {
-                "id": "n2",
-                "type": "named_thing"
-            }
-        ],
-        "edges": [
-            {
-                "id": "e0",
-                "source_id": "n1",
-                "target_id": "n2"
-            }
-        ]
+  "query_graph": {
+    "nodes": {
+      "n1": {
+        "id": "NCBIGene:6352",
+        "category": "biolink:Gene",
+        "is_set": false
+      },
+      "n2": {
+        "id": null,
+        "category": "biolink:GeneFamily",
+        "is_set": false
+      },
+      "n3": {
+        "id": null,
+        "category": "biolink:GeneFamily",
+        "is_set": false
+      }
     },
-    "knowledge_graph": {
-        "nodes": [
-            {
-                "synonyms": [],
-                "name": "NT5C1B",
-                "id": "NCBIGene:93034",
-                "equivalent_identifiers": [
-                    "NCBIGene:93034",
-                    "HGNC:17818",
-                    "UniProtKB:Q96P26",
-                    "ENSEMBL:ENSG00000185013",
-                    "NCBIGene:93034",
-                    "IUPHAR:1235"
-                ],
-                "type": [
-                    "named_thing",
-                    "biological_entity",
-                    "molecular_entity",
-                    "gene",
-                    "gene_or_gene_product",
-                    "macromolecular_machine",
-                    "genomic_entity"
-                ]
-            },
-            {
-                "name": "",
-                "id": "CHEBI:14648",
-                "equivalent_identifiers": [
-                    "PUBCHEM:14181",
-                    "CHEBI:14648",
-                    "INCHIKEY:DAYLJWODMCOQEW-TURQNECASA-O",
-                    "HMDB:HMDB0059645"
-                ],
-                "type": [
-                    "named_thing",
-                    "biological_entity",
-                    "chemical_substance",
-                    "molecular_entity"
-                ]
-            }
+    "edges": {
+      "e12": {
+        "subject": "n1",
+        "object": "n2",
+        "predicate": "biolink:part_of",
+        "relation": null
+      },
+      "e23": {
+        "subject": "n3",
+        "object": "n2",
+        "predicate": "biolink:part_of",
+        "relation": null
+      }
+    }
+  },
+  "knowledge_graph": {
+    "nodes": {
+      "NCBIGene:6352": {
+        "category": [
+          "biolink:NamedThing",
+          "biolink:BiologicalEntity",
+          "biolink:MolecularEntity",
+          "biolink:GenomicEntity",
+          "biolink:GeneOrGeneProduct",
+          "biolink:MacromolecularMachine",
+          "biolink:Gene"
         ],
-        "edges": [
-            {
-                "predicate_id": "RO:0002434",
-                "relation_label": "interacts with",
-                "edge_source": "hmdb.enzyme_to_metabolite",
-                "target_id": "NCBIGene:93034",
-                "source_id": "CHEBI:14648",
-                "id": "b80d",
-                "type": "interacts_with",
-                "source_database": "hmdb",
-                "relation": "RO:0002434",
-                "publications": []
-            }
+        "name": "CCL5",
+        "attributes": [
+          {
+            "type": "WIKIDATA:Q80585",
+            "value": {
+              "locus_group": "protein-coding gene",
+              "synonyms": [],
+              "chromosome": "17",
+              "location": "17q12",
+              "gene_family": [
+                "Chemokine ligands"
+              ],
+              "taxon": 9606,
+              "category": [
+                "biolink:BiologicalEntity",
+                "biolink:GenomicEntity",
+                "biolink:GeneOrGeneProduct",
+                "biolink:MacromolecularMachine",
+                "biolink:NamedThing",
+                "biolink:MolecularEntity",
+                "biolink:Gene"
+              ],
+              "gene_family_id": [
+                483
+              ],
+              "equivalent_identifiers": [
+                "ENSEMBL:ENSG00000271503",
+                "NCBIGene:6352",
+                "NCBIGene:6352",
+                "HGNC:10632",
+                "UniProtKB:P13501"
+              ]
+            },
+            "name": null,
+            "url": null,
+            "source": null
+          }
         ]
+      },
+      "PANTHER.FAMILY:PTHR12015:SF170": {
+        "category": [
+          "biolink:NamedThing",
+          "biolink:BiologicalEntity",
+          "biolink:GeneFamily",
+          "biolink:MolecularEntity",
+          "biolink:Entity"
+        ],
+        "name": "C-C MOTIF CHEMOKINE 5",
+        "attributes": [
+          {
+            "type": "WIKIDATA:Q80585",
+            "value": {
+              "synonyms": [],
+              "category": [
+                "biolink:BiologicalEntity",
+                "biolink:GeneFamily",
+                "biolink:NamedThing",
+                "biolink:MolecularEntity",
+                "biolink:Entity"
+              ],
+              "equivalent_identifiers": [
+                "PANTHER.FAMILY:PTHR12015:SF170"
+              ]
+            },
+            "name": null,
+            "url": null,
+            "source": null
+          }
+        ]
+      },
+      "PANTHER.FAMILY:PTHR12015": {
+        "category": [
+          "biolink:NamedThing",
+          "biolink:BiologicalEntity",
+          "biolink:GeneFamily",
+          "biolink:MolecularEntity",
+          "biolink:Entity"
+        ],
+        "name": "SMALL INDUCIBLE CYTOKINE A",
+        "attributes": [
+          {
+            "type": "WIKIDATA:Q80585",
+            "value": {
+              "synonyms": [],
+              "category": [
+                "biolink:BiologicalEntity",
+                "biolink:GeneFamily",
+                "biolink:NamedThing",
+                "biolink:MolecularEntity",
+                "biolink:Entity"
+              ],
+              "equivalent_identifiers": [
+                "PANTHER.FAMILY:PTHR12015"
+              ]
+            },
+            "name": null,
+            "url": null,
+            "source": null
+          }
+        ]
+      }
     },
-    "results": [
-        {
-            "edge_bindings": [
-                {
-                    "kg_id": "b80d",
-                    "qg_id": "e0"
-                }
-            ],
-            "node_bindings": [
-                {
-                    "kg_id": "NCBIGene:93034",
-                    "qg_id": "n1"
-                },
-                {
-                    "kg_id": "CHEBI:14648",
-                    "qg_id": "n2"
-                }
-            ]
-        }
-    ]
+    "edges": {
+      "dd8ef7a4606c4f8e405e6a5b1b095993": {
+        "subject": "NCBIGene:6352",
+        "object": "PANTHER.FAMILY:PTHR12015",
+        "predicate": "biolink:part_of",
+        "relation": null,
+        "attributes": [
+          {
+            "type": "WIKIDATA:Q80585",
+            "value": {
+              "predicate": "biolink:part_of",
+              "relation_label": "part of",
+              "provided_by": "panther.get_gene_by_gene_family",
+              "ctime": 1584932086.0009434,
+              "target_id": "PANTHER.FAMILY:PTHR12015",
+              "source_id": "NCBIGene:6352",
+              "source_database": "panther",
+              "relation": "BFO:0000050",
+              "publications": []
+            },
+            "name": null,
+            "url": null,
+            "source": null
+          }
+        ]
+      },
+      "9f7f9d86cb57e7190aafa57f7564eb05": {
+        "subject": "PANTHER.FAMILY:PTHR12015:SF170",
+        "object": "PANTHER.FAMILY:PTHR12015",
+        "predicate": "biolink:part_of",
+        "relation": null,
+        "attributes": [
+          {
+            "type": "WIKIDATA:Q80585",
+            "value": {
+              "predicate": "biolink:part_of",
+              "relation_label": "part of",
+              "provided_by": "panther.get_gene_family_by_gene_family",
+              "ctime": 1610437123.7988985,
+              "target_id": "PANTHER.FAMILY:PTHR12015",
+              "source_id": "PANTHER.FAMILY:PTHR12015:SF170",
+              "source_database": "panther",
+              "relation": "BFO:0000050",
+              "publications": []
+            },
+            "name": null,
+            "url": null,
+            "source": null
+          }
+        ]
+      }
+    }
+  },
+  "results":[
+    {
+      "node_bindings": {
+        "n1": [{"id": "NCBIGene:6352"}],
+        "n2": [{"id": "PANTHER.FAMILY:PTHR12015"}],
+        "n3": [{"id": "PANTHER.FAMILY:PTHR12015:SF170"}]
+      },
+      "edge_bindings": {
+        "e12": [{"id": "dd8ef7a4606c4f8e405e6a5b1b095993"}],
+        "e23": [{"id": "9f7f9d86cb57e7190aafa57f7564eb05"}]
+      }
+    }
+  ]
+
 }
