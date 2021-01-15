@@ -93,7 +93,7 @@ class Overlay:
             edge['predicate'] = r['predicate']
             edge['id'] = r['edge']['id']
             edge['attributes'] = [{
-                "type": "",
+                "type": "WIKIDATA:Q80585",
                 "value": r['edge']
             }]
             m = result.get(source_id, {})
