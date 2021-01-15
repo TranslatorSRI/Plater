@@ -1,7 +1,7 @@
 # Adds more configs to default open api config
 x-translator:
   component: KP
-  teams: [] # add teams
+  team: [] # add teams
 contact:
   email: "default@mail.org" # email
   name: "default-name" # name

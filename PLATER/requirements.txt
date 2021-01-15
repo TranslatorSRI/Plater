@@ -1,12 +1,11 @@
 coverage
 pyaml==20.3.1
 pytest==5.4.1
-starlette==0.13.2
+pytest-asyncio==0.14.0
+starlette==0.13.6
 uvicorn==0.11.7
-Jinja2==2.11.1
-git+https://github.com/NCATS-Tangerine/kgx.git@0025e3f90b4ba73d14485fd5c9a3244176bd75cc
-networkx
+git+git://github.com/patrickkwang/biolink-model-toolkit@master#egg=bmt
 git+https://github.com/ranking-agent/reasoner.git
-git+https://github.com/ranking-agent/reasoner-pydantic#egg=reasoner-pydantic
+git+https://github.com/TranslatorSRI/reasoner-pydantic@v1.0#egg=reasoner-pydantic
 git+https://github.com/patrickkwang/fastapi#egg=fastapi
 httpx
