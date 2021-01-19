@@ -3,13 +3,11 @@
       "query_graph":{
          "nodes":{
             "n0":{
-               "id":"GO:000001",
-               "type":"biolink:Cell"
+               "id":"NCBIGene:15",
+               "category":"biolink:Gene"
             }
          },
-         "edges":[
-
-         ]
+         "edges":{}
       }
    }
 }
