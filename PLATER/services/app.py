@@ -70,14 +70,15 @@ async def reasoner_api(
     request_json = request.dict()
     question = Question(request_json["message"])
     response = await question.answer(graph_interface)
-    return response
+    request_json.update({'message': response})
+    return request_json
 
 
 APP.add_api_route(
     "/query",
     reasoner_api,
     methods=["POST"],
-    response_model=Message,
+    response_model=ReasonerRequest,
     summary="Query Reasoner API",
     description="Given a question graph return question graph plus answers.",
     tags=["translator"]
@@ -87,7 +88,7 @@ APP.add_api_route(
     "/reasonerapi",
     reasoner_api,
     methods=["POST"],
-    response_model=Message,
+    response_model=ReasonerRequest,
     deprecated=True,
 )
 

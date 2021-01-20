@@ -42,27 +42,7 @@ class Question:
         print(f'grabbing results took {end - s}')
         results_dict = graph_interface.convert_to_dict(results)
         self._question_json.update(results_dict[0])
-        self.add_type_to_attributes(self._question_json[Question.KNOWLEDGE_GRAPH_KEY][Question.NODES_LIST_KEY])
-        self.add_type_to_attributes(self._question_json[Question.KNOWLEDGE_GRAPH_KEY][Question.EDGES_LIST_KEY])
         return self._question_json
-
-    def add_type_to_attributes(self, items):
-        """
-        Adds Data type curie to attributes
-        :param items: Nodes list or edges list
-        :return:
-        """
-        # basic python types to curie
-
-        for key in items:
-            item = items[key]
-            if 'attributes' in item:
-                for attribute in item['attributes']:
-                    value = attribute.get('value')
-                    if value:
-                        # Assigning type as associative array for now,
-                        # but needs to be more semantic (?) than just computer Data type.
-                        attribute['type'] = "WIKIDATA:Q80585"
 
     @staticmethod
     def transform_schema_to_question_template(graph_schema):
