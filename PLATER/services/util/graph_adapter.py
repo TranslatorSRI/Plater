@@ -176,7 +176,7 @@ class GraphInterface:
                 ancestors = set(self.toolkit.get_ancestors(x, reflexive=False, formatted=True))
                 ancestry_set = ancestry_set.union(ancestors)
             leaf_set = all_concepts - ancestry_set
-            return all_concepts
+            return leaf_set
 
         def get_schema(self):
             """
