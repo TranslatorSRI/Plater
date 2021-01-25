@@ -5,6 +5,8 @@ import httpx
 
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
+from bmt import Toolkit
+
 
 logger = LoggingUtil.init_logging(__name__,
                                   config.get('logging_level'),
@@ -160,6 +162,21 @@ class GraphInterface:
             self.driver = Neo4jHTTPDriver(host=host, port=port, auth=auth)
             self.schema = None
             self.summary = None
+            self.toolkit = Toolkit()
+
+        def find_biolink_leaves(self, biolink_concepts: list):
+            """
+            Given a list of biolink concepts, returns the leaves removing any parent concepts.
+            :param biolink_concepts: list of biolink concepts
+            :return: leave concepts.
+            """
+            ancestry_set = set()
+            all_concepts = set(biolink_concepts)
+            for x in all_concepts:
+                ancestors = set(self.toolkit.get_ancestors(x, reflexive=False, formatted=True))
+                ancestry_set = ancestry_set.union(ancestors)
+            leaf_set = all_concepts - ancestry_set
+            return leaf_set
 
         def get_schema(self):
             """
@@ -185,9 +202,13 @@ class GraphInterface:
                 # replacement for unwind for previous cypher
                 structured_expanded = []
                 for triplet in structured:
-                    source_labels, predicate, target_labels = triplet['source_labels'], \
+                    # Since there are some nodes in data currently just one label ['biolink:NamedThing']
+                    # This filter is to avoid that scenario.
+                    # @TODO need to remove this filter when data build avoids adding nodes with single ['biolink:NamedThing'] labels.
+                    filter_named_thing = lambda x: filter(lambda y: y != 'biolink:NamedThing', x)
+                    source_labels, predicate, target_labels = self.find_biolink_leaves(filter_named_thing(triplet['source_labels'])), \
                                                               triplet['predicate'], \
-                                                              triplet['target_labels']
+                                                              self.find_biolink_leaves(filter_named_thing(triplet['target_labels']))
                     for source_label in source_labels:
                         for target_label in target_labels:
                             structured_expanded.append(
