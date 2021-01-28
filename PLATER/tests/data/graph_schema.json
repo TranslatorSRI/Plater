@@ -1,12 +1,15 @@
 {
-  "chemical_substance": {
-      "gene": [
-          "directly_interacts_with"
+  "biolink:ChemicalSubstance": {
+      "biolink:Gene": [
+          "biolink:directly_interacts_with"
+      ],
+    "biolink:Disease": [
+        "biolink:treats"
       ]
   },
-  "gene": {
-      "disease": [
-          "has_basis_in"
+  "biolink:Gene": {
+      "biolink:Disease": [
+          "biolink:has_basis_in"
       ]
   }
  }

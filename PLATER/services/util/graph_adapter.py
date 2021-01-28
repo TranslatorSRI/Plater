@@ -178,6 +178,15 @@ class GraphInterface:
             leaf_set = all_concepts - ancestry_set
             return leaf_set
 
+        def invert_predicate(self, biolink_predicate):
+            """Given a biolink predicate, find its inverse"""
+            element = self.toolkit.get_element(biolink_predicate)
+            if element is None:
+                return None
+            if 'inverse' not in element:
+                return None
+            return element['inverse']
+
         def get_schema(self):
             """
             Gets the schema of the graph. To be used by. Also generates graph summary
@@ -234,8 +243,10 @@ class GraphInterface:
                         schema_bag[objct] = {}
                     if subject not in schema_bag[objct]:
                         schema_bag[objct][subject] = []
-                    if predicate not in schema_bag[objct][subject]:
-                        schema_bag[objct][subject].append(predicate)
+                    #If we invert the order of the nodes we also have to invert the predicate
+                    inverse_predicate = self.invert_predicate(predicate)
+                    if inverse_predicate is not None and inverse_predicate not in schema_bag[objct][subject]:
+                        schema_bag[objct][subject].append(inverse_predicate)
                 self.schema = schema_bag
                 logger.info("schema done.")
                 if not self.summary:
