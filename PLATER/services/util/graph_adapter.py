@@ -241,7 +241,9 @@ class GraphInterface:
 
                     #If we invert the order of the nodes we also have to invert the predicate
                     inverse_predicate = self.invert_predicate(predicate)
-                    if inverse_predicate is not None and inverse_predicate not in schema_bag[objct][subject]:
+                    if inverse_predicate is not None and \
+                            inverse_predicate not in schema_bag.get(objct,{}).get(subject,[]):
+                        # create the list if empty
                         if objct not in schema_bag:
                             schema_bag[objct] = {}
                         if subject not in schema_bag[objct]:
