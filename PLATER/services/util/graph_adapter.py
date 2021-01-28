@@ -183,9 +183,9 @@ class GraphInterface:
             element = self.toolkit.get_element(biolink_predicate)
             if element is None:
                 return None
-            if 'inverse' not in element:
+            if 'inverse' not in element or not element['inverse']:
                 return None
-            return element['inverse']
+            return self.toolkit.get_element(element['inverse']).slot_uri
 
         def get_schema(self):
             """
@@ -238,14 +238,14 @@ class GraphInterface:
                         schema_bag[subject][objct] = []
                     if predicate not in schema_bag[subject][objct]:
                         schema_bag[subject][objct].append(predicate)
-                    # do reverse
-                    if objct not in schema_bag:
-                        schema_bag[objct] = {}
-                    if subject not in schema_bag[objct]:
-                        schema_bag[objct][subject] = []
+
                     #If we invert the order of the nodes we also have to invert the predicate
                     inverse_predicate = self.invert_predicate(predicate)
                     if inverse_predicate is not None and inverse_predicate not in schema_bag[objct][subject]:
+                        if objct not in schema_bag:
+                            schema_bag[objct] = {}
+                        if subject not in schema_bag[objct]:
+                            schema_bag[objct][subject] = []
                         schema_bag[objct][subject].append(inverse_predicate)
                 self.schema = schema_bag
                 logger.info("schema done.")
