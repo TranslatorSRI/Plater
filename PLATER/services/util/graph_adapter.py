@@ -162,7 +162,9 @@ class GraphInterface:
             self.driver = Neo4jHTTPDriver(host=host, port=port, auth=auth)
             self.schema = None
             self.summary = None
-            self.toolkit = Toolkit()
+            self.bl_version = config.get('BL_VERSION', '1.5.0')
+            self.bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/{self.bl_version}/biolink-model.yaml'
+            self.toolkit = Toolkit(self.bl_url)
 
         def find_biolink_leaves(self, biolink_concepts: list):
             """
@@ -183,8 +185,13 @@ class GraphInterface:
             element = self.toolkit.get_element(biolink_predicate)
             if element is None:
                 return None
+            # If its symmetric
+            if 'symmetric' in element and element.symmetric:
+                return biolink_predicate
+            # if neither symmetric nor an inverse is found
             if 'inverse' not in element or not element['inverse']:
                 return None
+            # if an inverse is found
             return self.toolkit.get_element(element['inverse']).slot_uri
 
         def get_schema(self):
