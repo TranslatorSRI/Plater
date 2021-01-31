@@ -460,8 +460,3 @@ class GraphInterface:
     def __getattr__(self, item):
         # proxy function calls to the inner object.
         return getattr(self.instance, item)
-
-if __name__ == '__main__':
-    toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/1.5.0/biolink-model.yaml')
-    x = toolkit.get_element('biolink:GeneOrGeneProduct')
-    print(x)
