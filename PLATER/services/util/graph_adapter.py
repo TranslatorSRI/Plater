@@ -110,7 +110,7 @@ class Neo4jHTTPDriver:
         response = httpx.post(
             self._full_transaction_path,
             headers=self._header,
-            timeout=600,
+            timeout=1500,
             json=payload).json()
         errors = response.get('errors')
         if errors:
