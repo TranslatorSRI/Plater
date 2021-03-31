@@ -5,7 +5,7 @@ pytest-asyncio==0.14.0
 starlette==0.13.6
 uvicorn==0.11.7
 git+git://github.com/patrickkwang/biolink-model-toolkit@master#egg=bmt
-git+https://github.com/ranking-agent/reasoner.git
-git+https://github.com/TranslatorSRI/reasoner-pydantic@v1.0#egg=reasoner-pydantic
+git+https://github.com/ranking-agent/reasoner.git@main#egg=reasoner
+git+https://github.com/TranslatorSRI/reasoner-pydantic#egg=reasoner-pydantic
 git+https://github.com/patrickkwang/fastapi#egg=fastapi
 httpx
