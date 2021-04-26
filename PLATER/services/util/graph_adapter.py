@@ -49,8 +49,8 @@ class Neo4jHTTPDriver:
         Pings the neo4j backend.
         :return:
         """
-        neo4j_db_labels_endpoint = "/db/data/labels"
-        ping_url = f"{self._scheme}://{self._host}:{self._port}{neo4j_db_labels_endpoint}"
+        neo4j_test_connection_endpoint = ""
+        ping_url = f"{self._scheme}://{self._host}:{self._port}/{neo4j_test_connection_endpoint}"
         # if we can't contact neo4j, we should exit.
         try:
             import time
