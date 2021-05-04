@@ -1,15 +1,13 @@
 """FastAPI app."""
 import os
 
-from fastapi import  FastAPI, APIRouter
-from starlette.applications import Starlette
-from starlette.routing import Mount
+from fastapi import  FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.app_trapi_1_0 import APP_TRAPI_1_0
 from PLATER.services.app_trapi_1_1 import APP_TRAPI_1_1
-
+from PLATER.services.util.api_utils import construct_open_api_schema
 
 TITLE = config.get('PLATER_TITLE', 'Plater API')
 VERSION = os.environ.get('PLATER_VERSION', '1.0.0')
@@ -25,6 +23,7 @@ APP = FastAPI()
 APP.include_router(APP_TRAPI_1_1.router)
 APP.include_router(APP_TRAPI_1_0.router)
 
+APP.openapi_schema = construct_open_api_schema(app=APP, trapi_version='1.0')
 
 # CORS
 APP.add_middleware(
