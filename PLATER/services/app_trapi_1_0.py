@@ -327,16 +327,3 @@ APP_TRAPI_1_0.add_api_route(
 
 
 APP_TRAPI_1_0.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_0, trapi_version="1.0")
-
-# CORS
-APP_TRAPI_1_0.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(APP_TRAPI_1_0, host='0.0.0.0', port=8080)

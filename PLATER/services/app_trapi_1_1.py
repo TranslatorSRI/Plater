@@ -52,8 +52,3 @@ APP_TRAPI_1_1.add_api_route(
 )
 
 APP_TRAPI_1_1.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_1, trapi_version="1.1")
-
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(APP_TRAPI_1_1, host='0.0.0.0', port=8080)
-
