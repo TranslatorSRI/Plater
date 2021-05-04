@@ -22,13 +22,39 @@ class Question:
     EDGE_BINDINGS_KEY='edge_bindings'
     CURIE_KEY = 'curie'
 
-    def __init__(self, question_json):
+    def __init__(self, question_json, trapi_version="1.0"):
+        self.trapi_version  = trapi_version
         self._question_json = copy.deepcopy(question_json)
 
     def compile_cypher(self):
-        return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
+        return get_query(self.get_trapi_1_0_qgraph()[Question.QUERY_GRAPH_KEY])
 
-    async def answer(self, graph_interface: GraphInterface):
+    def get_trapi_1_0_qgraph(self):
+        """
+        Temporary conversion till reasoner transpiler full supports trapi 1.1
+        :return:
+        """
+        if self.trapi_version == '1.0':
+            return self._question_json
+
+        elif self.trapi_version == '1.1':
+            q_graph = copy.deepcopy(self._question_json)
+            for node_id in q_graph[Question.QUERY_GRAPH_KEY][Question.NODES_LIST_KEY]:
+                node = q_graph[Question.QUERY_GRAPH_KEY][Question.NODES_LIST_KEY][node_id]
+                if 'ids' in node:
+                    node['id'] = node['ids']
+                    del node['ids']
+                if 'categories' in node:
+                    node['category'] = node['categories']
+                    del node['categories']
+            for edge_key in q_graph[Question.QUERY_GRAPH_KEY][Question.EDGES_LIST_KEY]:
+                edge = q_graph[Question.QUERY_GRAPH_KEY][Question.EDGES_LIST_KEY][edge_key]
+                if 'predicates' in edge:
+                    edge['predicate'] = edge['predicates']
+                    del edge['predicates']
+            return q_graph
+
+    async def answer(self, graph_interface: GraphInterface, trapi_version=1.0):
         """
         Updates the query graph with answers from the neo4j backend
         :param graph_interface: interface for neo4j
