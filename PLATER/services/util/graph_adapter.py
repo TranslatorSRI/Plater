@@ -162,6 +162,7 @@ class GraphInterface:
             self.driver = Neo4jHTTPDriver(host=host, port=port, auth=auth)
             self.schema = None
             self.summary = None
+            self.meta_kg = None
             self.bl_version = config.get('BL_VERSION', '1.5.0')
             self.bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/{self.bl_version}/biolink-model.yaml'
             self.toolkit = Toolkit(self.bl_url)
@@ -418,6 +419,43 @@ class GraphInterface:
                 response = await self.run_cypher(query)
                 final = list(map(lambda node: node[source], self.driver.convert_to_dict(response)))
                 return final
+
+        def get_curie_prefix_by_node_type(self, node_type):
+            query = f"""
+            MATCH (n:`{node_type}`) return collect(n.id) as ids
+            """
+            logger.info(f"starting query {query} on graph... this might take a few")
+            result = self.driver.run_sync(query)
+            logger.info(f"completed query, collecting node curie prefixes")
+            result = self.convert_to_dict(result)
+            curie_prefixes = set()
+            for i in result[0]['ids']:
+                curie_prefixes.add(i.split(':')[0])
+            return curie_prefixes
+
+        async def get_meta_kg(self):
+            if self.meta_kg:
+                return self.meta_kg
+            schema = self.get_schema()
+            nodes = {}
+            predicates = []
+            for subject in schema:
+                for object in schema[subject]:
+                    for edge_type in schema[subject][object]:
+                        predicates.append({
+                            'subject': subject,
+                            'object': object,
+                            'predicate': edge_type
+                        })
+                    if object not in nodes:
+                        nodes[object] = {'id_prefixes': list(self.get_curie_prefix_by_node_type(object))}
+                if subject not in nodes:
+                    nodes[subject] = {'id_prefixes': list(self.get_curie_prefix_by_node_type(subject))}
+            self.meta_kg = {
+                'nodes': nodes,
+                'edges': predicates
+            }
+            return self.meta_kg
 
         def supports_apoc(self):
             """
