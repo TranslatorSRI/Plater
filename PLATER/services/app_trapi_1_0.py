@@ -1,51 +1,23 @@
 """FastAPI app."""
 import json
 import os
-import yaml
 from typing import Any, Dict, List
 
-from fastapi import Body, Depends, FastAPI
+from fastapi import Body, Depends, FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.utils import get_openapi
 
-from PLATER.services.models import (
+from PLATER.models.models_trapi_1_0 import (
     Message, ReasonerRequest, CypherRequest, SimpleSpecResponse, SimpleSpecElement,
     GraphSummaryResponse, CypherResponse, PredicatesResponse
 )
-from PLATER.services.config import config
 from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.question import Question
-
-TITLE = config.get('PLATER_TITLE', 'Plater API')
-VERSION = os.environ.get('PLATER_VERSION', '1.0.0')
-
-logger = LoggingUtil.init_logging(
-    __name__,
-    config.get('logging_level'),
-    config.get('logging_format'),
-)
-
-APP = FastAPI()
+from PLATER.services.util.api_utils import get_graph_interface, get_bl_helper, construct_open_api_schema
 
 
-def get_graph_interface():
-    """Get graph interface."""
-    return GraphInterface(
-        config.get('NEO4J_HOST'),
-        config.get('NEO4J_HTTP_PORT'),
-        (
-            config.get('NEO4J_USERNAME'),
-            config.get('NEO4J_PASSWORD')
-        )
-    )
-
-
-def get_bl_helper():
-    """Get Biolink helper."""
-    return BLHelper(config.get('BL_HOST', 'https://bl-lookup-sri.renci.org'))
+APP_TRAPI_1_0 = FastAPI(openapi_url='/1.0/openapi.json', docs_url='/1.0/docs')
 
 
 def get_example(operation: str):
@@ -74,7 +46,7 @@ async def reasoner_api(
     return request_json
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/query",
     reasoner_api,
     methods=["POST"],
@@ -84,7 +56,7 @@ APP.add_api_route(
     tags=["translator"]
 )
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/reasonerapi",
     reasoner_api,
     methods=["POST"],
@@ -109,7 +81,7 @@ async def cypher(
     return results
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/cypher",
     cypher,
     methods=["POST"],
@@ -130,7 +102,7 @@ async def predicates(
     return graph_interface.get_schema()
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/predicates",
     predicates,
     methods=["GET"],
@@ -145,7 +117,7 @@ APP.add_api_route(
 )
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/graph/schema",
     predicates,
     methods=["GET"],
@@ -205,7 +177,7 @@ async def simple_spec(
         return reformatted_schema
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/simple_spec",
     simple_spec,
     methods=["GET"],
@@ -228,7 +200,7 @@ async def get_reasoner_api(
     )
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/reasonerapi",
     get_reasoner_api,
     methods=["GET"],
@@ -249,7 +221,7 @@ async def graph_summary(
     return graph_interface.summary
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/graph/summary",
     graph_summary,
     methods=["GET"],
@@ -271,7 +243,7 @@ async def overlay(
     return await overlay_class.overlay_support_edges(request.dict()["message"])
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/overlay",
     overlay,
     methods=["POST"],
@@ -291,7 +263,7 @@ async def about() -> Any:
         return json.load(f)
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/about",
     about,
     methods=["GET"],
@@ -315,7 +287,7 @@ async def one_hop(
     )
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/{source_type}/{target_type}/{curie}",
     one_hop,
     methods=["GET"],
@@ -344,7 +316,7 @@ async def node(
     )
 
 
-APP.add_api_route(
+APP_TRAPI_1_0.add_api_route(
     "/{node_type}/{curie}",
     node,
     methods=["GET"],
@@ -354,58 +326,10 @@ APP.add_api_route(
 )
 
 
-def construct_open_api_schema():
-
-    if APP.openapi_schema:
-        return APP.openapi_schema
-    open_api_schema = get_openapi(
-        title=TITLE,
-        version=VERSION,
-        description='',
-        routes=APP.routes
-    )
-
-    open_api_extended_file_path = config.get_resource_path('../openapi-config.yaml')
-    with open(open_api_extended_file_path) as open_api_file:
-        open_api_extended_spec = yaml.load(open_api_file, Loader=yaml.SafeLoader)
-
-    x_translator_extension = open_api_extended_spec.get("x-translator")
-    contact_config = open_api_extended_spec.get("contact")
-    terms_of_service = open_api_extended_spec.get("termsOfService")
-    servers_conf = open_api_extended_spec.get("servers")
-    tags = open_api_extended_spec.get("tags")
-    title_override = open_api_extended_spec.get("title") or TITLE
-    description = open_api_extended_spec.get("description")
-
-    if tags:
-        open_api_schema['tags'] = tags
-
-    if x_translator_extension:
-        # if x_translator_team is defined amends schema with x_translator extension
-        open_api_schema["info"]["x-translator"] = x_translator_extension
-
-    if contact_config:
-        open_api_schema["info"]["contact"] = contact_config
-
-    if terms_of_service:
-        open_api_schema["info"]["termsOfService"] = terms_of_service
-
-    if description:
-        open_api_schema["info"]["description"] = description
-
-    if title_override:
-        open_api_schema["info"]["title"] = title_override
-
-    if servers_conf:
-        open_api_schema["servers"] = servers_conf
-
-    return open_api_schema
-
-
-APP.openapi_schema = construct_open_api_schema()
+APP_TRAPI_1_0.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_0, trapi_version="1.0")
 
 # CORS
-APP.add_middleware(
+APP_TRAPI_1_0.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -413,3 +337,6 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(APP_TRAPI_1_0, host='0.0.0.0', port=8080)

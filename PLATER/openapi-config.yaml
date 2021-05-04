@@ -2,6 +2,9 @@
 x-translator:
   component: KP
   team: [] # add teams
+  biolink-version: # picked up from environment variable `BL_VERSION`
+x-trapi:
+  version: 1.0
 contact:
   email: "default@mail.org" # email
   name: "default-name" # name
