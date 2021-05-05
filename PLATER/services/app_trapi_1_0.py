@@ -3,8 +3,8 @@ import json
 import os
 from typing import Any, Dict, List
 
-from fastapi import Body, Depends, FastAPI, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Body, Depends, FastAPI
+from fastapi.responses import JSONResponse
 
 from PLATER.models.models_trapi_1_0 import (
     Message, ReasonerRequest, CypherRequest, SimpleSpecResponse, SimpleSpecElement,
@@ -37,13 +37,13 @@ async def reasoner_api(
             example=get_example("reasoner"),
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> Message:
+):
     """Handle TRAPI request."""
     request_json = request.dict()
     question = Question(request_json["message"])
     response = await question.answer(graph_interface)
     request_json.update({'message': response})
-    return request_json
+    return JSONResponse(request_json)
 
 
 APP_TRAPI_1_0.add_api_route(
@@ -326,4 +326,4 @@ APP_TRAPI_1_0.add_api_route(
 )
 
 
-APP_TRAPI_1_0.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_0, trapi_version="1.0")
+APP_TRAPI_1_0.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_0, trapi_version="1.0.0")

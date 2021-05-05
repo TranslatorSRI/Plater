@@ -22,37 +22,32 @@ class Question:
     EDGE_BINDINGS_KEY='edge_bindings'
     CURIE_KEY = 'curie'
 
-    def __init__(self, question_json, trapi_version="1.0"):
+    def __init__(self, question_json, trapi_version="1.0.0"):
         self.trapi_version  = trapi_version
         self._question_json = copy.deepcopy(question_json)
 
     def compile_cypher(self):
-        return get_query(self.get_trapi_1_0_qgraph()[Question.QUERY_GRAPH_KEY])
+        return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
 
-    def get_trapi_1_0_qgraph(self):
-        """
-        Temporary conversion till reasoner transpiler full supports trapi 1.1
-        :return:
-        """
-        if self.trapi_version == '1.0':
-            return self._question_json
+    def format_attribute_trapi_1_1 (self, kg_items):
+        for identifier in kg_items:
+            item  = kg_items[identifier]
+            attributes = item.get('attributes', {})
+            for attr in attributes:
+                attr['original_attribute_name'] = attr['name']
+                attr['attribute_type_id'] = 'biolink:Association'
+                if attr['type'] != 'NA': attr['value_type_id'] = attr['type']
+                if 'name' in attr: del attr['name']
+                if 'type' in attr: del attr['type']
+        return kg_items
 
-        elif self.trapi_version == '1.1':
-            q_graph = copy.deepcopy(self._question_json)
-            for node_id in q_graph[Question.QUERY_GRAPH_KEY][Question.NODES_LIST_KEY]:
-                node = q_graph[Question.QUERY_GRAPH_KEY][Question.NODES_LIST_KEY][node_id]
-                if 'ids' in node:
-                    node['id'] = node['ids']
-                    del node['ids']
-                if 'categories' in node:
-                    node['category'] = node['categories']
-                    del node['categories']
-            for edge_key in q_graph[Question.QUERY_GRAPH_KEY][Question.EDGES_LIST_KEY]:
-                edge = q_graph[Question.QUERY_GRAPH_KEY][Question.EDGES_LIST_KEY][edge_key]
-                if 'predicates' in edge:
-                    edge['predicate'] = edge['predicates']
-                    del edge['predicates']
-            return q_graph
+    def transform_attributes(self, trapi_message):
+        if self.trapi_version == "1.0.0":
+            return trapi_message
+        elif self.trapi_version == "1.1.0":
+            self.format_attribute_trapi_1_1(trapi_message['knowledge_graph']['nodes'])
+            self.format_attribute_trapi_1_1(trapi_message['knowledge_graph']['edges'])
+            return trapi_message
 
     async def answer(self, graph_interface: GraphInterface, trapi_version=1.0):
         """
@@ -67,7 +62,7 @@ class Question:
         end = time.time()
         print(f'grabbing results took {end - s}')
         results_dict = graph_interface.convert_to_dict(results)
-        self._question_json.update(results_dict[0])
+        self._question_json.update(self.transform_attributes(results_dict[0]))
         return self._question_json
 
     @staticmethod

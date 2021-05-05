@@ -11,7 +11,8 @@ contact:
   x-id: "default link" # link if available
   x-role: "default-role" # role
 termsOfService: "" # link to terms of service
-tags: [] # document wide tags
+tags:
+  - name: trapi
 description: "" # Description for the whole spec
 title: "" # title for the whole spec, overrides PLATER_TITLE env value
 servers:
