@@ -6,6 +6,6 @@ starlette==0.13.6
 uvicorn==0.11.7
 git+git://github.com/patrickkwang/biolink-model-toolkit@master#egg=bmt
 git+https://github.com/ranking-agent/reasoner.git@main#egg=reasoner
-git+https://github.com/TranslatorSRI/reasoner-pydantic#egg=reasoner-pydantic
+git+https://github.com/TranslatorSRI/reasoner-pydantic@trapi-v1.1#egg=reasoner-pydantic
 git+https://github.com/patrickkwang/fastapi#egg=fastapi
 httpx
