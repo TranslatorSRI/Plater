@@ -46,7 +46,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
     terms_of_service = open_api_extended_spec.get("termsOfService")
     servers_conf = open_api_extended_spec.get("servers")
     tags = open_api_extended_spec.get("tags")
-    title_override = open_api_extended_spec.get("title") or plater_title
+    title_override = (open_api_extended_spec.get("title") or plater_title) + f' (trapi v-{trapi_version})'
     description = open_api_extended_spec.get("description")
 
     if tags:
