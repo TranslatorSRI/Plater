@@ -35,8 +35,8 @@ class Question:
             attributes = item.get('attributes', {})
             for attr in attributes:
                 attr['original_attribute_name'] = attr['name']
-                attr['attribute_type_id'] = 'biolink:Association'
-                if attr['type'] != 'NA': attr['value_type_id'] = attr['type']
+                # uses Data as attribute type id if not defined
+                attr['attribute_type_id'] = attr['type'] if attr['type'] != 'NA' else 'EDAM:data_0006'
                 if 'name' in attr: del attr['name']
                 if 'type' in attr: del attr['type']
         return kg_items
