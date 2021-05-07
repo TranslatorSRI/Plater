@@ -1,11 +1,11 @@
 """FastAPI app."""
 
-from fastapi import Depends, FastAPI
+from fastapi import Body, Depends, FastAPI
 from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
 
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.question import Question
-from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema
+from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
 
 
 APP_TRAPI_1_1 = FastAPI(openapi_url="/1.1/openapi.json" ,docs_url="/1.1/docs")
@@ -20,7 +20,10 @@ async def get_meta_knowledge_graph(
 
 
 async def reasoner_api(
-        request: ReasonerRequest,
+        request: ReasonerRequest = Body(
+            ...,
+            example={"message": get_example("reasoner-trapi-1.1")},
+        ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ):
     """Handle TRAPI request."""

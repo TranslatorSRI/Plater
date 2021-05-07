@@ -1,6 +1,7 @@
 import yaml
 
 from fastapi.openapi.utils import get_openapi
+import json
 import os
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.bl_helper import BLHelper
@@ -79,3 +80,15 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
     open_api_schema["info"]["x-trapi"] = {"version": trapi_version}
 
     return open_api_schema
+
+
+def get_example(operation: str):
+    """Get example for operation."""
+    with open(os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "examples",
+        f"{operation}.json",
+    )) as stream:
+        return json.load(stream)

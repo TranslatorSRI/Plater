@@ -14,21 +14,12 @@ from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.question import Question
-from PLATER.services.util.api_utils import get_graph_interface, get_bl_helper, construct_open_api_schema
+from PLATER.services.util.api_utils import get_graph_interface, get_bl_helper, construct_open_api_schema, get_example
 
 
 APP_TRAPI_1_0 = FastAPI(openapi_url='/1.0/openapi.json', docs_url='/1.0/docs')
 
 
-def get_example(operation: str):
-    """Get example for operation."""
-    with open(os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "examples",
-        f"{operation}.json",
-    )) as stream:
-        return json.load(stream)
 
 
 async def reasoner_api(
