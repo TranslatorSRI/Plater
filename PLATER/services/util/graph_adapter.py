@@ -431,7 +431,11 @@ class GraphInterface:
             curie_prefixes = set()
             for i in result[0]['ids']:
                 curie_prefixes.add(i.split(':')[0])
-            return curie_prefixes
+            # sort according to bl model
+            node_bl_def = self.toolkit.get_element(node_type)
+            id_prefixes = node_bl_def.id_prefixes
+            sorted_curie_prefixes = [i for i in id_prefixes if i in curie_prefixes]
+            return sorted_curie_prefixes
 
         async def get_meta_kg(self):
             if self.meta_kg:
