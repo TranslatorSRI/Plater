@@ -434,7 +434,9 @@ class GraphInterface:
             # sort according to bl model
             node_bl_def = self.toolkit.get_element(node_type)
             id_prefixes = node_bl_def.id_prefixes
-            sorted_curie_prefixes = [i for i in id_prefixes if i in curie_prefixes]
+            sorted_curie_prefixes = [i for i in id_prefixes if i in curie_prefixes] # gives presidence to what's in BL
+            # add other ids even if not in BL next
+            sorted_curie_prefixes = [i for i in curie_prefixes if i not in sorted_curie_prefixes]
             return sorted_curie_prefixes
 
         async def get_meta_kg(self):
