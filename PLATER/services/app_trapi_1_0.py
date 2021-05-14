@@ -33,7 +33,7 @@ async def reasoner_api(
     request_json = request.dict()
     question = Question(request_json["message"])
     response = await question.answer(graph_interface)
-    request_json.update({'message': response})
+    request_json.update({"message": response})
     return JSONResponse(request_json)
 
 

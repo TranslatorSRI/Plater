@@ -1,2 +1,2 @@
-from reasoner_pydantic import Query as ReasonerRequest, Message, Response, BiolinkEntity, BiolinkPredicate, MetaNode, MetaEdge , MetaKnowledgeGraph
+from PLATER.models.shared import ReasonerRequest, Message, Response, MetaKnowledgeGraph
 

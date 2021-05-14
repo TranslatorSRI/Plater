@@ -2,7 +2,7 @@
 from typing import Dict, List, Union
 
 from pydantic import BaseModel, constr
-from reasoner_pydantic import Message , Query as ReasonerRequest
+from PLATER.models.shared import Message, ReasonerRequest
 
 
 class CypherRequest(BaseModel):
