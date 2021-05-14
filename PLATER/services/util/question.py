@@ -31,7 +31,7 @@ class Question:
 
     def format_attribute_trapi_1_1 (self, kg_items):
         for identifier in kg_items:
-            item  = kg_items[identifier]
+            item = kg_items[identifier]
             attributes = item.get('attributes', {})
             for attr in attributes:
                 attr['original_attribute_name'] = attr['name']
@@ -49,10 +49,11 @@ class Question:
             self.format_attribute_trapi_1_1(trapi_message['knowledge_graph']['edges'])
             return trapi_message
 
-    async def answer(self, graph_interface: GraphInterface, trapi_version=1.0):
+    async def answer(self, graph_interface: GraphInterface, trapi_version="1.0.0"):
         """
         Updates the query graph with answers from the neo4j backend
         :param graph_interface: interface for neo4j
+        :param trapi_version: supported TRAPI api version
         :return: None
         """
         cypher = self.compile_cypher()
