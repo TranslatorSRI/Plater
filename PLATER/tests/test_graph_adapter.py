@@ -5,6 +5,7 @@ from PLATER.services.util.graph_adapter import Neo4jHTTPDriver, GraphInterface
 from pytest_httpx import HTTPXMock
 import pytest
 from unittest.mock import patch
+import os
 
 
 def test_neo4j_http_driver_ping_success(httpx_mock: HTTPXMock):
@@ -157,10 +158,8 @@ async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
 
     httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''))
-    with open('./data/schema_cypher_response.json') as f:
+    with open( os.path.join(os.path.dirname(__file__), 'data', 'schema_cypher_response.json'))as f:
         get_schema_response_json = json.load(f)
-    with open('./data/node_counts_cypher_response.json') as f:
-        node_counts_response_json = json.load(f)
     httpx_mock.add_response(url="http://localhost:7474/db/data/transaction/commit", method="POST", status_code=200,
                             match_content=json.dumps({
                                 "statements": [
