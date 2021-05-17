@@ -10,3 +10,4 @@ git+https://github.com/ranking-agent/reasoner.git@main#egg=reasoner
 git+https://github.com/TranslatorSRI/reasoner-pydantic@v1.1.0#egg=reasoner-pydantic
 httpx
 pytest-httpx
+h11==0.12.0
