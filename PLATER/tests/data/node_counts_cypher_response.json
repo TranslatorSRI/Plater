@@ -1,0 +1,49 @@
+{
+  "results": [
+    {
+      "columns": [
+        "types",
+        "count"
+      ],
+      "data": [
+        {
+          "row": [
+            [
+              "biolink:NamedThing",
+              "biolink:BiologicalEntity",
+              "biolink:Disease",
+              "biolink:DiseaseOrPhenotypicFeature"
+            ],
+            11
+          ],
+          "meta": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "row": [
+            [
+              "biolink:NamedThing",
+              "biolink:BiologicalEntity",
+              "biolink:DiseaseOrPhenotypicFeature",
+              "biolink:PhenotypicFeature"
+            ],
+            14
+          ],
+          "meta": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

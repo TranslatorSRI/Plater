@@ -29,14 +29,15 @@ class Question:
     def compile_cypher(self):
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
 
-    def format_attribute_trapi_1_1 (self, kg_items):
+    @staticmethod
+    def format_attribute_trapi_1_1 (kg_items):
         for identifier in kg_items:
             item = kg_items[identifier]
             attributes = item.get('attributes', {})
             for attr in attributes:
                 attr['original_attribute_name'] = attr['name']
                 # uses Data as attribute type id if not defined
-                attr['attribute_type_id'] = attr['type'] if attr['type'] != 'NA' else 'EDAM:data_0006'
+                attr['attribute_type_id'] = attr['type'] if 'type' in attr and attr['type'] != 'NA' else 'EDAM:data_0006'
                 if 'name' in attr: del attr['name']
                 if 'type' in attr: del attr['type']
         return kg_items
@@ -45,15 +46,14 @@ class Question:
         if self.trapi_version == "1.0.0":
             return trapi_message
         elif self.trapi_version == "1.1.0":
-            self.format_attribute_trapi_1_1(trapi_message['knowledge_graph']['nodes'])
-            self.format_attribute_trapi_1_1(trapi_message['knowledge_graph']['edges'])
+            self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('nodes', {}))
+            self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph').get('edges', {}))
             return trapi_message
 
-    async def answer(self, graph_interface: GraphInterface, trapi_version="1.0.0"):
+    async def answer(self, graph_interface: GraphInterface):
         """
         Updates the query graph with answers from the neo4j backend
         :param graph_interface: interface for neo4j
-        :param trapi_version: supported TRAPI api version
         :return: None
         """
         cypher = self.compile_cypher()
