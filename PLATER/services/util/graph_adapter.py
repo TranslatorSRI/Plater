@@ -232,7 +232,7 @@ class GraphInterface:
                 structured = self.convert_to_dict(result)
                 self.schema_raw_result = structured
                 schema_bag = {}
-                # permtuate source labels and target labels array
+                # permute source labels and target labels array
                 # replacement for unwind for previous cypher
                 structured_expanded = []
                 for triplet in structured:
