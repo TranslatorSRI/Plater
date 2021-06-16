@@ -31,9 +31,11 @@ async def reasoner_api(
 ):
     """Handle TRAPI request."""
     request_json = request.dict()
-    question = Question(request_json["message"])
+    question = Question(request.dict(by_alias=True)["message"])
     response = await question.answer(graph_interface)
+    response['query_graph'] = request_json["message"]["query_graph"]
     request_json.update({"message": response})
+    # return as raw json, to preserve original question. Else Pydantic will upcast incoming query graph to Trapi 1.1.0
     return JSONResponse(request_json)
 
 

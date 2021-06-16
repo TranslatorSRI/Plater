@@ -22,8 +22,7 @@ class Question:
     EDGE_BINDINGS_KEY='edge_bindings'
     CURIE_KEY = 'curie'
 
-    def __init__(self, question_json, trapi_version="1.0.0"):
-        self.trapi_version  = trapi_version
+    def __init__(self, question_json):
         self._question_json = copy.deepcopy(question_json)
 
     def compile_cypher(self):
@@ -35,20 +34,19 @@ class Question:
             item = kg_items[identifier]
             attributes = item.get('attributes', {})
             for attr in attributes:
-                attr['original_attribute_name'] = attr['name']
+                attr['original_attribute_name'] = attr['original_attribute_name'] or ''
                 # uses Data as attribute type id if not defined
-                attr['attribute_type_id'] = attr['type'] if 'type' in attr and attr['type'] != 'NA' else 'EDAM:data_0006'
-                if 'name' in attr: del attr['name']
-                if 'type' in attr: del attr['type']
+                if not('attribute_type_id' in attr and attr['attribute_type_id'] != 'NA'):
+                    attr['attribute_type_id'] = 'EDAM:data_0006'
+                if not('value_type_id' in attr and attr['value_type_id'] != 'NA'):
+                    # fix for issue https://github.com/RENCI-AUTOMAT/Automat-server/issues/15
+                    attr['value_type_id'] = 'biolink:Attribute'
         return kg_items
 
     def transform_attributes(self, trapi_message):
-        if self.trapi_version == "1.0.0":
-            return trapi_message
-        elif self.trapi_version == "1.1.0":
-            self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('nodes', {}))
-            self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph').get('edges', {}))
-            return trapi_message
+        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('nodes', {}))
+        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('edges', {}))
+        return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):
         """

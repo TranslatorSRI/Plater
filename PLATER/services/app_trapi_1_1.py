@@ -7,8 +7,8 @@ from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.question import Question
 from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
 
-
-APP_TRAPI_1_1 = FastAPI(openapi_url="/1.1/openapi.json" ,docs_url="/1.1/docs")
+# Mount open api at /1.1/openapi.json
+APP_TRAPI_1_1 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", openapi_prefix='/1.1')
 
 
 async def get_meta_knowledge_graph(
@@ -27,15 +27,15 @@ async def reasoner_api(
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ):
     """Handle TRAPI request."""
-    request_json = request.dict()
-    question = Question(request_json["message"], trapi_version='1.1.0')
+    request_json = request.dict(by_alias=True)
+    question = Question(request_json["message"])
     response = await question.answer(graph_interface)
     request_json.update({'message': response})
     return request_json
 
 
 APP_TRAPI_1_1.add_api_route(
-    "/1.1/meta_knowledge_graph",
+    "/meta_knowledge_graph",
     get_meta_knowledge_graph,
     methods=["GET"],
     response_model=MetaKnowledgeGraph,
@@ -45,7 +45,7 @@ APP_TRAPI_1_1.add_api_route(
 )
 
 APP_TRAPI_1_1.add_api_route(
-    "/1.1/query",
+    "/query",
     reasoner_api,
     methods=["POST"],
     response_model=ReasonerRequest,
@@ -54,4 +54,4 @@ APP_TRAPI_1_1.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_1.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_1, trapi_version="1.1.0")
+APP_TRAPI_1_1.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_1, trapi_version="1.1.0", prefix='/1.1')

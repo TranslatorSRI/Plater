@@ -10,34 +10,32 @@ def test_init():
             }
     }
     question = Question(reasoner_dict)
-    assert question.trapi_version == "1.0.0"
     assert question._question_json == reasoner_dict
-    question = Question(reasoner_dict, trapi_version='1.0.1')
-    assert question.trapi_version == '1.0.1'
     assert question._question_json == reasoner_dict
 
 
 def test_format_attribute():
-    trapi_kg_response = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [{"name": "pub", "type": "CURIE:x", "value": "x"}]}}}}
-    q = Question(question_json={}, trapi_version="1.0.0")
-    assert trapi_kg_response["knowledge_graph"] == q.transform_attributes(trapi_kg_response["knowledge_graph"])
-    expected_trapi_1_1 = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [{"attribute_type_id": "CURIE:x", "value": "x", "original_attribute_name":"pub"}]}} }}
-    q = Question(question_json={}, trapi_version="1.1.0")
-    assert q.transform_attributes(trapi_kg_response) == expected_trapi_1_1
-    expected_trapi_1_1 = {
+    trapi_kg_response = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [{"original_attribute_name": "pub", "attribute_type_id": "CURIE:x"}]}}}}
+    expected_trapi = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [{"attribute_type_id": "CURIE:x", "value_type_id": "biolink:Attribute", "original_attribute_name":"pub"}]}} }}
+    q = Question(question_json={})
+    # test if attribute_id if provided from neo4j response is preserved
+    # test if value_type is added to default 'biolink:Attribute'
+    assert q.transform_attributes(trapi_kg_response) == expected_trapi
+    expected_trapi = {
         "knowledge_graph": {
             "nodes": {
                 "CURIE:1": {
-                    "attributes": [{"attribute_type_id": "EDAM:data_0006", "value": "x", "original_attribute_name": "pub"}]
+                    "attributes": [{"attribute_type_id": "EDAM:data_0006", "value": "x", "original_attribute_name": "pub", "value_type_id": "oo"}]
                 }
             }
         }
     }
     trapi_kg_response = {
-        "knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [{"name": "pub", "value": "x"}]}}}
+        "knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [{"original_attribute_name": "pub", "value": "x", "value_type_id": "oo"}]}}}
     }
     # test default attribute to be EDAM:data_0006
-    assert q.transform_attributes(trapi_kg_response) == expected_trapi_1_1
+    # test if value_type is preserved if in response from neo4j
+    assert q.transform_attributes(trapi_kg_response) == expected_trapi
 
 
 class MOCK_GRAPH_ADAPTER():

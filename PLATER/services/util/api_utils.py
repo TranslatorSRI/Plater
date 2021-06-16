@@ -36,8 +36,6 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
         description='',
         routes=app.routes,
     )
-    # dir_path = os.path.dirname(os.path.realpath(__file__))
-    # open_api_config_file = os.path.join(dir_path, '..', '..', 'openapi-config.yaml')
     open_api_extended_file_path = config.get_resource_path(f'../openapi-config.yaml')
     with open(open_api_extended_file_path) as open_api_file:
         open_api_extended_spec = yaml.load(open_api_file, Loader=yaml.SafeLoader)
