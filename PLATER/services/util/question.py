@@ -28,6 +28,26 @@ class Question:
     def compile_cypher(self):
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
 
+    @staticmethod
+    def format_attribute_trapi_1_1 (kg_items):
+        for identifier in kg_items:
+            item = kg_items[identifier]
+            attributes = item.get('attributes', {})
+            for attr in attributes:
+                attr['original_attribute_name'] = attr['original_attribute_name'] or ''
+                # uses Data as attribute type id if not defined
+                if not('attribute_type_id' in attr and attr['attribute_type_id'] != 'NA'):
+                    attr['attribute_type_id'] = 'EDAM:data_0006'
+                if not('value_type_id' in attr and attr['value_type_id'] != 'NA'):
+                    # fix for issue https://github.com/RENCI-AUTOMAT/Automat-server/issues/15
+                    attr['value_type_id'] = 'biolink:Attribute'
+        return kg_items
+
+    def transform_attributes(self, trapi_message):
+        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('nodes', {}))
+        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('edges', {}))
+        return trapi_message
+
     async def answer(self, graph_interface: GraphInterface):
         """
         Updates the query graph with answers from the neo4j backend
@@ -41,7 +61,7 @@ class Question:
         end = time.time()
         print(f'grabbing results took {end - s}')
         results_dict = graph_interface.convert_to_dict(results)
-        self._question_json.update(results_dict[0])
+        self._question_json.update(self.transform_attributes(results_dict[0]))
         return self._question_json
 
     @staticmethod

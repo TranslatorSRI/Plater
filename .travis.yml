@@ -1,0 +1,25 @@
+dist: xenial
+
+language: python
+python:
+  - "3.9"
+
+notifications:
+  email:
+    - kebedey@renci.org
+
+
+# command to install dependencies
+install:
+  - pip install -r PLATER/requirements.txt
+
+env:
+  global:
+    - PYTHONPATH=$PWD
+
+# command to run tests
+script:
+  - pytest -p no:warnings $PWD/PLATER/tests
+
+after_success:
+  - coveralls

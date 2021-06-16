@@ -6,7 +6,7 @@ from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
 import os
 
-from PLATER.services.app import APP, get_graph_interface
+from PLATER.services.app_trapi_1_0 import APP_TRAPI_1_0, get_graph_interface
 
 
 class MockGraphInterface(GraphInterface):
@@ -72,12 +72,12 @@ def graph_interface():
     return _graph_interface()
 
 
-APP.dependency_overrides[get_graph_interface] = _graph_interface
+APP_TRAPI_1_0.dependency_overrides[get_graph_interface] = _graph_interface
 
 
 @pytest.mark.asyncio
 async def test_node_response(graph_interface):
-    async with AsyncClient(app=APP, base_url="http://test") as ac:
+    async with AsyncClient(app=APP_TRAPI_1_0, base_url="http://test") as ac:
         response = await ac.get("/chemical_substance/curie")
     assert response.status_code == 200
     graph_response = await graph_interface.get_node('chemical_substance', 'curie')
@@ -86,7 +86,7 @@ async def test_node_response(graph_interface):
 
 @pytest.mark.asyncio
 async def test_one_hop_response(graph_interface):
-    async with AsyncClient(app=APP, base_url="http://test") as ac:
+    async with AsyncClient(app=APP_TRAPI_1_0, base_url="http://test") as ac:
         response = await ac.get("/chemical_substance/gene/CHEBI:11492")
     assert response.status_code == 200
     graph_response = await graph_interface.get_single_hops('chemical_substance', 'gene', 'CHEBI:11492')
@@ -96,7 +96,7 @@ async def test_one_hop_response(graph_interface):
 @pytest.mark.asyncio
 async def test_cypher_response(graph_interface):
     query = 'MATCH (n) return n limit 1'
-    async with AsyncClient(app=APP, base_url="http://test") as ac:
+    async with AsyncClient(app=APP_TRAPI_1_0, base_url="http://test") as ac:
         response = await ac.post("/cypher", json={
             "query": query
         })
@@ -107,7 +107,7 @@ async def test_cypher_response(graph_interface):
 
 @pytest.mark.asyncio
 async def test_graph_schema_response(graph_interface):
-    async with AsyncClient(app=APP, base_url="http://test") as ac:
+    async with AsyncClient(app=APP_TRAPI_1_0, base_url="http://test") as ac:
         response = await ac.get("/graph/schema")
     assert response.status_code == 200
     assert response.json() == graph_interface.get_schema()
@@ -117,7 +117,7 @@ async def test_graph_schema_response(graph_interface):
 async def test_simple_one_hop_spec_response(graph_interface):
     # with out parameters it should return all the questions based on that
     # send source parameter, target parameter
-    async with AsyncClient(app=APP, base_url="http://test") as ac:
+    async with AsyncClient(app=APP_TRAPI_1_0, base_url="http://test") as ac:
         response = await ac.get("/simple_spec")
     assert response.status_code == 200
     specs = response.json()
@@ -136,11 +136,11 @@ async def test_simple_one_hop_spec_response(graph_interface):
 
     # test source param
     source_type = list(schema.keys())[0]
-    async with AsyncClient(app=APP, base_url="http://test") as ac:
+    async with AsyncClient(app=APP_TRAPI_1_0, base_url="http://test") as ac:
         response = await ac.get("/simple_spec?source=SOME:CURIE")
     # response = client.get(f'/simple_spec?source=SOME:CURIE')
     assert response.status_code == 200
-    async with AsyncClient(app=APP, base_url="http://test") as ac:
+    async with AsyncClient(app=APP_TRAPI_1_0, base_url="http://test") as ac:
         response = await ac.get("/simple_spec?source=SOME:CURIE")
     # response = client.get(f'/simple_spec?target=SOME:CURIE')
     assert response.status_code == 200

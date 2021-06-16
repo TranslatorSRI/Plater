@@ -1,5 +1,7 @@
 ## PLATER
 
+![test batch](https://travis-ci.com/TranslatorSRI/Plater.svg?branch=master)
+
 PLATER is a service to stand up REST endpoint over a neo4j database.
 There are some restrictions on the data structure of the Neo4j backend to be fully utilized through PLATER.
 
@@ -36,7 +38,7 @@ To run the web server directly:
     NEO4J_HTTP_PORT=7474
     PLATER_TITLE='Plater'
     PLATER_VERSION='1.0.0'
-    
+    BL_VERSION='1.6.1'
 
    ```
    

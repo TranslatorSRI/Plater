@@ -2,7 +2,7 @@
 from typing import Dict, List, Union
 
 from pydantic import BaseModel, constr
-from reasoner_pydantic import Message , Query as ReasonerRequest
+from PLATER.models.shared import Message, ReasonerRequest
 
 
 class CypherRequest(BaseModel):
@@ -35,12 +35,6 @@ class TypeSummary(BaseModel):
             }
         }
 
-
-# class GraphSummaryResponse(BaseModel):
-#     __root__: Dict[TypeSet, TypeSummary]
-
-
-# print(GraphSummaryResponse.schema_json(indent=4))
 
 GraphSummaryResponse = Dict[TypeSet, TypeSummary]
 

@@ -15,7 +15,7 @@ logger = LoggingUtil.init_logging(__name__,
 
 
 class Neo4jHTTPDriver:
-    def __init__(self, host: str, port: int,  auth: set, scheme: str = 'http'):
+    def __init__(self, host: str, port: int,  auth: tuple, scheme: str = 'http'):
         self._host = host
         self._neo4j_transaction_endpoint = "/db/data/transaction/commit"
         self._scheme = scheme
@@ -41,6 +41,10 @@ class Neo4jHTTPDriver:
                 logger.error(f"[x] Problem contacting Neo4j server {self._host}:{self._port} -- {response.status_code}")
                 txt = response.text
                 logger.debug(f"[x] Server responded with {txt}")
+                try:
+                    return response.json()
+                except:
+                    return txt
             else:
                 return response.json()
 
@@ -88,10 +92,10 @@ class Neo4jHTTPDriver:
         response = await self.post_request_json(payload)
         errors = response.get('errors')
         if errors:
+            logger.error(f'Neo4j returned `{errors}` for cypher {query}.')
             if return_errors:
                 return response
-            logger.error(f'Neo4j returned `{errors}` for cypher {query}.')
-            raise RuntimeWarning(f'Error running cypher {query}.')
+            raise RuntimeWarning(f'Error running cypher {query}. {errors}')
         return response
 
     def run_sync(self, query):
@@ -162,6 +166,7 @@ class GraphInterface:
             self.driver = Neo4jHTTPDriver(host=host, port=port, auth=auth)
             self.schema = None
             self.summary = None
+            self.meta_kg = None
             self.bl_version = config.get('BL_VERSION', '1.5.0')
             self.bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/{self.bl_version}/biolink-model.yaml'
             self.toolkit = Toolkit(self.bl_url)
@@ -227,17 +232,18 @@ class GraphInterface:
                 structured = self.convert_to_dict(result)
                 self.schema_raw_result = structured
                 schema_bag = {}
-                # permituate source labels and target labels array
+                # permute source labels and target labels array
                 # replacement for unwind for previous cypher
                 structured_expanded = []
                 for triplet in structured:
                     # Since there are some nodes in data currently just one label ['biolink:NamedThing']
                     # This filter is to avoid that scenario.
-                    # @TODO need to remove this filter when data build avoids adding nodes with single ['biolink:NamedThing'] labels.
-                    filter_named_thing = lambda x: filter(lambda y: y != 'biolink:NamedThing', x)
-                    source_labels, predicate, target_labels = self.find_biolink_leaves(filter_named_thing(triplet['source_labels'])), \
-                                                              triplet['predicate'], \
-                                                              self.find_biolink_leaves(filter_named_thing(triplet['target_labels']))
+                    # @TODO need to remove this filter when data build
+                    #  avoids adding nodes with single ['biolink:NamedThing'] labels.
+                    filter_named_thing = lambda x: list(filter(lambda y: y != 'biolink:NamedThing', x))
+                    source_labels, predicate, target_labels =\
+                        self.find_biolink_leaves(filter_named_thing(triplet['source_labels'])), triplet['predicate'], \
+                        self.find_biolink_leaves(filter_named_thing(triplet['target_labels']))
                     for source_label in source_labels:
                         for target_label in target_labels:
                             structured_expanded.append(
@@ -259,7 +265,7 @@ class GraphInterface:
                     if predicate not in schema_bag[subject][objct]:
                         schema_bag[subject][objct].append(predicate)
 
-                    #If we invert the order of the nodes we also have to invert the predicate
+                    # If we invert the order of the nodes we also have to invert the predicate
                     inverse_predicate = self.invert_predicate(predicate)
                     if inverse_predicate is not None and \
                             inverse_predicate not in schema_bag.get(objct,{}).get(subject,[]):
@@ -418,6 +424,49 @@ class GraphInterface:
                 response = await self.run_cypher(query)
                 final = list(map(lambda node: node[source], self.driver.convert_to_dict(response)))
                 return final
+
+        def get_curie_prefix_by_node_type(self, node_type):
+            query = f"""
+            MATCH (n:`{node_type}`) return collect(n.id) as ids
+            """
+            logger.info(f"starting query {query} on graph... this might take a few")
+            result = self.driver.run_sync(query)
+            logger.info(f"completed query, collecting node curie prefixes")
+            result = self.convert_to_dict(result)
+            curie_prefixes = set()
+            for i in result[0]['ids']:
+                curie_prefixes.add(i.split(':')[0])
+            # sort according to bl model
+            node_bl_def = self.toolkit.get_element(node_type)
+            id_prefixes = node_bl_def.id_prefixes
+            sorted_curie_prefixes = [i for i in id_prefixes if i in curie_prefixes] # gives presidence to what's in BL
+            # add other ids even if not in BL next
+            sorted_curie_prefixes += [i for i in curie_prefixes if i not in sorted_curie_prefixes]
+            return sorted_curie_prefixes
+
+        async def get_meta_kg(self):
+            if self.meta_kg:
+                return self.meta_kg
+            schema = self.get_schema()
+            nodes = {}
+            predicates = []
+            for subject in schema:
+                for object in schema[subject]:
+                    for edge_type in schema[subject][object]:
+                        predicates.append({
+                            'subject': subject,
+                            'object': object,
+                            'predicate': edge_type
+                        })
+                    if object not in nodes:
+                        nodes[object] = {'id_prefixes': list(self.get_curie_prefix_by_node_type(object))}
+                if subject not in nodes:
+                    nodes[subject] = {'id_prefixes': list(self.get_curie_prefix_by_node_type(subject))}
+            self.meta_kg = {
+                'nodes': nodes,
+                'edges': predicates
+            }
+            return self.meta_kg
 
         def supports_apoc(self):
             """
