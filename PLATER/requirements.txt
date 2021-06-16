@@ -5,7 +5,7 @@ pytest==6.0
 pytest-asyncio==0.14.0
 starlette==0.13.6
 uvicorn==0.14.0
-git+https://github.com/ranking-agent/reasoner.git@4a4f1a229b7d9c8e19b3547b5bc9490f9606a4b5#egg=reasoner
+git+https://github.com/ranking-agent/reasoner.git@main#egg=reasoner
 git+https://github.com/TranslatorSRI/reasoner-pydantic@v1.1.0#egg=reasoner-pydantic
 httpx
 pytest-httpx==0.12.0
