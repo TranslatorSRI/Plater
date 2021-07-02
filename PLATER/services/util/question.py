@@ -48,6 +48,9 @@ class Question:
                 if not('value_type_id' in attr and attr['value_type_id'] != 'NA'):
                     # fix for issue https://github.com/RENCI-AUTOMAT/Automat-server/issues/15
                     attr['value_type_id'] = 'biolink:Attribute'
+                if attr['attribute_type_id'] == "biolink:original_knowledge_source":
+                    attr['value_type_id'] = 'biolink:InformationResource'
+
         return kg_items
 
     def transform_attributes(self, trapi_message):
