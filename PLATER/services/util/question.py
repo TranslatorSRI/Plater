@@ -2,7 +2,14 @@ import copy
 from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
+import reasoner
 from reasoner.cypher import get_query
+
+
+reasoner.cypher.ATTRIBUTE_TYPES = {
+    "publications": "EDAM:data_0971",
+    "`biolink:orignal_knowledge_source`": "biolink:original_knowledge_source"
+}
 
 class Question:
 
