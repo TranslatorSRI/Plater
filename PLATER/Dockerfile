@@ -12,7 +12,6 @@ COPY ./requirements.txt PLATER/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install -r PLATER/requirements.txt
 EXPOSE 8080
-VOLUME logs
 RUN mkdir -p PLATER/logs
 RUN chown plater:plater PLATER/logs
 USER plater
