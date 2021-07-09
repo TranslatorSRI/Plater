@@ -1,4 +1,4 @@
-coverage
+coverage==5.5
 fastapi==0.66.0
 pyaml==20.4.0
 pytest==6.2.4
