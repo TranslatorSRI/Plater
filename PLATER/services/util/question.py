@@ -3,25 +3,29 @@ from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
 import reasoner
+import json
 from reasoner.cypher import get_query
 
+# load the attrib and value mapping file
+map_data = json.load(open("../../attr_val_map.json"))
 
-reasoner.cypher.ATTRIBUTE_TYPES = {
-    "publications": "EDAM:data_0971",
-    "`biolink:orignal_knowledge_source`": "biolink:original_knowledge_source"
-}
+# set the transpiler attribute mappings
+reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
+
+# set the value type mappings
+VALUE_TYPES = map_data['value_type_map']
 
 class Question:
 
     #SPEC VARS
     QUERY_GRAPH_KEY='query_graph'
-    KG_ID_KEY='id'
-    QG_ID_KEY='id'
+    KG_ID_KEY='ids'
+    QG_ID_KEY='ids'
     ANSWERS_KEY='results'
     KNOWLEDGE_GRAPH_KEY='knowledge_graph'
     NODES_LIST_KEY='nodes'
     EDGES_LIST_KEY='edges'
-    NODE_TYPE_KEY='category'
+    NODE_TYPE_KEY='categories'
     EDGE_TYPE_KEY='predicate'
     SOURCE_KEY='subject'
     TARGET_KEY='object'
@@ -38,18 +42,40 @@ class Question:
     @staticmethod
     def format_attribute_trapi_1_1 (kg_items):
         for identifier in kg_items:
-            item = kg_items[identifier]
-            attributes = item.get('attributes', {})
-            for attr in attributes:
+            # get the properties for the record
+            props = kg_items[identifier]
+
+            # save the transpiler attribs
+            attributes = props.get('attributes', [])
+
+            # create a new list that doesnt have core properties
+            new_attribs = [attrib for attrib in attributes if attrib['original_attribute_name'] not in props]
+
+            # for the non-core properties
+            for attr in new_attribs:
+                # make sure the original_attribute_name has somthig other than none
                 attr['original_attribute_name'] = attr['original_attribute_name'] or ''
-                # uses Data as attribute type id if not defined
+
+                # uses data as attribute type id if not defined
                 if not('attribute_type_id' in attr and attr['attribute_type_id'] != 'NA'):
                     attr['attribute_type_id'] = 'EDAM:data_0006'
-                if not('value_type_id' in attr and attr['value_type_id'] != 'NA'):
-                    # fix for issue https://github.com/RENCI-AUTOMAT/Automat-server/issues/15
-                    attr['value_type_id'] = 'biolink:Attribute'
-                if attr['attribute_type_id'] == "biolink:original_knowledge_source":
-                    attr['value_type_id'] = 'biolink:InformationResource'
+
+                # map the attribute type to the list above, otherwise generic default
+                attr["value_type_id"] = VALUE_TYPES.get(attr["original_attribute_name"], "biolink:Attribute")
+
+            # create a provenance attribute for plater
+            provenance_attrib = {
+              "attribute_type_id": "biolink:aggregator_knowledge_source",
+              "value": "infores:plater",
+              "value_type_id": "biolink:InformationResource",
+              "original_attribute_name": "biolink:aggregator_knowledge_source"
+            }
+
+            # add plater provenance to the list
+            new_attribs.append(provenance_attrib)
+            
+            # assign these attribs back to the original attrib list without the core properties
+            props['attributes'] = new_attribs
 
         return kg_items
 
