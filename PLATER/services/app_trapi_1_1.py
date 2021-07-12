@@ -8,7 +8,7 @@ from PLATER.services.util.question import Question
 from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
 
 # Mount open api at /1.1/openapi.json
-APP_TRAPI_1_1 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", openapi_prefix='/1.1')
+APP_TRAPI_1_1 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.1')
 
 
 async def get_meta_knowledge_graph(
@@ -54,4 +54,4 @@ APP_TRAPI_1_1.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_1.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_1, trapi_version="1.1.0", prefix='/1.1')
+APP_TRAPI_1_1.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_1, trapi_version="1.1.2.1", prefix='/1.1')
