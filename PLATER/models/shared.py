@@ -11,7 +11,7 @@ class ReasonerRequest(ReasonerRequestBaseClass):
         has_bound_node = False
         for q_node_id in q_nodes:
             q_node = q_nodes[q_node_id]
-            if q_node.id:
+            if q_node.ids:
                 has_bound_node = True
                 break
         assert has_bound_node, "Query graph should contain at least one bound node."
