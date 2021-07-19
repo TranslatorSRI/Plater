@@ -6,6 +6,7 @@ import reasoner
 import json
 from reasoner.cypher import get_query
 import os
+from bmt import Toolkit
 
 # load the attrib and value mapping file
 map_data = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "attr_val_map.json")))
@@ -16,32 +17,34 @@ reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
 # set the value type mappings
 VALUE_TYPES = map_data['value_type_map']
 
-class Question:
 
-    #SPEC VARS
-    QUERY_GRAPH_KEY='query_graph'
-    KG_ID_KEY='ids'
-    QG_ID_KEY='ids'
-    ANSWERS_KEY='results'
-    KNOWLEDGE_GRAPH_KEY='knowledge_graph'
-    NODES_LIST_KEY='nodes'
-    EDGES_LIST_KEY='edges'
-    NODE_TYPE_KEY='categories'
-    EDGE_TYPE_KEY='predicate'
-    SOURCE_KEY='subject'
-    TARGET_KEY='object'
-    NODE_BINDINGS_KEY='node_bindings'
-    EDGE_BINDINGS_KEY='edge_bindings'
+class Question:
+    # SPEC VARS
+    QUERY_GRAPH_KEY = 'query_graph'
+    KG_ID_KEY = 'ids'
+    QG_ID_KEY = 'ids'
+    ANSWERS_KEY = 'results'
+    KNOWLEDGE_GRAPH_KEY = 'knowledge_graph'
+    NODES_LIST_KEY = 'nodes'
+    EDGES_LIST_KEY = 'edges'
+    NODE_TYPE_KEY = 'categories'
+    EDGE_TYPE_KEY = 'predicate'
+    SOURCE_KEY = 'subject'
+    TARGET_KEY = 'object'
+    NODE_BINDINGS_KEY = 'node_bindings'
+    EDGE_BINDINGS_KEY = 'edge_bindings'
     CURIE_KEY = 'curie'
 
     def __init__(self, question_json):
         self._question_json = copy.deepcopy(question_json)
+        self.bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml'
+        self.toolkit = Toolkit(self.bl_url)
 
     def compile_cypher(self):
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
 
-    @staticmethod
-    def format_attribute_trapi_1_1 (kg_items):
+    # @staticmethod
+    def format_attribute_trapi_1_1(self, kg_items):
         for identifier in kg_items:
             # get the properties for the record
             props = kg_items[identifier]
@@ -49,7 +52,7 @@ class Question:
             # save the transpiler attribs
             attributes = props.get('attributes', [])
 
-            # create a new list that doesnt have core properties
+            # create a new list that doesnt have the core properties
             new_attribs = [attrib for attrib in attributes if attrib['original_attribute_name'] not in props]
 
             # for the non-core properties
@@ -57,24 +60,36 @@ class Question:
                 # make sure the original_attribute_name has somthig other than none
                 attr['original_attribute_name'] = attr['original_attribute_name'] or ''
 
-                # uses data as attribute type id if not defined
-                if not('attribute_type_id' in attr and attr['attribute_type_id'] != 'NA'):
-                    attr['attribute_type_id'] = 'EDAM:data_0006'
+                # lookup the biolink info
+                bl_info = self.toolkit.get_element(attr['original_attribute_name'])
 
-                # map the attribute type to the list above, otherwise generic default
-                attr["value_type_id"] = VALUE_TYPES.get(attr["original_attribute_name"], "biolink:Attribute")
+                # did we get something
+                if bl_info is not None:
+                    # if there are exact mappings use the first on
+                    if bl_info['slot_uri']:
+                        attr['attribute_type_id'] = bl_info['slot_uri']
+
+                    # assign the data type
+                    attr["value_type_id"] = str(bl_info['range'])
+                else:
+                    # map the attribute type to the list above, otherwise generic default
+                    attr["value_type_id"] = VALUE_TYPES.get(attr["original_attribute_name"], "EDAM:data_0006")
+
+                # uses generic data as attribute type id if not defined
+                if not ('attribute_type_id' in attr and attr['attribute_type_id'] != 'NA'):
+                    attr['attribute_type_id'] = 'biolink:Attribute'
 
             # create a provenance attribute for plater
             provenance_attrib = {
-              "attribute_type_id": "biolink:aggregator_knowledge_source",
-              "value": "infores:plater",
-              "value_type_id": "biolink:InformationResource",
-              "original_attribute_name": "biolink:aggregator_knowledge_source"
+                "attribute_type_id": "biolink:aggregator_knowledge_source",
+                "value": "infores:plater",
+                "value_type_id": "biolink:InformationResource",
+                "original_attribute_name": "biolink:aggregator_knowledge_source"
             }
 
             # add plater provenance to the list
             new_attribs.append(provenance_attrib)
-            
+
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
 
