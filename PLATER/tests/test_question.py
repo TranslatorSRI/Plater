@@ -15,14 +15,17 @@ def test_init():
 
 
 def test_format_attribute():
+    # note that this test does not run through the reasoner code that does the attribute mapping.
+    # so the values in the expected results must account for that
+
     trapi_kg_response = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [
         {"original_attribute_name": "pub", "attribute_type_id": "CURIE:x"},
         {"original_attribute_name": "biolink:original_knowledge_source", "value": "infores:test"}]
     }}}}
 
     expected_trapi = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [
-        {"original_attribute_name": "pub", "attribute_type_id": "CURIE:x", "value_type_id": "biolink:Attribute"},
-        {"original_attribute_name": "biolink:original_knowledge_source", "value": "infores:test", "attribute_type_id": "EDAM:data_0006", "value_type_id": "biolink:InformationResource"},
+        {"original_attribute_name": "pub", "attribute_type_id": "CURIE:x", "value_type_id": "EDAM:data_0006"},
+        {"original_attribute_name": "biolink:original_knowledge_source", "value": "infores:test", "attribute_type_id": "biolink:Attribute", "value_type_id": "biolink:InformationResource"},
         {"attribute_type_id": "biolink:aggregator_knowledge_source", "value": "infores:plater", "value_type_id": "biolink:InformationResource", "original_attribute_name": "biolink:aggregator_knowledge_source"}]
     }}}}
 
@@ -30,18 +33,26 @@ def test_format_attribute():
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default 'biolink:Attribute'
-    assert q.transform_attributes(trapi_kg_response.copy()) == expected_trapi
+    assert q.transform_attributes(trapi_kg_response) == expected_trapi
 
     t2_trapi_kg_response = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [
         {"original_attribute_name": "pub", "value": "x", "value_type_id": "oo", "attribute_type_id": "preserved_attrib"},
+        {"original_attribute_name": "publications", "value": "x"},
         {"original_attribute_name": "endogenous", "value": "false"},
-        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"]}]
+        {"original_attribute_name": "p-value", "value": "1.234"},
+        {"original_attribute_name": "chi-squared-statistic", "value": "2.345"},
+        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"]},
+        {"original_attribute_name": "biolink:original_knowledge_source", "value": "infores:test"}]
     }}}}
 
     t2_expected_trapi = {'knowledge_graph': {'nodes': {'CURIE:1': {'attributes': [
-        {'original_attribute_name': 'pub', 'value': 'x', 'value_type_id': 'biolink:Attribute', 'attribute_type_id': 'preserved_attrib'},
-        {'original_attribute_name': 'endogenous', 'value': 'false', 'value_type_id': 'xsd:boolean', 'attribute_type_id': 'EDAM:data_0006'},
+        {'original_attribute_name': 'pub', 'value': 'x', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'preserved_attrib'},
+        {'original_attribute_name': 'publications', 'value': 'x', 'value_type_id': 'publication', 'attribute_type_id': 'biolink:publications'},
+        {'original_attribute_name': 'endogenous', 'value': 'false', 'value_type_id': 'xsd:boolean', 'attribute_type_id': 'biolink:Attribute'},
+        {'original_attribute_name': 'p-value', 'value': '1.234', 'value_type_id': 'float', 'attribute_type_id': 'biolink:p_value'},
+        {'original_attribute_name': 'chi-squared-statistic', 'value': '2.345', 'value_type_id': 'float', 'attribute_type_id': 'biolink:chi_squared_statistic'},
         {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"], 'value_type_id': 'metatype:uriorcurie'},
+        {"original_attribute_name": "biolink:original_knowledge_source", "value": "infores:test", "attribute_type_id": "biolink:Attribute", "value_type_id": "biolink:InformationResource"},
         {'attribute_type_id': 'biolink:aggregator_knowledge_source', 'value': 'infores:plater', 'value_type_id': 'biolink:InformationResource', 'original_attribute_name': 'biolink:aggregator_knowledge_source'}]
     }}}}
 
