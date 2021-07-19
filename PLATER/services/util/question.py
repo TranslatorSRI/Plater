@@ -39,6 +39,7 @@ class Question:
         self._question_json = copy.deepcopy(question_json)
         self.bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml'
         self.toolkit = Toolkit(self.bl_url)
+        self.provenance = os.environ.get('PROVENANCE_TAG', 'infores:automat.unknown')
 
     def compile_cypher(self):
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
@@ -82,7 +83,7 @@ class Question:
             # create a provenance attribute for plater
             provenance_attrib = {
                 "attribute_type_id": "biolink:aggregator_knowledge_source",
-                "value": "infores:plater",
+                "value": self.provenance,
                 "value_type_id": "biolink:InformationResource",
                 "original_attribute_name": "biolink:aggregator_knowledge_source"
             }
