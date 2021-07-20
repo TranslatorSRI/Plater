@@ -18,9 +18,6 @@ reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
 # set the value type mappings
 VALUE_TYPES = map_data['value_type_map']
 
-# get the provenance tag for this data
-provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
-
 
 class Question:
     # SPEC VARS
@@ -43,7 +40,7 @@ class Question:
         self._question_json = copy.deepcopy(question_json)
 
         # self.toolkit = toolkit
-        self.provenance = provenance
+        self.provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
     def compile_cypher(self):
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
