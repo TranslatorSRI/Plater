@@ -7,6 +7,7 @@ import json
 from reasoner.cypher import get_query
 import os
 from bmt import Toolkit
+from PLATER.services.config import config
 
 # load the attrib and value mapping file
 map_data = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "attr_val_map.json")))
@@ -16,6 +17,14 @@ reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
 
 # set the value type mappings
 VALUE_TYPES = map_data['value_type_map']
+
+# get the biolink model version
+bl_version = config.get('BL_VERSION', '1.8.2')
+bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/{bl_version}/biolink-model.yaml'
+toolkit = Toolkit(bl_url)
+
+# get the provenance tag for this data
+provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
 
 class Question:
@@ -37,9 +46,9 @@ class Question:
 
     def __init__(self, question_json):
         self._question_json = copy.deepcopy(question_json)
-        self.bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml'
-        self.toolkit = Toolkit(self.bl_url)
-        self.provenance = os.environ.get('PROVENANCE_TAG', 'infores:automat.unknown')
+
+        self.toolkit = toolkit
+        self.provenance = provenance
 
     def compile_cypher(self):
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
