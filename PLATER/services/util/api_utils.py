@@ -27,7 +27,7 @@ def get_bl_helper():
 
 def construct_open_api_schema(app, trapi_version, prefix=""):
     plater_title = config.get('PLATER_TITLE', 'Plater API')
-    plater_version = os.environ.get('PLATER_VERSION', '1.0.0')
+    plater_version = os.environ.get('PLATER_VERSION', '1.1.0')
     if app.openapi_schema:
         return app.openapi_schema
     open_api_schema = get_openapi(
@@ -54,7 +54,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
     if x_translator_extension:
         # if x_translator_team is defined amends schema with x_translator extension
         open_api_schema["info"]["x-translator"] = x_translator_extension
-        open_api_schema["info"]["x-translator"]["biolink-version"] = config.get("BL_VERSION", "1.5.0")
+        open_api_schema["info"]["x-translator"]["biolink-version"] = config.get("BL_VERSION", "1.8.2")
 
     if contact_config:
         open_api_schema["info"]["contact"] = contact_config

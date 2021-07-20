@@ -37,7 +37,7 @@ To run the web server directly:
     NEO4J_PASSWORD=<change_me>    
     NEO4J_HTTP_PORT=7474
     PLATER_TITLE='Plater'
-    PLATER_VERSION='1.0.0'
+    PLATER_VERSION='1.1.0'
     BL_VERSION='1.6.1'
 
    ```

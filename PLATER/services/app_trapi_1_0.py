@@ -1,6 +1,5 @@
 """FastAPI app."""
 import json
-import os
 from typing import Any, Dict, List
 
 from fastapi import Body, Depends, FastAPI
@@ -18,8 +17,6 @@ from PLATER.services.util.api_utils import get_graph_interface, get_bl_helper, c
 
 
 APP_TRAPI_1_0 = FastAPI(openapi_url='/1.0/openapi.json', docs_url='/1.0/docs')
-
-
 
 
 async def reasoner_api(
