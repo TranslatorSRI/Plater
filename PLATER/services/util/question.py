@@ -2,9 +2,9 @@ import copy
 from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
-import reasoner
+import reasoner_transpiler as reasoner
 import json
-from reasoner.cypher import get_query
+from reasoner_transpiler.cypher import get_query
 import os
 from bmt import Toolkit
 from PLATER.services.config import config
