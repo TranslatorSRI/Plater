@@ -2,9 +2,9 @@ import copy
 from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
-import reasoner
+import reasoner_transpiler as reasoner
 import json
-from reasoner.cypher import get_query
+from reasoner_transpiler.cypher import get_query
 import os
 from bmt import Toolkit
 from PLATER.services.config import config
@@ -82,11 +82,12 @@ class Question:
                             if 'range' in bl_info and bl_info['range'] is not None:
                                 # try to get the type of data
                                 new_type = graph_interface.toolkit.get_element(bl_info['range'])
-
-                                if 'uri' in new_type and new_type['uri'] is not None:
-                                    # get the real data type
-                                    attr["value_type_id"] = new_type['uri']
-
+                                # check if new_type is not None. For eg. bl_info['range'] = 'uriorcurie' for things
+                                # for `relation` .
+                                if new_type:
+                                    if 'uri' in new_type and new_type['uri'] is not None:
+                                        # get the real data type
+                                        attr["value_type_id"] = new_type['uri']
                         elif 'class_uri' in bl_info:
                             attr['attribute_type_id'] = bl_info['class_uri']
 
