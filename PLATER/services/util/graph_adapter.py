@@ -167,9 +167,7 @@ class GraphInterface:
             self.schema = None
             self.summary = None
             self.meta_kg = None
-            self.bl_version = config.get('BL_VERSION', '2.1.0')
-            self.bl_url = f'https://raw.githubusercontent.com/biolink/biolink-model/{self.bl_version}/biolink-model.yaml'
-            self.toolkit = Toolkit(self.bl_url)
+            self.toolkit = Toolkit()
 
         def find_biolink_leaves(self, biolink_concepts: list):
             """
