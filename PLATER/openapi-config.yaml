@@ -4,7 +4,7 @@ x-translator:
   team: [] # add teams
   biolink-version: # picked up from environment variable `BL_VERSION`
 x-trapi:
-  version: 1.1.2.1
+  version: 1.1.2-1
 contact:
   email: "default@mail.org" # email
   name: "default-name" # name
