@@ -11,12 +11,13 @@ from PLATER.services.config import config
 def get_graph_interface():
     """Get graph interface."""
     return GraphInterface(
-        config.get('NEO4J_HOST'),
-        config.get('NEO4J_HTTP_PORT'),
-        (
+        host=config.get('NEO4J_HOST'),
+        port=config.get('NEO4J_HTTP_PORT'),
+        auth=(
             config.get('NEO4J_USERNAME'),
             config.get('NEO4J_PASSWORD')
-        )
+        ),
+        query_timeout=int(config.get('NEO4J_QUERY_TIMEOUT'))
     )
 
 
