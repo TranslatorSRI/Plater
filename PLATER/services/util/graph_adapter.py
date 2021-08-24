@@ -34,8 +34,8 @@ class Neo4jHTTPDriver:
         self.check_apoc_support()
         logger.debug(f'SUPPORTS APOC : {self._supports_apoc}')
 
-    async def post_request_json(self, payload):
-        async with httpx.AsyncClient(timeout=600) as session:
+    async def post_request_json(self, payload, timeout=600):
+        async with httpx.AsyncClient(timeout=timeout) as session:
             response = await session.post(self._full_transaction_path, json=payload, headers=self._header)
             if response.status_code != 200:
                 logger.error(f"[x] Problem contacting Neo4j server {self._host}:{self._port} -- {response.status_code}")
@@ -72,11 +72,12 @@ class Neo4jHTTPDriver:
             logger.debug(traceback.print_exc())
             raise RuntimeError('Connection to Neo4j could not be established.')
 
-    async def run(self, query, return_errors=False):
+    async def run(self, query, return_errors=False, timeout=600):
         """
         Runs a neo4j query async.
+        :param timeout: http timeout for queries sent to neo4j
+        :param return_errors: returns errors as values instead of raising an exception
         :param query: Cypher query.
-        :type query: str
         :return: result of query.
         :rtype: dict
         """
@@ -89,7 +90,7 @@ class Neo4jHTTPDriver:
             ]
         }
 
-        response = await self.post_request_json(payload)
+        response = await self.post_request_json(payload, timeout=timeout)
         errors = response.get('errors')
         if errors:
             logger.error(f'Neo4j returned `{errors}` for cypher {query}.')
@@ -162,11 +163,12 @@ class GraphInterface:
     """
 
     class _GraphInterface:
-        def __init__(self, host, port, auth):
+        def __init__(self, host, port, auth, query_timeout):
             self.driver = Neo4jHTTPDriver(host=host, port=port, auth=auth)
             self.schema = None
             self.summary = None
             self.meta_kg = None
+            self.query_timeout = query_timeout
             self.toolkit = Toolkit()
 
         def find_biolink_leaves(self, biolink_concepts: list):
@@ -386,6 +388,7 @@ class GraphInterface:
             :return: unprocessed neo4j response.
             :rtype: list
             """
+            kwargs['timeout'] = self.query_timeout
             return await self.driver.run(cypher, **kwargs)
 
         async def get_sample(self, node_type):
@@ -499,10 +502,13 @@ class GraphInterface:
 
     instance = None
 
-    def __init__(self, host, port, auth):
+    def __init__(self, host, port, auth, query_timeout=600):
         # create a new instance if not already created.
         if not GraphInterface.instance:
-            GraphInterface.instance = GraphInterface._GraphInterface(host=host, port=port, auth=auth)
+            GraphInterface.instance = GraphInterface._GraphInterface(host=host,
+                                                                     port=port,
+                                                                     auth=auth,
+                                                                     query_timeout=query_timeout)
 
     def __getattr__(self, item):
         # proxy function calls to the inner object.
