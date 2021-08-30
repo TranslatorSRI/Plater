@@ -54,4 +54,4 @@ APP_TRAPI_1_1.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_1.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_1, trapi_version="1.1.1", prefix='/1.1')
+APP_TRAPI_1_1.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_1, trapi_version="1.1.2", prefix='/1.1')
