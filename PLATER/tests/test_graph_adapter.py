@@ -126,16 +126,20 @@ async def test_driver_convert_to_dict(httpx_mock: HTTPXMock):
 async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
     httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     gi = GraphInterface('localhost','7474', auth=('neo4j', ''))
-    list_1 = ["biolink:ChemicalSubstance",
-              "biolink:MolecularEntity",
-              "biolink:BiologicalEntity",
-              "biolink:NamedThing",
-              "biolink:Entity"]
-    assert gi.find_biolink_leaves(list_1) == set(["biolink:ChemicalSubstance"])
-    include_mixins = ["biolink:ChemicalSubstance",
+    list_1 = [
+      "biolink:SmallMolecule",
+      "biolink:MolecularEntity",
+      "biolink:ChemicalEntity",
+      "biolink:PhysicalEssence",
+      "biolink:NamedThing",
+      "biolink:Entity",
+      "biolink:PhysicalEssenceOrOccurrent"
+    ]
+    assert gi.find_biolink_leaves(list_1) == set(["biolink:SmallMolecule"])
+    include_mixins = ["biolink:SmallMolecule",
               "biolink:MolecularEntity",
               "biolink:ChemicalOrDrugOrTreatment"]
-    assert gi.find_biolink_leaves(include_mixins) == set(["biolink:ChemicalSubstance"])
+    assert gi.find_biolink_leaves(include_mixins) == set(["biolink:SmallMolecule"])
     GraphInterface.instance = None
 
 @pytest.mark.asyncio
@@ -174,14 +178,13 @@ async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
     gi.instance.summary = True
     schema = gi.get_schema()
     expected = {
-      "biolink:Disease": {
-        "biolink:PhenotypicFeature": [
-          "biolink:has_phenotype"
-        ],
-        "biolink:Disease": [
-          "biolink:has_phenotype"
-        ]
-      }
+        'biolink:Disease': {
+            'biolink:Disease': ['biolink:has_phenotype',
+                                'biolink:phenotype_of'],
+            'biolink:PhenotypicFeature': ['biolink:has_phenotype']},
+        'biolink:PhenotypicFeature': {
+            'biolink:Disease': ['biolink:phenotype_of']
+        }
     }
     assert schema == expected
     GraphInterface.instance = None
