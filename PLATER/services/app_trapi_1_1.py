@@ -32,7 +32,7 @@ async def reasoner_api(
     question = Question(request_json["message"])
     response = await question.answer(graph_interface)
     request_json.update({'message': response})
-    return request_json
+    return JSONResponse(request_json)
 
 
 APP_TRAPI_1_1.add_api_route(
