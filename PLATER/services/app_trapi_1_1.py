@@ -1,6 +1,7 @@
 """FastAPI app."""
 
 from fastapi import Body, Depends, FastAPI
+from fastapi.responses import JSONResponse
 from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
 
 from PLATER.services.util.graph_adapter import GraphInterface
@@ -13,10 +14,10 @@ APP_TRAPI_1_1 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path
 
 async def get_meta_knowledge_graph(
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> MetaKnowledgeGraph:
+) -> JSONResponse:
     """Handle /meta_knowledge_graph."""
     response = await graph_interface.get_meta_kg()
-    return response
+    return JSONResponse(response)
 
 
 async def reasoner_api(
