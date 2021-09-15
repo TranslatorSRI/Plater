@@ -12,6 +12,9 @@ from PLATER.services.config import config
 # load the attrib and value mapping file
 map_data = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "attr_val_map.json")))
 
+# attribute skip list
+skip_list = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "skip_attr.json")))
+
 # set the transpiler attribute mappings
 reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
 
@@ -55,7 +58,10 @@ class Question:
             attributes = props.get('attributes', [])
 
             # create a new list that doesnt have the core properties
-            new_attribs = [attrib for attrib in attributes if attrib['original_attribute_name'] not in props]
+            new_attribs = [attrib for attrib in attributes
+                           if attrib['original_attribute_name'] not in props and attrib['original_attribute_name']
+                           not in skip_list
+                           ]
 
             # for the non-core properties
             for attr in new_attribs:
