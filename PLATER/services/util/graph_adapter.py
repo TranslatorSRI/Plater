@@ -297,7 +297,8 @@ class GraphInterface:
                         raw = self.convert_to_dict(self.driver.run_sync(query))
                         summary_key = ':'.join(labels)
                         summary[summary_key] = {
-                            'nodes_count': count
+                            'nodes_count': count,
+                            'labels': labels
                         }
                         for row in raw:
                             target_key = ':'.join(row['target_labels'])
@@ -307,6 +308,12 @@ class GraphInterface:
                             summary[summary_key][target_key][edge_name] = edge_count
                     self.summary = summary
                     logger.info(f'generated summary for {len(summary)} node types.')
+                    for nodes in summary:
+                        leaf_type = self.find_biolink_leaves(summary[nodes]['labels'])
+                        if len(leaf_type):
+                            leaf_type = list(leaf_type)[0]
+                            if leaf_type not in schema_bag:
+                                self.schema[leaf_type] = {}
             return self.schema
 
         async def get_mini_schema(self, source_id, target_id):
