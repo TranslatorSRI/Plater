@@ -1,12 +1,10 @@
 import copy
-from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
 import reasoner_transpiler as reasoner
 import json
-from reasoner_transpiler.cypher import get_query
+from reasoner_transpiler.cypher import get_query, RESERVED_NODE_PROPS, cypher_expression
 import os
-from bmt import Toolkit
 from PLATER.services.config import config
 
 # load the attrib and value mapping file
@@ -49,7 +47,7 @@ class Question:
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
 
     # @staticmethod
-    def format_attribute_trapi_1_1(self, kg_items, graph_interface: GraphInterface):
+    def format_attribute_trapi(self, kg_items, graph_interface: GraphInterface):
         for identifier in kg_items:
             # get the properties for the record
             props = kg_items[identifier]
@@ -114,8 +112,8 @@ class Question:
         return kg_items
 
     def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
-        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('nodes', {}), graph_interface)
-        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('edges', {}), graph_interface)
+        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), graph_interface)
+        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}), graph_interface)
         return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):

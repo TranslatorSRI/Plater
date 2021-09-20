@@ -1,13 +1,18 @@
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.question import Question
-from functools import reduce
+from PLATER.services.util.question import Question, cypher_expression, RESERVED_NODE_PROPS
+import os
+import json
+
+map_data = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "attr_val_map.json")))
+
+ATTRIBUTE_TYPES = map_data['attribute_type_map']
 
 
 class Overlay:
     def __init__(self, graph_interface: GraphInterface):
         self.graph_interface = graph_interface
 
-    async def overlay_support_edges(self, reasoner_graph):
+    async def connect_k_nodes(self, reasoner_graph):
         """
         Grabs a set of answers and queries for connection among set of nodes
         :param reasoner_graph:
@@ -29,17 +34,6 @@ class Overlay:
                     for n in nodes:
                         all_kg_nodes.append(n['id'])
 
-            # all_kg_nodes = set(
-            #     reduce(lambda a, b: a + b,
-            #            map(lambda node_binding: node_binding[Question.KG_ID_KEY]
-            #            if isinstance(node_binding[Question.KG_ID_KEY], list)
-            #            # 3. convert every thing to array and reduce
-            #            else [node_binding[Question.KG_ID_KEY]],
-            #                # 2. merge them into single array
-            #                reduce(lambda a, b: a + b,
-            #                       # 1. get node bindings from all answers
-            #                       map(lambda ans: ans[Question.NODE_BINDINGS_KEY], answer), [])), []))
-            # fun part summon APOC
             if self.graph_interface.supports_apoc():
                 all_kg_nodes = list(all_kg_nodes)
                 apoc_result = (await self.graph_interface.run_apoc_cover(all_kg_nodes))[0]['result']
@@ -54,7 +48,7 @@ class Overlay:
                         for n in nodes:
                             ans_all_node_ids.add(n['id'])
                     for node_id in ans_all_node_ids:
-                        other_nodes = ans_all_node_ids.difference(set([node_id]))
+                        other_nodes = ans_all_node_ids.difference({node_id})
                         # lookup current node in apoc_result
                         current_node_relations = apoc_result.get(node_id, {})
                         for other_node_id in other_nodes:
@@ -85,17 +79,21 @@ class Overlay:
         """
         result = {}
         for r in result_set:
-            source_id = r['subject']
-            target_id = r['object']
-            edge = {}
-            edge['subject'] = source_id
-            edge['object'] = target_id
-            edge['predicate'] = r['predicate']
-            edge['id'] = r['edge']['id']
-            edge['attributes'] = [{
-                "type": "WIKIDATA:Q80585",
-                "value": r['edge']
-            }]
+            edge = r['edge']
+            core_attributes = ['subject', 'object', 'predicate', 'id']
+            attributes = []
+            new_edge = {attr: r['edge'][attr] for attr in core_attributes}
+            for attribute in edge:
+                if attribute not in core_attributes:
+                    attributes.append({
+                        'original_attribute_name': attribute,
+                        'value': edge[attribute]
+                    })
+            new_edge['attributes'] = attributes
+
+            edge = Question({}).format_attribute_trapi({'edge': new_edge}, self.graph_interface)['edge']
+            source_id = edge['subject']
+            target_id = edge['object']
             m = result.get(source_id, {})
             n = m.get(target_id, list())
             n.append(edge)
@@ -103,3 +101,26 @@ class Overlay:
             result[source_id] = m
         return result
 
+    async def annotate_node(self, message):
+        node_ids = list(message['knowledge_graph'].get('nodes').keys())
+        node_ids = cypher_expression.dumps(node_ids)
+        core_properties = cypher_expression.dumps(RESERVED_NODE_PROPS)
+        attribute_types = cypher_expression.dumps(ATTRIBUTE_TYPES)
+        response = self.graph_interface.convert_to_dict(
+            await self.graph_interface.get_nodes(node_ids, core_properties, attribute_types)
+        )[0]['result']
+        response = Question({}).format_attribute_trapi(response, self.graph_interface)
+        # overides based on original attribute names
+        for n_id in message['knowledge_graph']['nodes']:
+            current_node = message['knowledge_graph']['nodes'][n_id]
+            from_db = response.get(n_id, [])
+            result = self.merge_attributes(current_node['attributes'], from_db['attributes'])
+            current_node['attributes'] = result
+            message['knowledge_graph']['nodes'][n_id] = current_node
+        return message
+
+    def merge_attributes(self, attrs_1, attrs_2):
+        reformatted_1 = {x['original_attribute_name']: x for x in attrs_1}
+        reformatted_2 = {x['original_attribute_name']: x for x in attrs_2}
+        reformatted_1.update(reformatted_2)
+        return [reformatted_1[x] for x in reformatted_1]

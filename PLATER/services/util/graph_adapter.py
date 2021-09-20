@@ -497,6 +497,30 @@ class GraphInterface:
             result = self.convert_to_dict(self.driver.run_sync(query))
             return result
 
+        async def get_nodes(self, node_ids, core_attributes, attr_types, **kwargs):
+            query = f"""
+            UNWIND  {node_ids} as id
+            match (n:`biolink:NamedThing`{{id: id}})
+            return apoc.map.fromLists(
+                [n IN collect(DISTINCT n) | n.id], 
+                [
+                    n IN collect(DISTINCT n)| {{
+                            categories: labels(n),
+                            attributes: [
+                                key in apoc.coll.subtract(keys(n), {core_attributes})
+                                | 
+                                {{
+                                    original_attribute_name: key, 
+                                    value: n[key],
+                                    attribute_type_id: COALESCE({attr_types}[key], "NA")                                    
+                                }}                                
+                                ]
+                            }}
+                ]) as result
+            """
+            return await self.driver.run(query, **kwargs)
+
+
         def convert_to_dict(self, result):
             return self.driver.convert_to_dict(result)
 
