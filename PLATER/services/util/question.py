@@ -1,12 +1,10 @@
 import copy
-from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
 import reasoner_transpiler as reasoner
 import json
-from reasoner_transpiler.cypher import get_query
+from reasoner_transpiler.cypher import get_query, RESERVED_NODE_PROPS, cypher_expression
 import os
-from bmt import Toolkit
 from PLATER.services.config import config
 
 # load the attrib and value mapping file
