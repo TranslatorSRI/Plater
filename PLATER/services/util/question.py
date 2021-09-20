@@ -47,7 +47,7 @@ class Question:
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
 
     # @staticmethod
-    def format_attribute_trapi_1_1(self, kg_items, graph_interface: GraphInterface):
+    def format_attribute_trapi(self, kg_items, graph_interface: GraphInterface):
         for identifier in kg_items:
             # get the properties for the record
             props = kg_items[identifier]
@@ -112,8 +112,8 @@ class Question:
         return kg_items
 
     def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
-        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('nodes', {}), graph_interface)
-        self.format_attribute_trapi_1_1(trapi_message.get('knowledge_graph', {}).get('edges', {}), graph_interface)
+        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), graph_interface)
+        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}), graph_interface)
         return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):

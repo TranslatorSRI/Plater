@@ -91,7 +91,7 @@ class Overlay:
                     })
             new_edge['attributes'] = attributes
 
-            edge = Question({}).format_attribute_trapi_1_1({'edge': new_edge}, self.graph_interface)['edge']
+            edge = Question({}).format_attribute_trapi({'edge': new_edge}, self.graph_interface)['edge']
             source_id = edge['subject']
             target_id = edge['object']
             m = result.get(source_id, {})
@@ -109,7 +109,7 @@ class Overlay:
         response = self.graph_interface.convert_to_dict(
             await self.graph_interface.get_nodes(node_ids, core_properties, attribute_types)
         )[0]['result']
-        response = Question({}).format_attribute_trapi_1_1(response, self.graph_interface)
+        response = Question({}).format_attribute_trapi(response, self.graph_interface)
         # overides based on original attribute names
         for n_id in message['knowledge_graph']['nodes']:
             current_node = message['knowledge_graph']['nodes'][n_id]
