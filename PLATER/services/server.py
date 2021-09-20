@@ -21,15 +21,12 @@ logger = LoggingUtil.init_logging(
 
 APP = FastAPI()
 
-# Mount 1.1 app at /1.1
-APP.mount('/1.1',  APP_TRAPI_1_1, 'Trapi 1.1')
 # Mount 1.2 app at /1.2
 APP.mount('/1.2',  APP_TRAPI_1_2, 'Trapi 1.2')
 # Mount default app at /
 APP.mount('/', APP_COMMON, '')
 # Add all routes of each app for open api generation at /openapi.json
 # This will create an aggregate openapi spec.
-APP.include_router(APP_TRAPI_1_1.router, prefix='/1.1')
 APP.include_router(APP_TRAPI_1_2.router, prefix='/1.2')
 APP.include_router(APP_COMMON.router)
 # Construct app /openapi.json # Note this is not to be registered on smart api . Instead /1.1/openapi.json
