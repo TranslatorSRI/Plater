@@ -113,8 +113,8 @@ class Overlay:
         # overides based on original attribute names
         for n_id in message['knowledge_graph']['nodes']:
             current_node = message['knowledge_graph']['nodes'][n_id]
-            from_db = response.get(n_id, [])
-            result = self.merge_attributes(current_node['attributes'], from_db['attributes'])
+            from_db = response.get(n_id, {})
+            result = self.merge_attributes(current_node['attributes'], from_db.get('attributes', []))
             current_node['attributes'] = result
             message['knowledge_graph']['nodes'][n_id] = current_node
         return message
