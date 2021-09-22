@@ -1,20 +1,31 @@
-from pydantic import validator
+from pydantic import validator, root_validator
 from typing import Dict
-from reasoner_pydantic import Query as ReasonerRequestBaseClass, Message, Response, BiolinkEntity, BiolinkPredicate, MetaNode, MetaEdge , MetaKnowledgeGraph, QNode, QEdge
+from reasoner_pydantic import Query as ReasonerRequestBaseClass, \
+    Message, \
+    Response, \
+    BiolinkEntity, \
+    BiolinkPredicate, \
+    MetaNode, \
+    MetaEdge , \
+    MetaKnowledgeGraph, \
+    QNode, \
+    QEdge
 
 
 class ReasonerRequest(ReasonerRequestBaseClass):
 
-    @validator("message")
+    @root_validator
     def validate_unbound_nodes(cls, v):
-        q_nodes: Dict[str, QNode] = v.query_graph.nodes
-        has_bound_node = False
-        for q_node_id in q_nodes:
-            q_node = q_nodes[q_node_id]
-            if q_node.ids:
-                has_bound_node = True
-                break
-        assert has_bound_node, "Query graph should contain at least one bound node."
+        q_nodes: Dict[str, QNode] = v['message'].query_graph.nodes
+        workflows = [x.__root__.id.name for x in v['workflow'].__root__]
+        if "lookup" in workflows:
+            has_bound_node = False
+            for q_node_id in q_nodes:
+                q_node = q_nodes[q_node_id]
+                if q_node.ids:
+                    has_bound_node = True
+                    break
+            assert has_bound_node, "Query graph should contain at least one bound node."
         return v
 
     @validator("message")
