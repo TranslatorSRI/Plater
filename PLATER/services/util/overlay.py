@@ -1,5 +1,5 @@
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.question import Question, cypher_expression, RESERVED_NODE_PROPS, skip_list
+from PLATER.services.util.question import Question, cypher_expression, RESERVED_NODE_PROPS
 import os
 import json
 
@@ -122,8 +122,7 @@ class Overlay:
                 continue
             result = self.merge_attributes(
                 attributes_msg=current_node.get('attributes') or [],
-                attributes_neo=from_db.get('attributes') or [],
-                skip_list=skip_list)
+                attributes_neo=from_db.get('attributes') or [])
             # override categories and name if they exist from db else preserve original
             current_node['categories'] = from_db.get('categories') or current_node['categories']
             current_node['name'] = from_db.get('name') or current_node['name']
@@ -132,7 +131,7 @@ class Overlay:
             message['knowledge_graph']['nodes'][n_id] = current_node
         return message
 
-    def merge_attributes(self, attributes_msg, attributes_neo, skip_list=[]):
+    def merge_attributes(self, attributes_msg, attributes_neo):
         """
         :param attrs_1: Original attributes from message
         :param attrs_2: attributes from neo4j
@@ -140,6 +139,6 @@ class Overlay:
         :return:
         """
         reformatted_1 = {x['original_attribute_name']: x for x in attributes_msg}
-        reformatted_2 = {x['original_attribute_name']: x for x in attributes_neo if x not in skip_list}
+        reformatted_2 = {x['original_attribute_name']: x for x in attributes_neo}
         reformatted_1.update(reformatted_2)
         return [reformatted_1[x] for x in reformatted_1]
