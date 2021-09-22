@@ -17,8 +17,12 @@ class ReasonerRequest(ReasonerRequestBaseClass):
     @root_validator
     def validate_unbound_nodes(cls, v):
         q_nodes: Dict[str, QNode] = v['message'].query_graph.nodes
-        workflows = [x.__root__.id.name for x in v['workflow'].__root__]
-        if "lookup" in workflows:
+        if v.get('workflow'):
+            is_lookup = 'lookup' in [x.__root__.id.name for x in v['workflow'].__root__]
+        else:
+            # by default its is a lookup if no workflow is specified
+            is_lookup = True
+        if is_lookup:
             has_bound_node = False
             for q_node_id in q_nodes:
                 q_node = q_nodes[q_node_id]
