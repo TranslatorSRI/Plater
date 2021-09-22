@@ -124,8 +124,8 @@ class Overlay:
                 attributes_msg=current_node.get('attributes') or [],
                 attributes_neo=from_db.get('attributes') or [])
             # override categories and name if they exist from db else preserve original
-            current_node['categories'] = from_db.get('categories') or current_node['categories']
-            current_node['name'] = from_db.get('name') or current_node['name']
+            current_node['categories'] = from_db.get('categories') or current_node.get('categories')
+            current_node['name'] = from_db.get('name') or current_node.get('name')
             # set attributes of new node to merged attributes
             current_node['attributes'] = result
             message['knowledge_graph']['nodes'][n_id] = current_node
