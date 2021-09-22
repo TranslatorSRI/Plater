@@ -513,6 +513,7 @@ class GraphInterface:
                 [
                     n IN collect(DISTINCT n)| {{
                             categories: labels(n),
+                            name: n.name,
                             attributes: [
                                 key in apoc.coll.subtract(keys(n), {core_attributes})
                                 | 

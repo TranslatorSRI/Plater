@@ -1,5 +1,5 @@
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.question import Question, cypher_expression, RESERVED_NODE_PROPS
+from PLATER.services.util.question import Question, cypher_expression, RESERVED_NODE_PROPS, skip_list
 import os
 import json
 
@@ -104,7 +104,9 @@ class Overlay:
     async def annotate_node(self, message):
         node_ids = list(message['knowledge_graph'].get('nodes').keys())
         node_ids = cypher_expression.dumps(node_ids)
-        core_properties = cypher_expression.dumps(RESERVED_NODE_PROPS)
+        # skip name , id , categories from being returned in attributes array
+        core_properties = cypher_expression.dumps(RESERVED_NODE_PROPS + ['name'])
+        # mapping for attributes
         attribute_types = cypher_expression.dumps(ATTRIBUTE_TYPES)
         response = self.graph_interface.convert_to_dict(
             await self.graph_interface.get_nodes(node_ids, core_properties, attribute_types)
@@ -113,14 +115,31 @@ class Overlay:
         # overides based on original attribute names
         for n_id in message['knowledge_graph']['nodes']:
             current_node = message['knowledge_graph']['nodes'][n_id]
+            # get node from db
             from_db = response.get(n_id, {})
-            result = self.merge_attributes(current_node['attributes'], from_db.get('attributes', []))
+            # skip if node is empty
+            if not from_db:
+                continue
+            result = self.merge_attributes(
+                attributes_msg=current_node.get('attributes') or [],
+                attributes_neo=from_db.get('attributes') or [],
+                skip_list=skip_list)
+            # override categories and name if they exist from db else preserve original
+            current_node['categories'] = from_db.get('categories') or current_node['categories']
+            current_node['name'] = from_db.get('name') or current_node['name']
+            # set attributes of new node to merged attributes
             current_node['attributes'] = result
             message['knowledge_graph']['nodes'][n_id] = current_node
         return message
 
-    def merge_attributes(self, attrs_1, attrs_2):
-        reformatted_1 = {x['original_attribute_name']: x for x in attrs_1}
-        reformatted_2 = {x['original_attribute_name']: x for x in attrs_2}
+    def merge_attributes(self, attributes_msg, attributes_neo, skip_list=[]):
+        """
+        :param attrs_1: Original attributes from message
+        :param attrs_2: attributes from neo4j
+        :param skip_list: attributes to skip from neo4j
+        :return:
+        """
+        reformatted_1 = {x['original_attribute_name']: x for x in attributes_msg}
+        reformatted_2 = {x['original_attribute_name']: x for x in attributes_neo if x not in skip_list}
         reformatted_1.update(reformatted_2)
         return [reformatted_1[x] for x in reformatted_1]
