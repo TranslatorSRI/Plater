@@ -28,11 +28,11 @@ Similarly for edges, edge labels in neo4j are used to perform edge lookup. Predi
 Plater does subclass inference if subclass edges are encoded into neo4j graph. For eg , let A be a super class of B and C. And let B, C are related to D and E respectively 
 
 ```
-(A) <- biolink:subclass_of - (B) - biolink:related_to -> (D)
-    <- biolink:subclass_of - (C) - biolink:related_to -> (E)
+(A) <- biolink:subclass_of - (B) - biolink:decreases_activity_of -> (D)
+    <- biolink:subclass_of - (C) - biolink:decreases_activity_of -> (E)
 ```
 
-Querying for A - [ biolink:related_to] -> (?) would give us back all of these nodes, B, C D and E. B and C have direct relations but D and E are inferred from the subclasses B and C of A.  
+Querying for A - [ biolink:decreases_activity_of] -> (?) would give us back nodes D and E. 
 
 
 #### Presenting Attributes
