@@ -25,14 +25,14 @@ Similarly for edges, edge labels in neo4j are used to perform edge lookup. Predi
 
 #### Subclass Inference
 
-Plater does subclass inference if subclass edges are encoded into neo4j graph. For eg , let A be a super class of B and C. And let B, C are related to D and E respectively 
+Plater does subclass inference if subclass edges are encoded into neo4j graph. For eg , let A be a super class of B and C. And let B, C are related to D and E respectively :
 
 ```
 (A) <- biolink:subclass_of - (B) - biolink:decreases_activity_of -> (D)
     <- biolink:subclass_of - (C) - biolink:decreases_activity_of -> (E)
 ```
 
-Querying for A - [ biolink:decreases_activity_of] -> (?) would give us back nodes D and E. 
+Querying for `A - [ biolink:decreases_activity_of] -> (?)` graph structure in TRAPI would give us back nodes D and E. 
 
 
 #### Presenting Attributes
