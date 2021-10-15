@@ -1,8 +1,8 @@
-## PLATER
+# PLATER
 
 ![test batch](https://travis-ci.com/TranslatorSRI/Plater.svg?branch=master)
 
-### About 
+## About 
 
 Suppose you have constructed a biolink-compliant knowledge graph, and want to deploy it as a TRAPI endpoint with limited fuss.  Plater is a web server that automatically exposes a Neo4j instance through [TRAPI](https://github.com/NCATSTranslator/ReasonerAPI) compliant endpoints. Plater brings several tools together in a web server to achieve this. It Uses [Reasoner Pydantic models](https://github.com/TranslatorSRI/reasoner-pydantic) for frontend validation and [Reasoner transpiler](https://github.com/ranking-agent/reasoner-transpiler) for transforming TRAPI to and from cypher and querying the Neo4j backend. The Neo4j database can be populated by using [KGX](https://github.com/biolink/kgx) upload, which is able to consume numerous graph input formats. By pointing Plater to Neo4j we can easily stand up a Knowledge Provider that provides the “lookup” operation and meta_knowledge_graph, as well as providing a platform to distribute common code implementing future operations across any endpoint built using Plater. In addition, with some configuration (x-trapi parameters etc...) options we can easily register our new instance to [Smart api](https://smart-api.info/). 
 
@@ -10,8 +10,34 @@ Another tool that comes in handy with Plater is [Automat](https://github.com/REN
 
 
 
-### Data Presentation Configuration
-#### Edge and Node Attributes
+## Data Presentation Configuration
+
+### Node and Edge lookup
+--------------------
+
+#### Matching a TRAPI query 
+
+
+PLATER matches nodes in neo4j using node labels. It expects nodes in neo4j to be labeled using [biolink types](https://biolink.github.io/biolink-model/docs/). Nodes in neo4j can have multiple labels. When looking a node from an incoming TRAPI query graph, the node type(s) are extracted for a node, and by traversing the biolink model, all subtypes and mixins that go with the query node type(s) will be used to lookup nodes. 
+
+Similarly for edges, edge labels in neo4j are used to perform edge lookup. Predicate hierarchy in biolink would be consulted to find subclasses of the query predicate type(s) and those would be used in an `OR` combinatorial fashion to find results.  
+ 
+
+#### Subclass Inference
+
+Plater does subclass inference if subclass edges are encoded into neo4j graph. For eg , let A be a super class of B and C. And let B, C are related to D and E respectively 
+
+```
+(A) <- biolink:subclass_of - (B) - biolink:related_to -> (D)
+    <- biolink:subclass_of - (C) - biolink:related_to -> (E)
+```
+
+Querying for A - [ biolink:related_to] -> (?) would give us back all of these nodes, B, C D and E. B and C have direct relations but D and E are inferred from the subclasses B and C of A.  
+
+
+#### Presenting Attributes
+
+
 Plater tries to resolve attibute types and value types for edges and nodes in the following ways. 
 
 1. [attr_val_map.json](https://github.com/TranslatorSRI/Plater/blob/master/attr_val_map.json): This file has the following structure 
@@ -64,12 +90,12 @@ Plater tries to resolve attibute types and value types for edges and nodes in th
  3. If the above steps fail the attribute will be presented having `"attribute_type_id": "biolink:Attribute"` and `"value_type_id": "EDAM:data_0006"`
  4. If there are attributes that is not needed for presentation through TRAPI [Skip_attr.json](https://github.com/TranslatorSRI/Plater/blob/master/skip_attr.json) can be used to specify attribute names in neo4j to skip. 
  
-#### Provenance 
-
+### Provenance 
+------------
 By setting `PROVENANCE_TAG` environment variable to something like `infores:automat.ctd` , edges will contain provenance information on edges and nodes.
 
 
-### Installation
+## Installation
 
 To run the web server directly:
 
