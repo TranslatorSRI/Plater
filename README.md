@@ -20,7 +20,16 @@ Another tool that comes in handy with Plater is [Automat](https://github.com/REN
 
 PLATER matches nodes in neo4j using node labels. It expects nodes in neo4j to be labeled using [biolink types](https://biolink.github.io/biolink-model/docs/). Nodes in neo4j can have multiple labels. When looking a node from an incoming TRAPI query graph, the node type(s) are extracted for a node, and by traversing the biolink model, all subtypes and mixins that go with the query node type(s) will be used to lookup nodes. 
 
-Similarly for edges, edge labels in neo4j are used to perform edge lookup. Predicate hierarchy in biolink would be consulted to find subclasses of the query predicate type(s) and those would be used in an `OR` combinatorial fashion to find results.  
+It's recommended that when encoding nodes labels in neo4j that we use the biolink class genealogy. For instance a node that is known to be a `biolink:SmallMolecule` can be assigned all of these classes ` ["biolink:SmallMolecule", "biolink:MolecularEntity", "biolink:ChemicalEntity",
+      "biolink:PhysicalEssence",
+      "biolink:NamedThing",
+      "biolink:Entity",
+      "biolink:PhysicalEssenceOrOccurrent"]` . 
+
+By doing such encoding, during lookup the incoming query is can be more laxed (ask for `biolink:NamedThing`) or more specific (ask for `biolink:SmallMolecule ` etc...), and PLATER would be able to use the encoded label information to find matching node(s). 
+
+Similarly for edges, edge labels in neo4j are used to perform edge lookup. Predicate hierarchy in biolink would be consulted to find subclasses of the query predicate type(s) and those would be used in an `OR` combinatorial fashion to find results. 
+ 
  
 
 #### Subclass Inference
@@ -92,8 +101,7 @@ Plater tries to resolve attibute types and value types for edges and nodes in th
  
 ### Provenance 
 ------------
-By setting `PROVENANCE_TAG` environment variable to something like `infores:automat.ctd` , edges will contain provenance information on edges and nodes.
-
+By setting `PROVENANCE_TAG` environment variable to something like `infores:automat.ctd` , PLATER will return provenance information on edges and nodes.
 
 ## Installation
 
