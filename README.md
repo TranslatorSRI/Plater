@@ -15,6 +15,23 @@ Another tool that comes in handy with Plater is [Automat](https://github.com/REN
 ### Node and Edge lookup
 --------------------
 
+#### Neo4j Data Structure
+
+##### Nodes
+Nodes are expected to have the following core structure:
+      
+1. id : as neo4j node property with label `id`
+2. category : Array of biolink types as neo4j node labels
+3. Additional attributes can be added and will be exposed. (more details on "Matching a TRAPI query" section)
+
+##### Edges 
+Edges need to have the following properties structure:
+1. subject: as a neo4j edge property with label `subject`
+2. object: as neo4j edge property with label `object`
+3. predicate: as neo4j edge type  
+5. id: as neo4j edge property with label `id`
+6. Additional attributes will be returned in the TRAPI response attributes section. (more details on "Matching a TRAPI query" section)
+
 #### Matching a TRAPI query 
 
 
