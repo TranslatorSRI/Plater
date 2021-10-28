@@ -3,6 +3,7 @@ x-translator:
   component: KP
   team: [] # add teams
   biolink-version: # picked up from environment variable `BL_VERSION`
+  infores: # picked up from environment variable `PROVENANCE_TAG'
 x-trapi:
   version: 1.2.0
 contact:
