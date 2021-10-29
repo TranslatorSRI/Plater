@@ -56,6 +56,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
         # if x_translator_team is defined amends schema with x_translator extension
         open_api_schema["info"]["x-translator"] = x_translator_extension
         open_api_schema["info"]["x-translator"]["biolink-version"] = config.get("BL_VERSION", "2.1.0")
+        open_api_schema["info"]["x-translator"]["infores"] = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
     if contact_config:
         open_api_schema["info"]["contact"] = contact_config
@@ -73,6 +74,8 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
         for cnf in servers_conf:
             if prefix and 'url' in cnf:
                 cnf['url'] = cnf['url'] + prefix
+                cnf['x-maturity'] = os.environ.get("MATURITY_VALUE", "maturity")
+                cnf['x-location'] = os.environ.get("LOCATION_VALUE", "location")
         open_api_schema["servers"] = servers_conf
 
 
