@@ -43,8 +43,8 @@ class Question:
         # self.toolkit = toolkit
         self.provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
-    def compile_cypher(self):
-        return get_query(self._question_json[Question.QUERY_GRAPH_KEY])
+    def compile_cypher(self, **kwargs):
+        return get_query(self._question_json[Question.QUERY_GRAPH_KEY],**kwargs)
 
     # @staticmethod
     def format_attribute_trapi(self, kg_items, graph_interface: GraphInterface):
@@ -122,7 +122,7 @@ class Question:
         :param graph_interface: interface for neo4j
         :return: None
         """
-        cypher = self.compile_cypher()
+        cypher = self.compile_cypher(**{"use_hints": True})
         print(cypher)
         s = time.time()
         results = await graph_interface.run_cypher(cypher)
