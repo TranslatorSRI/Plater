@@ -14,6 +14,10 @@ RUN wget $APOC_URI
 
 RUN wget $GDS_URL
 
+RUN unzip neo4j-graph-data-science-1.1.5-standalone.zip
+
+RUN rm neo4j-graph-data-science-1.1.5-standalone.zip
+
 WORKDIR /
 
 EXPOSE 7474 7473 7687
