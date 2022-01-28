@@ -18,6 +18,9 @@ def graph_interface_apoc_supported():
                         'predicate': 'biolink:related_to',
                         'edge': {
                             'id': 'SUPPORT_EDGE_KG_ID_1',
+                            'predicate': 'biolink:related_to',
+                            'subject': 'NODE:0',
+                            'object': 'NODE:2',
                             'attr_1': [],
                             'attr_2': {}
                         }
@@ -26,8 +29,10 @@ def graph_interface_apoc_supported():
                         'object': 'NODE:22',
                         'predicate': 'biolink:related_to',
                         'edge': {
-                            'type': 'biolink:related_to',
+                            'predicate': 'biolink:related_to',
                             'id': 'SUPPORT_EDGE_KG_ID_2',
+                            'subject': 'NODE:00',
+                            'object': 'NODE:22',
                             'attr_1': [],
                             'attr_2': {}
                         }
@@ -37,7 +42,9 @@ def graph_interface_apoc_supported():
                         'object': 'NODE:22',
                         'predicate': 'biolink:related_to',
                         'edge': {
-                            'type': 'biolink:related_to',
+                            'subject': 'NODE:0',
+                            'object': 'NODE:22',
+                            'predicate': 'biolink:related_to',
                             'id': 'SUPPORT_EDGE_KG_ID_3'
                         }
                     }
@@ -131,7 +138,7 @@ def get_kg_ids(bindings):
 def test_overlay_adds_support_bindings(graph_interface_apoc_supported, reasoner_json):
     ov = Overlay(graph_interface=graph_interface_apoc_supported)
     event_loop = asyncio.get_event_loop()
-    response = event_loop.run_until_complete(ov.overlay_support_edges(reasoner_json))
+    response = event_loop.run_until_complete(ov.connect_k_nodes(reasoner_json))
     edges = response['knowledge_graph']['edges']
     edge_ids = edges.keys()
     assert len(edge_ids) == 2
