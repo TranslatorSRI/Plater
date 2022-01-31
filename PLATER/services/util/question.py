@@ -6,12 +6,8 @@ import json
 from reasoner_transpiler.cypher import get_query, RESERVED_NODE_PROPS, cypher_expression
 import os
 from PLATER.services.config import config
+from PLATER.services.util.attribute_mapping import map_data, skip_list, get_attribute_bl_info
 
-# load the attrib and value mapping file
-map_data = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "attr_val_map.json")))
-
-# attribute skip list
-skip_list = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "skip_attr.json")))
 
 # set the transpiler attribute mappings
 reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
@@ -47,7 +43,7 @@ class Question:
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY],**kwargs)
 
     # @staticmethod
-    def format_attribute_trapi(self, kg_items, graph_interface: GraphInterface):
+    def format_attribute_trapi(self, kg_items):
         for identifier in kg_items:
             # get the properties for the record
             props = kg_items[identifier]
@@ -63,37 +59,17 @@ class Question:
 
             # for the non-core properties
             for attr in new_attribs:
-                # make sure the original_attribute_name has somthig other than none
+                # make sure the original_attribute_name has something other than none
                 attr['original_attribute_name'] = attr['original_attribute_name'] or ''
 
                 # map the attribute type to the list above, otherwise generic default
                 attr["value_type_id"] = VALUE_TYPES.get(attr["original_attribute_name"], "EDAM:data_0006")
 
                 # uses generic data as attribute type id if not defined
-                if not ('attribute_type_id' in attr and attr['attribute_type_id'] != 'NA'):
-                    attr['attribute_type_id'] = 'biolink:Attribute'
-
-                    # lookup the biolink info
-                    bl_info = graph_interface.toolkit.get_element(attr['original_attribute_name'])
-
-                    # did we get something
-                    if bl_info is not None:
-                        # if there are exact mappings use the first on
-                        if 'slot_uri' in bl_info:
-                            attr['attribute_type_id'] = bl_info['slot_uri']
-
-                            # was there a range value
-                            if 'range' in bl_info and bl_info['range'] is not None:
-                                # try to get the type of data
-                                new_type = graph_interface.toolkit.get_element(bl_info['range'])
-                                # check if new_type is not None. For eg. bl_info['range'] = 'uriorcurie' for things
-                                # for `relation` .
-                                if new_type:
-                                    if 'uri' in new_type and new_type['uri'] is not None:
-                                        # get the real data type
-                                        attr["value_type_id"] = new_type['uri']
-                        elif 'class_uri' in bl_info:
-                            attr['attribute_type_id'] = bl_info['class_uri']
+                if not ("attribute_type_id" in attr and attr["attribute_type_id"] != 'NA'):
+                    attribute_data = get_attribute_bl_info(attr["original_attribute_name"])
+                    if attribute_data:
+                        attr.update(attribute_data)
 
             # create a provenance attribute for plater
             provenance_attrib = {
@@ -112,8 +88,8 @@ class Question:
         return kg_items
 
     def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
-        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), graph_interface)
-        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}), graph_interface)
+        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}))
+        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
         return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):

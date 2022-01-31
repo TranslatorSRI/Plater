@@ -6,7 +6,7 @@ import httpx
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from bmt import Toolkit
-
+from PLATER.services.util.attribute_mapping import get_attribute_bl_info
 
 logger = LoggingUtil.init_logging(__name__,
                                   config.get('logging_level'),
@@ -428,7 +428,7 @@ class GraphInterface:
 
         def get_curie_prefix_by_node_type(self, node_type):
             query = f"""
-            MATCH (n:`{node_type}`) return collect(n.id) as ids
+            MATCH (n:`{node_type}`) return collect(n.id) as ids , collect(keys(n)) as attributes
             """
             logger.info(f"starting query {query} on graph... this might take a few")
             result = self.driver.run_sync(query)
@@ -443,7 +443,18 @@ class GraphInterface:
             sorted_curie_prefixes = [i for i in id_prefixes if i in curie_prefixes] # gives presidence to what's in BL
             # add other ids even if not in BL next
             sorted_curie_prefixes += [i for i in curie_prefixes if i not in sorted_curie_prefixes]
-            return sorted_curie_prefixes
+            all_keys = set()
+            for keys in result[0]['attributes']:
+                for k in keys:
+                    all_keys.add(k)
+
+            attributes_as_bl_types = []
+            for key in all_keys:
+                attr_data = get_attribute_bl_info(key)
+                if attr_data:
+                    attr_data['original_attribute_names'] = [key]
+                    attributes_as_bl_types.append(attr_data)
+            return sorted_curie_prefixes, attributes_as_bl_types
 
         async def get_meta_kg(self):
             if self.meta_kg:
@@ -460,9 +471,11 @@ class GraphInterface:
                             'predicate': edge_type
                         })
                     if object not in nodes:
-                        nodes[object] = {'id_prefixes': list(self.get_curie_prefix_by_node_type(object))}
+                        curies, attributes = self.get_curie_prefix_by_node_type(object)
+                        nodes[object] = {'id_prefixes': curies, "attributes": attributes}
                 if subject not in nodes:
-                    nodes[subject] = {'id_prefixes': list(self.get_curie_prefix_by_node_type(subject))}
+                    curies, attributes = self.get_curie_prefix_by_node_type(subject)
+                    nodes[subject] = {'id_prefixes': curies,  "attributes": attributes}
             self.meta_kg = {
                 'nodes': nodes,
                 'edges': predicates

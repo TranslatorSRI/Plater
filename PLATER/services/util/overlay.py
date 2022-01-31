@@ -91,7 +91,7 @@ class Overlay:
                     })
             new_edge['attributes'] = attributes
 
-            edge = Question({}).format_attribute_trapi({'edge': new_edge}, self.graph_interface)['edge']
+            edge = Question({}).format_attribute_trapi({'edge': new_edge})['edge']
             source_id = edge['subject']
             target_id = edge['object']
             m = result.get(source_id, {})

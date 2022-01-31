@@ -203,18 +203,19 @@ async def test_get_meta_kg(httpx_mock: HTTPXMock):
         ]
       }
     }
+    node_attributes = [{"attribute_type_id": "biolink:same_as"}]
     def patch_get_node_curies(node_type):
         # mimic db return ids then filter curie prefixes
         if node_type == "biolink:Disease":
-            return ['MONDO']
+            return ['MONDO'] , node_attributes
         if node_type == "biolink:PhenotypicFeature":
-            return ['HP']
+            return ['HP'], node_attributes
     gi.instance.get_curie_prefix_by_node_type = patch_get_node_curies
 
     assert await gi.get_meta_kg() == {
         "nodes": {
-            "biolink:Disease": { "id_prefixes": ['MONDO']},
-            "biolink:PhenotypicFeature":{ "id_prefixes": ['HP']}
+            "biolink:Disease": { "id_prefixes": ['MONDO'], "attributes": node_attributes},
+            "biolink:PhenotypicFeature":{ "id_prefixes": ['HP'], "attributes": node_attributes}
         }, "edges": [
             { "subject": "biolink:Disease", "object": "biolink:PhenotypicFeature", "predicate": "biolink:has_phenotype"},
             { "object": "biolink:Disease", "subject": "biolink:Disease", "predicate": "biolink:has_phenotype"},
