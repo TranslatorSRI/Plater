@@ -82,6 +82,16 @@ class Question:
             # add plater provenance to the list
             new_attribs.append(provenance_attrib)
 
+            # Adds attribute source for provenance attributes.
+            # setting this to self provenance (eg. infores:automat-biolink).
+            for attribute in new_attribs:
+                if attribute.get('attribute_type_id') in [
+                    "biolink:original_knowledge_source",
+                    "biolink:primary_knowledge_source",
+                    "biolink:aggregator_knowledge_source"
+                ] and attribute.get('value_type_id') == "biolink:InformationResource":
+                    attribute['attribute_source'] = self.provenance
+
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
 
