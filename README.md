@@ -112,13 +112,14 @@ Plater tries to resolve attibute types and value types for edges and nodes in th
             }
     ```
   
- 2. In cases where there are attributes in neo4j that are not specified in attr_val_map.json, PLATER will try to resolve a biolink class by using the original attribute name using Biolink model toolkit. 
- 3. If the above steps fail the attribute will be presented having `"attribute_type_id": "biolink:Attribute"` and `"value_type_id": "EDAM:data_0006"`
- 4. If there are attributes that is not needed for presentation through TRAPI [Skip_attr.json](https://github.com/TranslatorSRI/Plater/blob/master/skip_attr.json) can be used to specify attribute names in neo4j to skip. 
+2. In cases where there are attributes in neo4j that are not specified in attr_val_map.json, PLATER will try to resolve a biolink class by using the original attribute name using Biolink model toolkit. 
+3. If the above steps fail the attribute will be presented having `"attribute_type_id": "biolink:Attribute"` and `"value_type_id": "EDAM:data_0006"`
+4. If there are attributes that is not needed for presentation through TRAPI [Skip_attr.json](https://github.com/TranslatorSRI/Plater/blob/master/skip_attr.json) can be used to specify attribute names in neo4j to skip.
+   KGX loading adds a new attributes `provided_by` and `knowledge_source` to nodes and edges respectively, which are the file name used to load the graph. By default, we have included these to the skip list. 
  
 ### Provenance 
 ------------
-By setting `PROVENANCE_TAG` environment variable to something like `infores:automat.ctd` , PLATER will return provenance information on edges and nodes.
+By setting `PROVENANCE_TAG` environment variable to something like `infores:automat.ctd` , PLATER will return provenance information on edges.
 
 ## Installation
 
