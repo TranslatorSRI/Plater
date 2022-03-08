@@ -43,7 +43,7 @@ class Question:
         return get_query(self._question_json[Question.QUERY_GRAPH_KEY],**kwargs)
 
     # @staticmethod
-    def format_attribute_trapi(self, kg_items):
+    def format_attribute_trapi(self, kg_items, node=False):
         for identifier in kg_items:
             # get the properties for the record
             props = kg_items[identifier]
@@ -74,15 +74,16 @@ class Question:
             # create a provenance attribute for plater
             provenance_attrib = {
                 "attribute_type_id": "biolink:aggregator_knowledge_source",
-                "value": self.provenance,
+                "value": [self.provenance],
                 "value_type_id": "biolink:InformationResource",
                 "original_attribute_name": "biolink:aggregator_knowledge_source"
             }
 
             # add plater provenance to the list
-            new_attribs.append(provenance_attrib)
+            if not node:
+                # Adds attribute source for provenance attributes to edges.
+                new_attribs.append(provenance_attrib)
 
-            # Adds attribute source for provenance attributes.
             # setting this to self provenance (eg. infores:automat-biolink).
             for attribute in new_attribs:
                 if attribute.get('attribute_type_id') in [
@@ -98,7 +99,7 @@ class Question:
         return kg_items
 
     def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
-        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}))
+        self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), node=True)
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
         return trapi_message
 
