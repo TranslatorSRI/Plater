@@ -92,6 +92,8 @@ class Question:
                     "biolink:aggregator_knowledge_source"
                 ] and attribute.get('value_type_id') == "biolink:InformationResource":
                     attribute['attribute_source'] = self.provenance
+                    # convert to list for uniformity
+                    attribute['value'] = [attribute['value']] if isinstance(attribute['value'], str) else attribute['value']
 
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
