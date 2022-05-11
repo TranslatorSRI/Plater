@@ -6,7 +6,7 @@ pytest-asyncio==0.15.1
 starlette==0.14.2
 uvicorn==0.14.0
 reasoner-transpiler==1.10.3
-bmt-lite-2.2.5==2.2.0
+bmt-lite-v2.3.0==2.2.1
 reasoner-pydantic==1.2.0.4
 httpx==0.18.2
 pytest-httpx==0.12.0
