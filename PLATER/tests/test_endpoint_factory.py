@@ -119,28 +119,23 @@ async def test_simple_one_hop_spec_response(graph_interface):
     # send source parameter, target parameter
     async with AsyncClient(app=APP_COMMON, base_url="http://test") as ac:
         response = await ac.get("/simple_spec")
-    assert response.status_code == 200
-    specs = response.json()
-    schema = graph_interface.get_schema()
-    source_types = set(schema.keys())
-    target_types = set(reduce(lambda acc, source: acc + list(schema[source].keys()), schema, []))
-    spec_len = 0
-    for source in schema:
-        for target in schema[source]:
-            spec_len += len(schema[source][target])
-    assert len(specs) == spec_len
+        assert response.status_code == 200
+        specs = response.json()
+        schema = graph_interface.get_schema()
+        source_types = set(schema.keys())
+        target_types = set(reduce(lambda acc, source: acc + list(schema[source].keys()), schema, []))
+        spec_len = 0
+        for source in schema:
+            for target in schema[source]:
+                spec_len += len(schema[source][target])
+        assert len(specs) == spec_len
 
-    for item in specs:
-        assert item['source_type'] in source_types
-        assert item['target_type'] in target_types
+        for item in specs:
+            assert item['source_type'] in source_types
+            assert item['target_type'] in target_types
 
-    # test source param
-    source_type = list(schema.keys())[0]
-    async with AsyncClient(app=APP_COMMON, base_url="http://test") as ac:
+        # test source param
         response = await ac.get("/simple_spec?source=SOME:CURIE")
-    # response = client.get(f'/simple_spec?source=SOME:CURIE')
-    assert response.status_code == 200
-    async with AsyncClient(app=APP_COMMON, base_url="http://test") as ac:
+        assert response.status_code == 200
         response = await ac.get("/simple_spec?source=SOME:CURIE")
-    # response = client.get(f'/simple_spec?target=SOME:CURIE')
-    assert response.status_code == 200
+        assert response.status_code == 200
