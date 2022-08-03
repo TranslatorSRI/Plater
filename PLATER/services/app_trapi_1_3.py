@@ -9,7 +9,7 @@ from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
 
 # Mount open api at /1.2/openapi.json
-APP_TRAPI_1_2 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.2')
+APP_TRAPI_1_3 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.3')
 
 
 async def get_meta_knowledge_graph(
@@ -23,6 +23,7 @@ async def get_meta_knowledge_graph(
 async def reasoner_api(
         request: ReasonerRequest = Body(
             ...,
+            # Works for now but in deployment would be replaced by a mount, specific to backend dataset
             example=get_example("reasoner-trapi-1.2"),
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
@@ -47,7 +48,7 @@ async def reasoner_api(
     return request_json
 
 
-APP_TRAPI_1_2.add_api_route(
+APP_TRAPI_1_3.add_api_route(
     "/meta_knowledge_graph",
     get_meta_knowledge_graph,
     methods=["GET"],
@@ -57,7 +58,7 @@ APP_TRAPI_1_2.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_2.add_api_route(
+APP_TRAPI_1_3.add_api_route(
     "/query",
     reasoner_api,
     methods=["POST"],
@@ -67,4 +68,4 @@ APP_TRAPI_1_2.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_2.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_2, trapi_version="1.2.0", prefix='/1.2')
+APP_TRAPI_1_3.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_3, trapi_version="1.3.0", prefix='/1.3')
