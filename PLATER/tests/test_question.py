@@ -5,11 +5,12 @@ import pytest
 from PLATER.services.util.question import Question
 from bmt import Toolkit
 import asyncio, json
+import os
 import copy
 
 @pytest.fixture
 def message():
-    with open('./data/trapi1.3.json') as stream:
+    with open(os.path.join(os.path.dirname(__file__), 'data','trapi1.3.json')) as stream:
         message = json.load(stream)
     return message
 
