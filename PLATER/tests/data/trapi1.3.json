@@ -1,0 +1,386 @@
+{
+  "query_graph": {
+    "nodes": {
+      "n0": {
+        "ids": null,
+        "categories": [
+          "biolink:Disease"
+        ],
+        "is_set": false,
+        "constraints": []
+      },
+      "n1": {
+        "ids": [
+          "PUBCHEM.COMPOUND:5453"
+        ],
+        "categories": [
+          "biolink:SmallMolecule"
+        ],
+        "is_set": false,
+        "constraints": []
+      }
+    },
+    "edges": {
+      "e0": {
+        "subject": "n0",
+        "object": "n1",
+        "knowledge_type": null,
+        "predicates": [
+          "biolink:related_to"
+        ],
+        "attribute_constraints": [],
+        "qualifier_constraints": []
+      }
+    }
+  },
+  "knowledge_graph": {
+    "nodes": {
+      "PUBCHEM.COMPOUND:5453": {
+        "categories": [
+          "biolink:Entity",
+          "biolink:NamedThing",
+          "biolink:PhysicalEssenceOrOccurrent",
+          "biolink:PhysicalEssence",
+          "biolink:MolecularEntity",
+          "biolink:ChemicalEntity",
+          "biolink:SmallMolecule"
+        ],
+        "name": "Thiotepa",
+        "attributes": [
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": "S=P(N1CC1)(N1CC1)N1CC1",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "smiles"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": "7",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "fda_labels"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": "10",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "rgb"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": -1.309999942779541,
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "alogs"
+          },
+          {
+            "attribute_type_id": "biolink:same_as",
+            "value": [
+              "PUBCHEM.COMPOUND:5453",
+              "CHEMBL.COMPOUND:CHEMBL671",
+              "UNII:905Z5W3GKH",
+              "CHEBI:9570",
+              "DRUGBANK:DB04572",
+              "MESH:D013852",
+              "DrugCentral:2638",
+              "GTOPDB:7622",
+              "HMDB:HMDB0015576",
+              "KEGG.COMPOUND:C07641",
+              "INCHIKEY:FOCVUCIESVLUNU-UHFFFAOYSA-N"
+            ],
+            "value_type_id": "metatype:uriorcurie",
+            "original_attribute_name": "equivalent_identifiers"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": "0",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "arom_c"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": "0",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "sp_c"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": "A very toxic alkylating antineoplastic agent also used as an insect sterilant. It causes skin, gastrointestinal, CNS, and bone marrow damage. According to the Fourth Annual Report on Carcinogens (NTP 85-002, 1985), thiotepa may reasonably be anticipated to be a carcinogen (Merck Index, 11th ed).",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "mrdef"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": 9.03,
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "tpsa"
+          },
+          {
+            "attribute_type_id": "biolink:Attribute",
+            "value": "OFP",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "status"
+          }
+        ]
+      },
+      "MONDO:0001609": {
+        "categories": [
+          "biolink:Entity",
+          "biolink:NamedThing",
+          "biolink:BiologicalEntity",
+          "biolink:ThingWithTaxon",
+          "biolink:DiseaseOrPhenotypicFeature",
+          "biolink:Disease"
+        ],
+        "name": "agranulocytosis",
+        "attributes": [
+          {
+            "attribute_type_id": "biolink:same_as",
+            "value": [
+              "MONDO:0001609",
+              "DOID:12987",
+              "UMLS:C0001824",
+              "UMLS:C4551627",
+              "MESH:D000380",
+              "MEDDRA:10001507",
+              "MEDDRA:10018687",
+              "NCIT:C2863",
+              "SNOMEDCT:154830007",
+              "SNOMEDCT:17182001",
+              "SNOMEDCT:417672002",
+              "HP:0001913"
+            ],
+            "value_type_id": "metatype:uriorcurie",
+            "original_attribute_name": "equivalent_identifiers"
+          }
+        ]
+      },
+      "MONDO:0001106": {
+        "categories": [
+          "biolink:Entity",
+          "biolink:NamedThing",
+          "biolink:BiologicalEntity",
+          "biolink:ThingWithTaxon",
+          "biolink:DiseaseOrPhenotypicFeature",
+          "biolink:Disease"
+        ],
+        "name": "kidney failure",
+        "attributes": [
+          {
+            "attribute_type_id": "biolink:same_as",
+            "value": [
+              "MONDO:0001106",
+              "DOID:1074",
+              "EFO:1002048",
+              "UMLS:C0035078",
+              "UMLS:C1565489",
+              "UMLS:C1839604",
+              "MESH:D051437",
+              "MEDDRA:10016149",
+              "MEDDRA:10021523",
+              "MEDDRA:10022467",
+              "MEDDRA:10023418",
+              "MEDDRA:10038435",
+              "MEDDRA:10038448",
+              "MEDDRA:10038449",
+              "MEDDRA:10038450",
+              "MEDDRA:10038469",
+              "MEDDRA:10038474",
+              "MEDDRA:10062237",
+              "NCIT:C114592",
+              "NCIT:C4376",
+              "SNOMEDCT:236423003",
+              "SNOMEDCT:42399005",
+              "SNOMEDCT:723188008",
+              "ICD9:586",
+              "HP:0000083"
+            ],
+            "value_type_id": "metatype:uriorcurie",
+            "original_attribute_name": "equivalent_identifiers"
+          }
+        ]
+      }
+    },
+    "edges": {
+      "18c8e24d1835c01cd54e07abb5b71b44": {
+        "subject": "PUBCHEM.COMPOUND:5453",
+        "object": "MONDO:0001609",
+        "predicate": "biolink:causes",
+        "attributes": [
+          {
+            "attribute_type_id": "biolink:aggregator_knowledge_source",
+            "value": [
+              "infores:hetio"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:aggregator_knowledge_source",
+            "attribute_source": "infores:automat-robokop"
+          },
+          {
+            "attribute_type_id": "biolink:original_knowledge_source",
+            "value": [
+              "infores:sider"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:original_knowledge_source",
+            "attribute_source": "infores:automat-robokop"
+          },
+          {
+            "attribute_type_id": "biolink:relation",
+            "value": "SEMMEDDB:causes",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "relation"
+          },
+          {
+            "attribute_type_id": "biolink:aggregator_knowledge_source",
+            "value": [
+              "infores:automat-robokop"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:aggregator_knowledge_source",
+            "attribute_source": "infores:automat-robokop"
+          }
+        ]
+      },
+      "304ef8f54494931d8eccb50e1b68be04": {
+        "subject": "PUBCHEM.COMPOUND:5453",
+        "object": "MONDO:0001106",
+        "predicate": "biolink:causes",
+        "attributes": [
+          {
+            "attribute_type_id": "biolink:aggregator_knowledge_source",
+            "value": [
+              "infores:hetio"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:aggregator_knowledge_source",
+            "value_url": null,
+            "attribute_source": "infores:automat-robokop",
+            "description": null,
+            "attributes": null
+          },
+          {
+            "attribute_type_id": "biolink:original_knowledge_source",
+            "value": [
+              "infores:original_source_1"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:original_knowledge_source",
+            "value_url": null,
+            "attribute_source": "infores:automat-robokop",
+            "description": null,
+            "attributes": null
+          },
+          {
+            "attribute_type_id": "biolink:relation",
+            "value": "SEMMEDDB:causes",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "relation",
+            "value_url": null,
+            "attribute_source": null,
+            "description": null,
+            "attributes": null
+          },
+          {
+            "attribute_type_id": "biolink:aggregator_knowledge_source",
+            "value": [
+              "infores:automat-robokop"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:aggregator_knowledge_source",
+            "value_url": null,
+            "attribute_source": "infores:automat-robokop",
+            "description": null,
+            "attributes": null
+          }
+        ]
+      },
+      "57de50b7d36a7b952a12376ae39c1f92": {
+        "subject": "PUBCHEM.COMPOUND:5453",
+        "object": "MONDO:0001609",
+        "predicate": "biolink:contributes_to",
+        "attributes": [
+          {
+            "attribute_type_id": "biolink:original_knowledge_source",
+            "value": [
+              "infores:ctd"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:original_knowledge_source",
+            "attribute_source": "infores:automat-robokop"
+          },
+          {
+            "attribute_type_id": "biolink:relation",
+            "value": "CTD:marker_mechanism",
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "relation"
+          },
+          {
+            "attribute_type_id": "biolink:publications",
+            "value": [
+              "PMID:2121628"
+            ],
+            "value_type_id": "EDAM:data_0006",
+            "original_attribute_name": "publications"
+          },
+          {
+            "attribute_type_id": "biolink:aggregator_knowledge_source",
+            "value": [
+              "infores:automat-robokop"
+            ],
+            "value_type_id": "biolink:InformationResource",
+            "original_attribute_name": "biolink:aggregator_knowledge_source",
+            "attribute_source": "infores:automat-robokop"
+          }
+        ]
+      }
+    }
+  },
+  "results": [
+    {
+      "node_bindings": {
+        "n0": [
+          {
+            "id": "MONDO:0001609"
+          }
+        ],
+        "n1": [
+          {
+            "id": "PUBCHEM.COMPOUND:5453",
+            "qnode_id": "PUBCHEM.COMPOUND:5453"
+          }
+        ]
+      },
+      "edge_bindings": {
+        "e0": [
+          {
+            "id": "18c8e24d1835c01cd54e07abb5b71b44"
+          },
+          {
+            "id": "57de50b7d36a7b952a12376ae39c1f92"
+          }
+        ]
+      }
+    },
+    {
+      "node_bindings": {
+        "n0": [
+          {
+            "id": "MONDO:0001106"
+          }
+        ],
+        "n1": [
+          {
+            "id": "PUBCHEM.COMPOUND:5453",
+            "qnode_id": "PUBCHEM.COMPOUND:5453"
+          }
+        ]
+      },
+      "edge_bindings": {
+        "e0": [
+          {
+            "id": "304ef8f54494931d8eccb50e1b68be04"
+          }
+        ]
+      }
+    }
+  ]
+}

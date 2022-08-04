@@ -2,9 +2,10 @@ import copy
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
 import reasoner_transpiler as reasoner
-import json
 from reasoner_transpiler.cypher import get_query, RESERVED_NODE_PROPS, cypher_expression
-import os
+from reasoner_pydantic.qgraph import AttributeConstraint
+from reasoner_pydantic.shared import Attribute
+from PLATER.services.util.constraints import check_attributes
 from PLATER.services.config import config
 from PLATER.services.util.attribute_mapping import map_data, skip_list, get_attribute_bl_info
 
@@ -119,7 +120,102 @@ class Question:
         print(f'grabbing results took {end - s}')
         results_dict = graph_interface.convert_to_dict(results)
         self._question_json.update(self.transform_attributes(results_dict[0], graph_interface))
+        self._question_json = Question.apply_attribute_constraints(self._question_json)
         return self._question_json
+
+    @staticmethod
+    def apply_attribute_constraints(message):
+        q_nodes = message['query_graph'].get('nodes', {})
+        q_edges = message['query_graph'].get('edges', {})
+        node_constraints = {
+            q_id: [AttributeConstraint(**constraint) for constraint in q_nodes[q_id]['constraints']] for q_id in q_nodes
+            if q_nodes[q_id]['constraints']
+        }
+        edge_constraints = {
+            q_id: [AttributeConstraint(**constraint) for constraint in q_edges[q_id]['attribute_constraints']] for q_id in q_edges
+            if q_edges[q_id]['attribute_constraints']
+        }
+        # if there are no constraints no need to do stuff.
+        if not(len(node_constraints) or len(edge_constraints)):
+            return message
+        # grab kg_ids for constrained items
+        constrained_node_ids = {}
+        constrained_edge_ids = {}
+        for r in message['results']:
+            for q_id in node_constraints.keys():
+                for node in r['node_bindings'][q_id]:
+                    constrained_node_ids[node['id']] = node_constraints[q_id]
+            for q_id in edge_constraints.keys():
+                for edge in r['edge_bindings'][q_id]:
+                    constrained_edge_ids[edge['id']] = edge_constraints[q_id]
+        # mark nodes for deletion
+        nodes_to_filter = set()
+        for node_id in constrained_node_ids:
+            kg_node = message['knowledge_graph']['nodes'][node_id]
+            attributes = [Attribute(**attr) for attr in kg_node['attributes']]
+            keep = check_attributes(attribute_constraints=constrained_node_ids[node_id], db_attributes=attributes)
+            if not keep:
+                nodes_to_filter.add(node_id)
+        # mark edges for deletion
+        edges_to_filter = set()
+        for edge_id, edge in message['knowledge_graph']['edges'].items():
+            # if node is to be removed remove its linking edges aswell
+            if edge['subject'] in nodes_to_filter or edge['object'] in nodes_to_filter:
+                edges_to_filter.add(edge_id)
+                continue
+            # else check if edge is in constrained list and do filter
+            if edge_id in constrained_edge_ids:
+                attributes = [Attribute(**attr) for attr in edge['attributes']]
+                keep = check_attributes(attribute_constraints=constrained_edge_ids[edge_id], db_attributes=attributes)
+                if not keep:
+                    edges_to_filter.add(edge_id)
+        # remove some nodes
+        filtered_kg_nodes = {node_id: node for node_id, node in message['knowledge_graph']['nodes'].items()
+                             if node_id not in nodes_to_filter
+                             }
+        # remove some edges, also those linking to filtered nodes
+        filtered_kg_edges = {edge_id: edge for edge_id, edge in message['knowledge_graph']['edges'].items()
+                             if edge_id not in edges_to_filter
+                             }
+        # results binding fun!
+        filtered_bindings = []
+        for result in message['results']:
+            skip_result = False
+            new_node_bindings = {}
+            for q_id, binding in result['node_bindings'].items():
+                binding_new = [x for x in binding if x['id'] not in nodes_to_filter]
+                # if this list is empty well, skip the whole result
+                if not binding_new:
+                    skip_result = True
+                    break
+                new_node_bindings[q_id] = binding_new
+            # if node bindings are empty for a q_id skip the whole result
+            if skip_result:
+                continue
+            new_edge_bindings = {}
+            for q_id, binding in result['edge_bindings'].items():
+                binding_new = [x for x in binding if x['id'] not in edges_to_filter]
+                # if this list is empty well, skip the whole result
+                if not binding_new:
+                    skip_result = True
+                    break
+                new_edge_bindings[q_id] = binding_new
+            # if edge bindings are empty for a q_id skip the whole result
+            if skip_result:
+                continue
+            filtered_bindings.append({
+                "node_bindings": new_node_bindings,
+                "edge_bindings": new_edge_bindings
+            })
+
+        return {
+            "query_graph": message['query_graph'],
+            "knowledge_graph": {
+                "nodes": filtered_kg_nodes,
+                "edges": filtered_kg_edges
+            },
+            "results": filtered_bindings
+        }
 
     @staticmethod
     def transform_schema_to_question_template(graph_schema):

@@ -1,7 +1,9 @@
 FROM renciorg/renci-python-image:v0.0.1
 
+ARG VERSION=master
+
 WORKDIR /home/plater
-RUN git clone https://github.com/TranslatorSRI/Plater.git
+RUN git clone --branch ${VERSION} --single-branch https://github.com/TranslatorSRI/Plater.git
 WORKDIR /home/plater/Plater
 ENV PYTHONPATH=/home/plater/Plater
 COPY ./requirements.txt PLATER/requirements.txt
