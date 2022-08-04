@@ -5,7 +5,7 @@ import reasoner_transpiler as reasoner
 from reasoner_transpiler.cypher import get_query, RESERVED_NODE_PROPS, cypher_expression
 from reasoner_pydantic.qgraph import AttributeConstraint
 from reasoner_pydantic.shared import Attribute
-from PLATER.services.util.constaints import check_attributes
+from PLATER.services.util.constraints import check_attributes
 from PLATER.services.config import config
 from PLATER.services.util.attribute_mapping import map_data, skip_list, get_attribute_bl_info
 

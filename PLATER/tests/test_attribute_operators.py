@@ -1,4 +1,4 @@
-from PLATER.services.util.constaints import *
+from PLATER.services.util.constraints import *
 from reasoner_pydantic.qgraph import AttributeConstraint
 
 
