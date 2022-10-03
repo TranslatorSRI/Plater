@@ -405,14 +405,14 @@ class GraphInterface:
             rows = response['results'][0]['data'][0]['row']
             return rows
 
-        async def get_examples(self, source, target=None, predicate=None, num_examples=1):
+        def get_examples(self, subject_node_type, object_node_type=None, predicate=None, num_examples=1):
             """
             Returns an example for source node only if target is not specified, if target is specified a sample one hop
             is returned.
-            :param source: Node type of the source node.
-            :type source: str
-            :param target: Node type of the target node.
-            :type target: str
+            :param subject_node_type: Node type of the source node.
+            :type subject_node_type: str
+            :param object_node_type: Node type of the target node.
+            :type object_node_type: str
             :param predicate: Predicate curie for the edge.
             :type predicate: str
             :param num_examples: The maximum number of examples returned.
@@ -420,21 +420,22 @@ class GraphInterface:
             :return: A single source node value if target is not provided. If target is provided too, a triplet.
             :rtype:
             """
-            if target and predicate:
-                query = f"MATCH (source:{source})-[edge:{predicate}]->(target:{target}) return source, edge, target limit {num_examples}"
-                response = await self.run_cypher(query)
-                final = list(map(lambda data: data['row'], response['results'][0]['data']))
-                return final
-            elif target:
-                query = f"MATCH (source:{source})-[edge]->(target:{target}) return source, edge, target limit {num_examples}"
-                response = await self.run_cypher(query)
-                final = list(map(lambda data: data['row'], response['results'][0]['data']))
-                return final
+            if object_node_type and predicate:
+                query = f"MATCH (subject:`{subject_node_type}`)-[edge:`{predicate}`]->(object:`{object_node_type}`) " \
+                        f"return subject, edge, object limit {num_examples}"
+                response = self.convert_to_dict(self.driver.run_sync(query))
+                return response
+            elif object_node_type:
+                query = f"MATCH (subject:`{subject_node_type}`)-[edge]->(object:`{object_node_type}`) " \
+                        f"return subject, edge, object limit {num_examples}"
+                response = self.convert_to_dict(self.driver.run_sync(query))
+                return response
             else:
-                query = f"MATCH ({source}:{source}) return {source} limit {num_examples}"
-                response = await self.run_cypher(query)
-                final = list(map(lambda node: node[source], self.driver.convert_to_dict(response)))
-                return final
+                # this looks weird and I don't think it's used but leaving here just in case
+                query = f"MATCH (`{subject_node_type}`:`{subject_node_type}`) " \
+                        f"return `{subject_node_type}` limit {num_examples}"
+                response = self.convert_to_dict(self.driver.run_sync(query))
+                return response
 
         def get_curie_prefix_by_node_type(self, node_type):
             query = f"""
@@ -466,15 +467,6 @@ class GraphInterface:
                     attributes_as_bl_types.append(attr_data)
             return sorted_curie_prefixes, attributes_as_bl_types
 
-        def get_example_edge(self,
-                             subject_node_type,
-                             object_node_type,
-                             predicate):
-            query = f"MATCH (a:{subject_node_type})-[{predicate}]->(b:{object_node_type}) return a.id, b.id limit 1"
-            response = await self.driver.run(query)
-            rows = response['results'][0]['data'][0]['row']
-            return rows
-
         def generate_meta_kg_and_test_data(self):
             schema = self.get_schema()
             nodes = {}
@@ -494,8 +486,8 @@ class GraphInterface:
                             'object': object,
                             'predicate': predicate
                         })
-                        example_edges = self.get_examples(source=subject,
-                                                          target=object,
+                        example_edges = self.get_examples(subject_node_type=subject,
+                                                          object_node_type=object,
                                                           predicate=predicate,
                                                           num_examples=1)
                         if example_edges:
@@ -504,13 +496,10 @@ class GraphInterface:
                                 "subject_category": subject,
                                 "object_category": object,
                                 "predicate": predicate,
-                                "subject": neo4j_edge['source']['id'],
-                                "object": neo4j_edge['target']['id']
+                                "subject": neo4j_edge['subject']['id'],
+                                "object": neo4j_edge['object']['id']
                             }
                             test_edges.append(test_edge)
-                        else:
-                            logger.warning(f'No example/test edges found for {subject}-{predicate}->{object}! '
-                                           f'That should not happen.')
 
             self.meta_kg = {
                 'nodes': nodes,

@@ -1,5 +1,6 @@
 from pydantic import validator, root_validator
-from typing import Dict
+from typing import Dict, List
+from pydantic import BaseModel
 from reasoner_pydantic import Query as ReasonerRequestBaseClass, \
     Message, \
     Response, \
@@ -10,6 +11,19 @@ from reasoner_pydantic import Query as ReasonerRequestBaseClass, \
     MetaKnowledgeGraph, \
     QNode, \
     QEdge
+
+
+class SRITestEdge(BaseModel):
+    subject: str
+    object: str
+    predicate: str
+    subject_category: str
+    object_category: str
+
+
+class SRITestData(BaseModel):
+    url: str
+    edges: List[SRITestEdge]
 
 
 class ReasonerRequest(ReasonerRequestBaseClass):

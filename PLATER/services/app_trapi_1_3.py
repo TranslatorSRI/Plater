@@ -1,7 +1,8 @@
 """FastAPI app."""
 
 from fastapi import Body, Depends, FastAPI
-from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest, SRITestData)
+from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
+from PLATER.models.shared import SRITestData
 
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.question import Question
@@ -71,8 +72,8 @@ APP_TRAPI_1_3.add_api_route(
     get_sri_testing_data,
     methods=["GET"],
     response_model=SRITestData,
-    summary="Meta knowledge graph representation of this TRAPI web service.",
-    description="Returns meta knowledge graph representation of this TRAPI web service.",
+    summary="Test data for usage by the SRI Testing Harness.",
+    description="Returns a list of edges that are representative examples of the knowledge graph.",
     tags=["trapi"]
 )
 
