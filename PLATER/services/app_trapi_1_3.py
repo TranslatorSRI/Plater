@@ -1,7 +1,7 @@
 """FastAPI app."""
 
 from fastapi import Body, Depends, FastAPI
-from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
+from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest, SRITestData)
 
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.question import Question
@@ -17,6 +17,14 @@ async def get_meta_knowledge_graph(
 ) -> MetaKnowledgeGraph:
     """Handle /meta_knowledge_graph."""
     response = await graph_interface.get_meta_kg()
+    return response
+
+
+async def get_sri_testing_data(
+        graph_interface: GraphInterface = Depends(get_graph_interface),
+) -> SRITestData:
+    """Handle /sri_testing_data."""
+    response = await graph_interface.get_sri_testing_data()
     return response
 
 
@@ -53,6 +61,16 @@ APP_TRAPI_1_3.add_api_route(
     get_meta_knowledge_graph,
     methods=["GET"],
     response_model=MetaKnowledgeGraph,
+    summary="Meta knowledge graph representation of this TRAPI web service.",
+    description="Returns meta knowledge graph representation of this TRAPI web service.",
+    tags=["trapi"]
+)
+
+APP_TRAPI_1_3.add_api_route(
+    "/sri_testing_data",
+    get_sri_testing_data,
+    methods=["GET"],
+    response_model=SRITestData,
     summary="Meta knowledge graph representation of this TRAPI web service.",
     description="Returns meta knowledge graph representation of this TRAPI web service.",
     tags=["trapi"]
