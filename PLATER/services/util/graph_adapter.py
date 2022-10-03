@@ -423,7 +423,7 @@ class GraphInterface:
             if target and predicate:
                 query = f"MATCH (source:{source})-[edge:{predicate}]->(target:{target}) return source, edge, target limit {num_examples}"
                 response = await self.run_cypher(query)
-                final = list(map(lambda data: data['row'], response['results'][0]['data'][0]['row']))
+                final = list(map(lambda data: data['row'], response['results'][0]['data']))
                 return final
             elif target:
                 query = f"MATCH (source:{source})-[edge]->(target:{target}) return source, edge, target limit {num_examples}"
@@ -499,7 +499,15 @@ class GraphInterface:
                                                           predicate=predicate,
                                                           num_examples=1)
                         if example_edges:
-                            test_edges.append(example_edges[0])
+                            neo4j_edge = example_edges[0]
+                            test_edge = {
+                                "subject_category": subject,
+                                "object_category": object,
+                                "predicate": predicate,
+                                "subject": neo4j_edge['source']['id'],
+                                "object": neo4j_edge['target']['id']
+                            }
+                            test_edges.append(test_edge)
                         else:
                             logger.warning(f'No example/test edges found for {subject}-{predicate}->{object}! '
                                            f'That should not happen.')
