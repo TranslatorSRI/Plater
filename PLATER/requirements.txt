@@ -3,7 +3,7 @@ fastapi==0.85.0
 pyaml==20.4.0
 pytest==6.2.4
 pytest-asyncio==0.15.1
-starlette==0.14.2
+starlette==0.20.4
 uvicorn==0.14.0
 reasoner-transpiler==1.10.6
 reasoner-pydantic==3.0.1
