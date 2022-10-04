@@ -1,6 +1,6 @@
 import base64
 import traceback
-
+import os
 import httpx
 
 from PLATER.services.config import config
@@ -168,6 +168,7 @@ class GraphInterface:
             self.schema = None
             self.summary = None
             self.meta_kg = None
+            self.sri_testing_data = None
             self.query_timeout = query_timeout
             self.toolkit = Toolkit()
 
@@ -404,27 +405,37 @@ class GraphInterface:
             rows = response['results'][0]['data'][0]['row']
             return rows
 
-        async def get_examples(self, source, target=None):
+        def get_examples(self, subject_node_type, object_node_type=None, predicate=None, num_examples=1):
             """
             Returns an example for source node only if target is not specified, if target is specified a sample one hop
             is returned.
-            :param source: Node type of the source node.
-            :type source: str
-            :param target: Node type of the target node.
-            :type target: str
+            :param subject_node_type: Node type of the source node.
+            :type subject_node_type: str
+            :param object_node_type: Node type of the target node.
+            :type object_node_type: str
+            :param predicate: Predicate curie for the edge.
+            :type predicate: str
+            :param num_examples: The maximum number of examples returned.
+            :type num_examples: int
             :return: A single source node value if target is not provided. If target is provided too, a triplet.
             :rtype:
             """
-            if target:
-                query = f"MATCH (source:{source})-[edge]->(target:{target}) return source, edge, target limit 1"
-                response = await self.run_cypher(query)
-                final = list(map(lambda data: data['row'], response['results'][0]['data']))
-                return final
+            if object_node_type and predicate:
+                query = f"MATCH (subject:`{subject_node_type}`)-[edge:`{predicate}`]->(object:`{object_node_type}`) " \
+                        f"return subject, edge, object limit {num_examples}"
+                response = self.convert_to_dict(self.driver.run_sync(query))
+                return response
+            elif object_node_type:
+                query = f"MATCH (subject:`{subject_node_type}`)-[edge]->(object:`{object_node_type}`) " \
+                        f"return subject, edge, object limit {num_examples}"
+                response = self.convert_to_dict(self.driver.run_sync(query))
+                return response
             else:
-                query = f"MATCH ({source}:{source}) return {source} limit 1"
-                response = await self.run_cypher(query)
-                final = list(map(lambda node: node[source], self.driver.convert_to_dict(response)))
-                return final
+                # this looks weird and I don't think it's used but leaving here just in case
+                query = f"MATCH (`{subject_node_type}`:`{subject_node_type}`) " \
+                        f"return `{subject_node_type}` limit {num_examples}"
+                response = self.convert_to_dict(self.driver.run_sync(query))
+                return response
 
         def get_curie_prefix_by_node_type(self, node_type):
             query = f"""
@@ -456,31 +467,59 @@ class GraphInterface:
                     attributes_as_bl_types.append(attr_data)
             return sorted_curie_prefixes, attributes_as_bl_types
 
-        async def get_meta_kg(self):
-            if self.meta_kg:
-                return self.meta_kg
+        def generate_meta_kg_and_test_data(self):
             schema = self.get_schema()
             nodes = {}
             predicates = []
+            test_edges = []
             for subject in schema:
+                if subject not in nodes:
+                    curies, attributes = self.get_curie_prefix_by_node_type(subject)
+                    nodes[subject] = {'id_prefixes': curies, "attributes": attributes}
                 for object in schema[subject]:
-                    for edge_type in schema[subject][object]:
-                        predicates.append({
-                            'subject': subject,
-                            'object': object,
-                            'predicate': edge_type
-                        })
                     if object not in nodes:
                         curies, attributes = self.get_curie_prefix_by_node_type(object)
                         nodes[object] = {'id_prefixes': curies, "attributes": attributes}
-                if subject not in nodes:
-                    curies, attributes = self.get_curie_prefix_by_node_type(subject)
-                    nodes[subject] = {'id_prefixes': curies,  "attributes": attributes}
+                    for predicate in schema[subject][object]:
+                        predicates.append({
+                            'subject': subject,
+                            'object': object,
+                            'predicate': predicate
+                        })
+                        example_edges = self.get_examples(subject_node_type=subject,
+                                                          object_node_type=object,
+                                                          predicate=predicate,
+                                                          num_examples=1)
+                        if example_edges:
+                            neo4j_edge = example_edges[0]
+                            test_edge = {
+                                "subject_category": subject,
+                                "object_category": object,
+                                "predicate": predicate,
+                                "subject": neo4j_edge['subject']['id'],
+                                "object": neo4j_edge['object']['id']
+                            }
+                            test_edges.append(test_edge)
+
             self.meta_kg = {
                 'nodes': nodes,
                 'edges': predicates
             }
+            plater_url = os.environ['PUBLIC_URL']
+            self.sri_testing_data = {
+                'url': plater_url,
+                'edges': test_edges
+            }
+
+        async def get_meta_kg(self):
+            if not self.meta_kg:
+                self.generate_meta_kg_and_test_data()
             return self.meta_kg
+
+        async def get_sri_testing_data(self):
+            if not self.sri_testing_data:
+                self.generate_meta_kg_and_test_data()
+            return self.sri_testing_data
 
         def supports_apoc(self):
             """
