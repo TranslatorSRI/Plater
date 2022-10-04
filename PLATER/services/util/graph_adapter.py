@@ -1,6 +1,6 @@
 import base64
 import traceback
-
+import os
 import httpx
 
 from PLATER.services.config import config
@@ -505,7 +505,7 @@ class GraphInterface:
                 'nodes': nodes,
                 'edges': predicates
             }
-            plater_url = f'http://..../sri_testing_data'
+            plater_url = os.environ['PUBLIC_URL']
             self.sri_testing_data = {
                 'url': plater_url,
                 'edges': test_edges
