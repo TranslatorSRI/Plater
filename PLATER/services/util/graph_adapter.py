@@ -431,9 +431,8 @@ class GraphInterface:
                 response = self.convert_to_dict(self.driver.run_sync(query))
                 return response
             else:
-                # this looks weird and I don't think it's used but leaving here just in case
-                query = f"MATCH (`{subject_node_type}`:`{subject_node_type}`) " \
-                        f"return `{subject_node_type}` limit {num_examples}"
+                query = f"MATCH (subject:`{subject_node_type}`) " \
+                        f"return subject limit {num_examples}"
                 response = self.convert_to_dict(self.driver.run_sync(query))
                 return response
 
@@ -505,7 +504,10 @@ class GraphInterface:
                 'nodes': nodes,
                 'edges': predicates
             }
-            plater_url = os.environ['PUBLIC_URL']
+            if 'PUBLIC_URL' in os.environ and os.environ['PUBLIC_URL']:
+                plater_url = os.environ['PUBLIC_URL']
+            else:
+                plater_url = 'http://-fake-default-url-/plater'
             self.sri_testing_data = {
                 'url': plater_url,
                 'edges': test_edges

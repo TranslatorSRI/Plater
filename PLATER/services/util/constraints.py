@@ -1,5 +1,4 @@
-import collections
-from collections.abc import Iterable
+from collections.abc import Iterable, MutableSequence
 from reasoner_pydantic.qgraph import AttributeConstraint, Operator as OperatorModel
 from reasoner_pydantic.shared import Attribute, HashableSequence
 from typing import List
@@ -17,7 +16,7 @@ class Operator:
         return isinstance(a, numbers.Number)
 
     def is_iterable(self, a):
-        return isinstance(a, (collections.Iterable, collections.MutableSequence)) and not isinstance(a, str)
+        return isinstance(a, (Iterable, MutableSequence)) and not isinstance(a, str)
 
     def is_same_data_type(self, a, b):
         """
