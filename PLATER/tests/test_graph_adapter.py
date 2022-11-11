@@ -152,8 +152,9 @@ async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
     assert gi.invert_predicate(symmetric_predicate) == symmetric_predicate
     predicate_with_inverse = "biolink:part_of"
     assert gi.invert_predicate(predicate_with_inverse) == "biolink:has_part"
-    predicate_no_inverse_and_not_symmetric = "biolink:associated_with_increased_likelihood_of"
-    assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) == None
+    # biolink 3.1.0 seems to be pretty good on inverses.
+    # predicate_no_inverse_and_not_symmetric = "biolink:associated_with_increased_likelihood_of"
+    # assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) == None
     GraphInterface.instance = None
 
 @pytest.mark.asyncio

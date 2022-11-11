@@ -77,6 +77,66 @@ def test_format_attribute():
     # test if value_type is preserved if in response from neo4j
     assert transformed == t2_expected_trapi
 
+def test_format_edge_qualifiers():
+    # note that this test does not run through the reasoner code that does the attribute mapping.
+    # so the values in the expected results must account for that
+
+    trapi_kg_response ={ "knowledge_graph": {
+       "edges":{
+          "some_id":{
+             "predicate":"biolink:affects",
+             "subject":"PUBCHEM.COMPOUND:5311062",
+             "attributes":[
+                {
+                   "attribute_type_id":"NA",
+                   "original_attribute_name":"qualified_predicate",
+                   "value":"biolink:causes"
+                },
+                {
+                   "attribute_type_id":"NA",
+                   "original_attribute_name":"object_aspect",
+                   "value":"activity"
+                },
+                {
+                   "attribute_type_id":"NA",
+                   "original_attribute_name":"object_direction",
+                   "value":"decreased"
+                }
+             ],
+             "object":"NCBIGene:283871"
+          }
+       }
+    } }
+    expected_trapi = {"knowledge_graph": {"edges": {'some_id': {
+                                              'attributes': [{'attribute_type_id': 'biolink:qualified_predicate',
+                                                              'original_attribute_name': 'qualified_predicate',
+                                                              'value': 'biolink:causes',
+                                                              'value_type_id': 'EDAM:data_0006'},
+                                                             {'attribute_type_id': 'biolink:object_aspect_qualifier',
+                                                              'original_attribute_name': 'object_aspect',
+                                                              'value': 'activity',
+                                                              'value_type_id': 'EDAM:data_0006'},
+                                                             {'attribute_type_id': 'biolink:object_direction_qualifier',
+                                                              'original_attribute_name': 'object_direction',
+                                                              'value': 'decreased',
+                                                              'value_type_id': 'EDAM:data_0006'},
+                                                             {'attribute_source': 'infores:automat.notspecified',
+                                                              'attribute_type_id': 'biolink:aggregator_knowledge_source',
+                                                              'original_attribute_name': 'biolink:aggregator_knowledge_source',
+                                                              'value': ['infores:automat.notspecified'],
+                                                              'value_type_id': 'biolink:InformationResource'}],
+                                              'object': 'NCBIGene:283871',
+                                              'predicate': 'biolink:affects',
+                                              'subject': 'PUBCHEM.COMPOUND:5311062'}}
+                                          }}
+
+    q = Question(question_json={})
+    graph_interface = MOCK_GRAPH_ADAPTER()
+    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+
+    # test attribute_id if provided from neo4j response is preserved
+    # test if value_type is added to default "biolink:Attribute"
+    assert transformed == expected_trapi
 
 class MOCK_GRAPH_ADAPTER():
     called = False

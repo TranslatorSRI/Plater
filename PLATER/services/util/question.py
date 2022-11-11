@@ -41,7 +41,15 @@ class Question:
         self.provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
     def compile_cypher(self, **kwargs):
-        return get_query(self._question_json[Question.QUERY_GRAPH_KEY],**kwargs)
+        query_graph = copy.deepcopy(self._question_json[Question.QUERY_GRAPH_KEY])
+        edges = query_graph.get('edges')
+        for e in edges:
+            # removes "biolink:" from constraint names. since these are not encoded in the graph.
+            if edges[e]['qualifier_constraints']:
+                for qualifier in edges[e]['qualifier_constraints']:
+                    for item in qualifier['qualifier_set']:
+                        item['qualifier_type_id'] = item['qualifier_type_id'].replace('biolink:', '')
+        return get_query(query_graph, **kwargs)
 
     # @staticmethod
     def format_attribute_trapi(self, kg_items, node=False):
@@ -112,7 +120,7 @@ class Question:
         :param graph_interface: interface for neo4j
         :return: None
         """
-        cypher = self.compile_cypher(**{"use_hints": True})
+        cypher = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal"})
         print(cypher)
         s = time.time()
         results = await graph_interface.run_cypher(cypher)
