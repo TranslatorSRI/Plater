@@ -26,16 +26,17 @@ def get_attribute_bl_info(attribute_name):
     # map the attribute type to the list above, otherwise generic default
     new_attr_meta_data["value_type_id"] = VALUE_TYPES.get(attribute_name, new_attr_meta_data["value_type_id"])
     attr_found = None
-    if attribute_name in map_data["attribute_type_map"]:
+    if attribute_name in map_data["attribute_type_map"] or f'`{attribute_name}`' in map_data["attribute_type_map"]:
         attr_found = True
-        new_attr_meta_data["attribute_type_id"] = map_data["attribute_type_map"][attribute_name]
+        new_attr_meta_data["attribute_type_id"] = map_data["attribute_type_map"].get(attribute_name) \
+                                                  or map_data["attribute_type_map"].get(f"`{attribute_name}`")
     if attribute_name in map_data["value_type_map"]:
         new_attr_meta_data["value_type_id"] = map_data["value_type_map"][attribute_name]
     if attr_found:
         return new_attr_meta_data
 
-    # lookup the biolink info
-    bl_info = bmt_toolkit.get_element(attribute_name)
+    # lookup the biolink info, for qualifiers suffix with _qualifier and do lookup.
+    bl_info = bmt_toolkit.get_element(attribute_name) or bmt_toolkit.get_element(attribute_name + "_qualifier")
 
     # did we get something
     if bl_info is not None:
