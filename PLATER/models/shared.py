@@ -30,6 +30,9 @@ class ReasonerRequest(ReasonerRequestBaseClass):
 
     @root_validator
     def validate_unbound_nodes(cls, v):
+        # check if message exist and not invalid upstream
+        if not v.get('message'):
+            return v
         q_nodes: Dict[str, QNode] = v['message'].query_graph.nodes
         if v.get('workflow'):
             is_lookup = 'lookup' in [x.__root__.id.name for x in v['workflow'].__root__]
