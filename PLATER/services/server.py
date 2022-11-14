@@ -10,7 +10,7 @@ from PLATER.services.app_trapi_1_3 import APP_TRAPI_1_3
 from PLATER.services.util.api_utils import construct_open_api_schema
 
 TITLE = config.get('PLATER_TITLE', 'Plater API')
-VERSION = os.environ.get('PLATER_VERSION', '1.3.0-3')
+VERSION = os.environ.get('PLATER_VERSION', '1.3.0-4')
 
 logger = LoggingUtil.init_logging(
     __name__,
