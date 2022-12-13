@@ -59,7 +59,7 @@ if os.environ.get("OTEL_ENABLED"):
     )
     jaeger_exporter = JaegerExporter(
         agent_host_name=os.environ.get("JAEGER_HOST", "localhost"),
-        agent_port=os.environ.get("JAEGER_PORT", "6831"),
+        agent_port=int(os.environ.get("JAEGER_PORT", "6831")),
     )
     trace.get_tracer_provider().add_span_processor(
         BatchSpanProcessor(jaeger_exporter)
