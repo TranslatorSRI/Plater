@@ -1,4 +1,6 @@
 import copy
+import json
+
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
 import reasoner_transpiler as reasoner
@@ -8,7 +10,7 @@ from reasoner_pydantic.shared import Attribute
 from PLATER.services.util.constraints import check_attributes
 from PLATER.services.config import config
 from PLATER.services.util.attribute_mapping import map_data, skip_list, get_attribute_bl_info
-
+from PLATER.services.util.logutil import LoggingUtil
 
 # set the transpiler attribute mappings
 reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
@@ -16,6 +18,11 @@ reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
 # set the value type mappings
 VALUE_TYPES = map_data['value_type_map']
 
+logger = LoggingUtil.init_logging(
+    __name__,
+    config.get('logging_level'),
+    config.get('logging_format'),
+)
 
 class Question:
     # SPEC VARS
@@ -121,11 +128,12 @@ class Question:
         :return: None
         """
         cypher = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal"})
-        print(cypher)
+        logger.info(f"answering query_graph: {json.dumps(self._question_json)}")
+        logger.debug(f"cypher: {cypher}")
         s = time.time()
         results = await graph_interface.run_cypher(cypher)
         end = time.time()
-        print(f'grabbing results took {end - s}')
+        logger.info(f"getting answers took {end - s} seconds")
         results_dict = graph_interface.convert_to_dict(results)
         self._question_json.update(self.transform_attributes(results_dict[0], graph_interface))
         self._question_json = Question.apply_attribute_constraints(self._question_json)
