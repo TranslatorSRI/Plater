@@ -17,7 +17,8 @@ def get_graph_interface():
             config.get('NEO4J_USERNAME'),
             config.get('NEO4J_PASSWORD')
         ),
-        query_timeout=int(config.get('NEO4J_QUERY_TIMEOUT'))
+        query_timeout=int(config.get('NEO4J_QUERY_TIMEOUT')),
+        bl_version=config.get('BL_VERSION')
     )
 
 

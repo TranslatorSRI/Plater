@@ -72,6 +72,7 @@ APP_TRAPI_1_3.add_api_route(
     get_sri_testing_data,
     methods=["GET"],
     response_model=SRITestData,
+    response_model_exclude_none=True,
     summary="Test data for usage by the SRI Testing Harness.",
     description="Returns a list of edges that are representative examples of the knowledge graph.",
     tags=["trapi"]

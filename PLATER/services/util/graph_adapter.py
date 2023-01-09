@@ -2,7 +2,9 @@ import base64
 import traceback
 import os
 import httpx
+import time
 
+from collections import defaultdict
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from bmt import Toolkit
@@ -57,7 +59,6 @@ class Neo4jHTTPDriver:
         ping_url = f"{self._scheme}://{self._host}:{self._port}/{neo4j_test_connection_endpoint}"
         # if we can't contact neo4j, we should exit.
         try:
-            import time
             now = time.time()
             response = httpx.get(ping_url, headers=self._header)
             later = time.time()
@@ -163,14 +164,17 @@ class GraphInterface:
     """
 
     class _GraphInterface:
-        def __init__(self, host, port, auth, query_timeout):
+        def __init__(self, host, port, auth, query_timeout, bl_version):
             self.driver = Neo4jHTTPDriver(host=host, port=port, auth=auth)
             self.schema = None
-            self.summary = None
+            # used to keep track of derived inverted predicates
+            self.inverted_predicates = defaultdict(lambda: defaultdict(set))
+            # self.summary = None
             self.meta_kg = None
             self.sri_testing_data = None
             self.query_timeout = query_timeout
             self.toolkit = Toolkit()
+            self.bl_version = bl_version
 
         def find_biolink_leaves(self, biolink_concepts: list):
             """
@@ -213,64 +217,49 @@ class GraphInterface:
             as value.
             :rtype: dict
             """
-            self.schema_raw_result = {}
             if self.schema is None:
-                query = """
-                           MATCH (a)-[x]->(b)
-                           WHERE not a:Concept and not b:Concept                                                          
-                           RETURN DISTINCT labels(a) as source_labels, type(x) as predicate, labels(b) as target_labels
-                           """
-                logger.info(f"starting query {query} on graph... this might take a few")
+                query = """ 
+                MATCH (a)-[x]->(b)
+                RETURN DISTINCT labels(a) as source_labels, type(x) as predicate, labels(b) as target_labels
+                """
+                logger.info(f"Starting schema query {query} on graph... this might take a few.")
+                before_time = time.time()
                 result = self.driver.run_sync(query)
-                logger.info(f"completed query, preparing initial schema")
-                structured = self.convert_to_dict(result)
-                self.schema_raw_result = structured
-                schema_bag = {}
-                # permute source labels and target labels array
-                # replacement for unwind for previous cypher
-                structured_expanded = []
-                for triplet in structured:
+                after_time = time.time()
+                logger.info(f"Completed schema query ({after_time - before_time} seconds). Preparing initial schema.")
+                schema_query_results = self.convert_to_dict(result)
+                # iterate through results (multiple sets of source label, predicate, target label arrays)
+                # and convert them to a schema dictionary of subject->object->predicates
+                self.schema = defaultdict(lambda: defaultdict(set))
+                for schema_result in schema_query_results:
                     # Since there are some nodes in data currently just one label ['biolink:NamedThing']
                     # This filter is to avoid that scenario.
                     # @TODO need to remove this filter when data build
                     #  avoids adding nodes with single ['biolink:NamedThing'] labels.
                     filter_named_thing = lambda x: list(filter(lambda y: y != 'biolink:NamedThing', x))
-                    source_labels, predicate, target_labels =\
-                        self.find_biolink_leaves(filter_named_thing(triplet['source_labels'])), triplet['predicate'], \
-                        self.find_biolink_leaves(filter_named_thing(triplet['target_labels']))
+                    source_labels, predicate, target_labels = \
+                        self.find_biolink_leaves(filter_named_thing(schema_result['source_labels'])), \
+                        schema_result['predicate'], \
+                        self.find_biolink_leaves(filter_named_thing(schema_result['target_labels']))
                     for source_label in source_labels:
                         for target_label in target_labels:
-                            structured_expanded.append(
-                                {
-                                    'source_label': source_label,
-                                    'target_label': target_label,
-                                    'predicate': predicate
-                                }
-                            )
-                structured = structured_expanded
-                for triplet in structured:
-                    subject = triplet['source_label']
-                    predicate = triplet['predicate']
-                    objct = triplet['target_label']
-                    if subject not in schema_bag:
-                        schema_bag[subject] = {}
-                    if objct not in schema_bag[subject]:
-                        schema_bag[subject][objct] = []
-                    if predicate not in schema_bag[subject][objct]:
-                        schema_bag[subject][objct].append(predicate)
+                            self.schema[source_label][target_label].add(predicate)
 
-                    # If we invert the order of the nodes we also have to invert the predicate
-                    inverse_predicate = self.invert_predicate(predicate)
-                    if inverse_predicate is not None and \
-                            inverse_predicate not in schema_bag.get(objct,{}).get(subject,[]):
-                        # create the list if empty
-                        if objct not in schema_bag:
-                            schema_bag[objct] = {}
-                        if subject not in schema_bag[objct]:
-                            schema_bag[objct][subject] = []
-                        schema_bag[objct][subject].append(inverse_predicate)
-                self.schema = schema_bag
+                # find and add the inverse for each predicate if there is one,
+                # keep track of inverted predicates we added so we don't query the graph for them
+                for source_label, target_labels in self.schema.items():
+                    for target_label, predicates in target_labels.items():
+                        inverted_predicates = set()
+                        for predicate in predicates:
+                            inverse_predicate = self.invert_predicate(predicate)
+                            if inverse_predicate is not None and \
+                                    inverse_predicate not in self.schema[source_label][target_label]:
+                                inverted_predicates.add(inverse_predicate)
+                                self.inverted_predicates[source_label][target_label].add(inverse_predicate)
+                        self.schema[source_label][target_label].update(inverted_predicates)
+
                 logger.info("schema done.")
+                '''
                 if not self.summary:
                     query = """
                     MATCH (c) RETURN DISTINCT labels(c) as types, count(c) as count                
@@ -306,8 +295,9 @@ class GraphInterface:
                         leaf_type = self.find_biolink_leaves(summary[nodes]['labels'])
                         if len(leaf_type):
                             leaf_type = list(leaf_type)[0]
-                            if leaf_type not in schema_bag:
+                            if leaf_type not in self.schema:
                                 self.schema[leaf_type] = {}
+                '''
             return self.schema
 
         async def get_mini_schema(self, source_id, target_id):
@@ -405,7 +395,12 @@ class GraphInterface:
             rows = response['results'][0]['data'][0]['row']
             return rows
 
-        def get_examples(self, subject_node_type, object_node_type=None, predicate=None, num_examples=1):
+        def get_examples(self,
+                         subject_node_type,
+                         object_node_type=None,
+                         predicate=None,
+                         num_examples=1,
+                         use_qualifiers=False):
             """
             Returns an example for source node only if target is not specified, if target is specified a sample one hop
             is returned.
@@ -420,14 +415,15 @@ class GraphInterface:
             :return: A single source node value if target is not provided. If target is provided too, a triplet.
             :rtype:
             """
+            qualifiers_check = " WHERE edge.qualified_predicate IS NOT NULL " if use_qualifiers else ""
             if object_node_type and predicate:
                 query = f"MATCH (subject:`{subject_node_type}`)-[edge:`{predicate}`]->(object:`{object_node_type}`) " \
-                        f"return subject, edge, object limit {num_examples}"
+                        f"{qualifiers_check} return subject, edge, object limit {num_examples}"
                 response = self.convert_to_dict(self.driver.run_sync(query))
                 return response
             elif object_node_type:
                 query = f"MATCH (subject:`{subject_node_type}`)-[edge]->(object:`{object_node_type}`) " \
-                        f"return subject, edge, object limit {num_examples}"
+                        f"{qualifiers_check} return subject, edge, object limit {num_examples}"
                 response = self.convert_to_dict(self.driver.run_sync(query))
                 return response
             else:
@@ -485,31 +481,62 @@ class GraphInterface:
                             'object': object,
                             'predicate': predicate
                         })
-                        example_edges = self.get_examples(subject_node_type=subject,
-                                                          object_node_type=object,
-                                                          predicate=predicate,
-                                                          num_examples=1)
-                        if example_edges:
-                            neo4j_edge = example_edges[0]
-                            test_edge = {
-                                "subject_category": subject,
-                                "object_category": object,
-                                "predicate": predicate,
-                                "subject": neo4j_edge['subject']['id'],
-                                "object": neo4j_edge['object']['id']
-                            }
-                            test_edges.append(test_edge)
+                        if predicate not in self.inverted_predicates[subject][object]:
+                            has_qualifiers = False
+                            if int(self.bl_version[0]) > 2:
+                                has_qualifiers = self.predicate_has_qualifiers(predicate)
+
+                            example_edges = self.get_examples(subject_node_type=subject,
+                                                              object_node_type=object,
+                                                              predicate=predicate,
+                                                              num_examples=1,
+                                                              use_qualifiers=has_qualifiers)
+
+                            # sometimes a predicate could have qualifiers but there is not an example of one
+                            if not example_edges and has_qualifiers:
+                                example_edges = self.get_examples(subject_node_type=subject,
+                                                                  object_node_type=object,
+                                                                  predicate=predicate,
+                                                                  num_examples=1,
+                                                                  use_qualifiers=False)
+
+                            if example_edges:
+                                neo4j_subject = example_edges[0]['subject']
+                                neo4j_object = example_edges[0]['object']
+                                neo4j_edge = example_edges[0]['edge']
+                                test_edge = {
+                                    "subject_category": subject,
+                                    "object_category": object,
+                                    "predicate": predicate,
+                                    "subject_id": neo4j_subject['id'],
+                                    "object_id": neo4j_object['id']
+                                }
+                                if has_qualifiers:
+                                    qualifiers = dict()
+                                    if "qualified_predicate" in neo4j_edge:
+                                        qualifiers["qualified_predicate"] = neo4j_edge["qualified_predicate"]
+                                    if "subject_direction_qualifier" in neo4j_edge:
+                                        qualifiers["subject_direction_qualifier"] = neo4j_edge["subject_direction_qualifier"]
+                                    if "subject_aspect_qualifier" in neo4j_edge:
+                                        qualifiers["subject_aspect_qualifier"] = neo4j_edge["subject_aspect_qualifier"]
+                                    if "object_direction_qualifier" in neo4j_edge:
+                                        qualifiers["object_direction_qualifier"] = neo4j_edge["object_direction_qualifier"]
+                                    if "object_aspect_qualifier" in neo4j_edge:
+                                        qualifiers["object_aspect_qualifier"] = neo4j_edge["object_aspect_qualifier"]
+                                    if qualifiers:
+                                        test_edge["qualifiers"] = qualifiers
+                                test_edges.append(test_edge)
+                            else:
+                                logger.info(f'Failed to find an example for {subject}->{predicate}->{object}')
 
             self.meta_kg = {
                 'nodes': nodes,
                 'edges': predicates
             }
-            if 'PUBLIC_URL' in os.environ and os.environ['PUBLIC_URL']:
-                plater_url = os.environ['PUBLIC_URL']
-            else:
-                plater_url = 'http://-fake-default-url-/plater'
+            logger.info(f'SRI Testing data complete. Generated {len(test_edges)} test edges.')
             self.sri_testing_data = {
-                'url': plater_url,
+                'version': self.bl_version,
+                'source_type': 'primary',
                 'edges': test_edges
             }
 
@@ -575,19 +602,25 @@ class GraphInterface:
             """
             return await self.driver.run(query, **kwargs)
 
+        def predicate_has_qualifiers(self, predicate):
+            # TODO some bmt magic and find out if this predicate has qualifiers
+            if predicate in ['biolink:affects', 'biolink:regulates']:
+                return True
+            return False
 
         def convert_to_dict(self, result):
             return self.driver.convert_to_dict(result)
 
     instance = None
 
-    def __init__(self, host, port, auth, query_timeout=600):
+    def __init__(self, host, port, auth, query_timeout=600, bl_version=None):
         # create a new instance if not already created.
         if not GraphInterface.instance:
             GraphInterface.instance = GraphInterface._GraphInterface(host=host,
                                                                      port=port,
                                                                      auth=auth,
-                                                                     query_timeout=query_timeout)
+                                                                     query_timeout=query_timeout,
+                                                                     bl_version=bl_version)
 
     def __getattr__(self, item):
         # proxy function calls to the inner object.
