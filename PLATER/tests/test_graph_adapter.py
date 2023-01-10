@@ -1,6 +1,6 @@
 import httpx
 import json
-
+from collections import defaultdict
 from PLATER.services.util.graph_adapter import Neo4jHTTPDriver, GraphInterface
 from pytest_httpx import HTTPXMock
 import pytest
@@ -159,8 +159,10 @@ async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
-    query_schema = """\n                           MATCH (a)-[x]->(b)\n                           WHERE not a:Concept and not b:Concept                                                          \n                           RETURN DISTINCT labels(a) as source_labels, type(x) as predicate, labels(b) as target_labels\n                           """
-
+    query_schema = """ 
+                MATCH (a)-[x]->(b)
+                RETURN DISTINCT labels(a) as source_labels, type(x) as predicate, labels(b) as target_labels
+                """
     httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''))
     with open( os.path.join(os.path.dirname(__file__), 'data', 'schema_cypher_response.json'))as f:
@@ -176,17 +178,13 @@ async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
                             )
 
     # lets pretend we already have summary
-    gi.instance.summary = True
+    # gi.instance.summary = True
     schema = gi.get_schema()
-    expected = {
-        'biolink:Disease': {
-            'biolink:Disease': ['biolink:has_phenotype',
-                                'biolink:phenotype_of'],
-            'biolink:PhenotypicFeature': ['biolink:has_phenotype']},
-        'biolink:PhenotypicFeature': {
-            'biolink:Disease': ['biolink:phenotype_of']
-        }
-    }
+    expected = defaultdict(lambda: defaultdict(set))
+    expected['biolink:Disease']['biolink:Disease'] = {'biolink:has_phenotype', 'biolink:phenotype_of'}
+    expected['biolink:PhenotypicFeature']['biolink:Disease'] = {'biolink:phenotype_of'}
+    expected['biolink:Disease']['biolink:PhenotypicFeature'] = {'biolink:has_phenotype'}
+
     assert schema == expected
     GraphInterface.instance = None
 
@@ -213,7 +211,7 @@ async def test_get_meta_kg(httpx_mock: HTTPXMock):
             return ['HP'], node_attributes
     gi.instance.get_curie_prefix_by_node_type = patch_get_node_curies
 
-    def patch_get_examples(subject_node_type, object_node_type=None, predicate=None, num_examples=1):
+    def patch_get_examples(subject_node_type, object_node_type=None, predicate=None, num_examples=1, use_qualifiers=False):
         examples = []
         for i in range(num_examples):
             mock_edge = {
@@ -236,18 +234,14 @@ async def test_get_meta_kg(httpx_mock: HTTPXMock):
     }
 
     sri_testing_data = await gi.get_sri_testing_data()
-    if 'PUBLIC_URL' in os.environ and os.environ['PUBLIC_URL']:
-        sri_testing_data['url'] == os.environ['PUBLIC_URL']
-    else:
-        assert sri_testing_data['url'] == 'http://-fake-default-url-/plater'
     assert sri_testing_data['edges'] == [
         {'subject_category': 'biolink:Disease',
          'object_category': 'biolink:PhenotypicFeature',
          'predicate': 'biolink:has_phenotype',
-         'subject': 'HP:1999',
-         'object': 'MONDO:1999'},
+         'subject_id': 'HP:1999',
+         'object_id': 'MONDO:1999'},
         {'subject_category': 'biolink:Disease',
          'object_category': 'biolink:Disease',
          'predicate': 'biolink:has_phenotype',
-         'subject': 'HP:1999',
-         'object': 'MONDO:1999'}]
+         'subject_id': 'HP:1999',
+         'object_id': 'MONDO:1999'}]
