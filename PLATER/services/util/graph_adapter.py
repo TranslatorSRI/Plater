@@ -164,7 +164,7 @@ class GraphInterface:
     """
 
     class _GraphInterface:
-        def __init__(self, host, port, auth, query_timeout, bl_version):
+        def __init__(self, host, port, auth, query_timeout, bl_version="3.1"):
             self.driver = Neo4jHTTPDriver(host=host, port=port, auth=auth)
             self.schema = None
             # used to keep track of derived inverted predicates
@@ -247,16 +247,16 @@ class GraphInterface:
 
                 # find and add the inverse for each predicate if there is one,
                 # keep track of inverted predicates we added so we don't query the graph for them
-                for source_label, target_labels in self.schema.items():
-                    for target_label, predicates in target_labels.items():
+                for source_label in list(self.schema.keys()):
+                    for target_label in list(self.schema[source_label].keys()):
                         inverted_predicates = set()
-                        for predicate in predicates:
+                        for predicate in self.schema[source_label][target_label]:
                             inverse_predicate = self.invert_predicate(predicate)
                             if inverse_predicate is not None and \
-                                    inverse_predicate not in self.schema[source_label][target_label]:
+                                    inverse_predicate not in self.schema[target_label][source_label]:
                                 inverted_predicates.add(inverse_predicate)
-                                self.inverted_predicates[source_label][target_label].add(inverse_predicate)
-                        self.schema[source_label][target_label].update(inverted_predicates)
+                                self.inverted_predicates[target_label][source_label].add(inverse_predicate)
+                        self.schema[target_label][source_label].update(inverted_predicates)
 
                 logger.info("schema done.")
                 '''
@@ -613,7 +613,7 @@ class GraphInterface:
 
     instance = None
 
-    def __init__(self, host, port, auth, query_timeout=600, bl_version=None):
+    def __init__(self, host, port, auth, query_timeout=600, bl_version="3.1"):
         # create a new instance if not already created.
         if not GraphInterface.instance:
             GraphInterface.instance = GraphInterface._GraphInterface(host=host,
