@@ -512,17 +512,32 @@ class GraphInterface:
                                     "object_id": neo4j_object['id']
                                 }
                                 if has_qualifiers:
-                                    qualifiers = dict()
+                                    qualifiers = []
                                     if "qualified_predicate" in neo4j_edge:
-                                        qualifiers["qualified_predicate"] = neo4j_edge["qualified_predicate"]
+                                        qualifiers.append({
+                                            "qualifier_type_id": "biolink:qualified_predicate",
+                                            "qualifier_value": neo4j_edge["qualified_predicate"]
+                                        })
                                     if "subject_direction_qualifier" in neo4j_edge:
-                                        qualifiers["subject_direction_qualifier"] = neo4j_edge["subject_direction_qualifier"]
+                                        qualifiers.append({
+                                            "qualifier_type_id": "biolink:subject_direction_qualifier",
+                                            "qualifier_value": neo4j_edge["subject_direction_qualifier"]
+                                        })
                                     if "subject_aspect_qualifier" in neo4j_edge:
-                                        qualifiers["subject_aspect_qualifier"] = neo4j_edge["subject_aspect_qualifier"]
+                                        qualifiers.append({
+                                            "qualifier_type_id": "biolink:subject_aspect_qualifier",
+                                            "qualifier_value": neo4j_edge["subject_aspect_qualifier"]
+                                        })
                                     if "object_direction_qualifier" in neo4j_edge:
-                                        qualifiers["object_direction_qualifier"] = neo4j_edge["object_direction_qualifier"]
+                                        qualifiers.append({
+                                            "qualifier_type_id": "biolink:object_direction_qualifier",
+                                            "qualifier_value": neo4j_edge["object_direction_qualifier"]
+                                        })
                                     if "object_aspect_qualifier" in neo4j_edge:
-                                        qualifiers["object_aspect_qualifier"] = neo4j_edge["object_aspect_qualifier"]
+                                        qualifiers.append({
+                                            "qualifier_type_id": "biolink:object_aspect_qualifier",
+                                            "qualifier_value": neo4j_edge["object_aspect_qualifier"]
+                                        })
                                     if qualifiers:
                                         test_edge["qualifiers"] = qualifiers
                                 test_edges.append(test_edge)

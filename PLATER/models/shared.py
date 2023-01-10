@@ -19,7 +19,7 @@ class SRITestEdge(BaseModel):
     predicate: str
     subject_category: str
     object_category: str
-    qualifiers: Optional[Dict] = None
+    qualifiers: Optional[List] = None
 
 
 class SRITestData(BaseModel):
