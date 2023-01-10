@@ -29,7 +29,7 @@ def get_bl_helper():
 
 def construct_open_api_schema(app, trapi_version, prefix=""):
     plater_title = config.get('PLATER_TITLE', 'Plater API')
-    plater_version = os.environ.get('PLATER_VERSION', '1.3.0-8')
+    plater_version = os.environ.get('PLATER_VERSION', '1.3.0-9')
     server_url = os.environ.get('PUBLIC_URL')
     if app.openapi_schema:
         return app.openapi_schema
