@@ -52,6 +52,7 @@ class Question:
         edges = query_graph.get('edges')
         for e in edges:
             # removes "biolink:" from constraint names. since these are not encoded in the graph.
+            # TODO revert this when we switch to having biolink: in the graphs
             if edges[e]['qualifier_constraints']:
                 for qualifier in edges[e]['qualifier_constraints']:
                     for item in qualifier['qualifier_set']:
@@ -67,10 +68,26 @@ class Question:
             # save the transpiler attribs
             attributes = props.get('attributes', [])
 
-            # create a new list that doesnt have the core properties
+            # separate the qualifiers from attributes for edges and format them
+            if not node:
+                qualifier_results = [attrib for attrib in attributes
+                                     if 'qualifie' in attrib['original_attribute_name']]
+                if qualifier_results:
+                    formatted_qualifiers = []
+                    for qualifier in qualifier_results:
+                        formatted_qualifiers.append({
+                            "qualifier_type_id": f"biolink:{qualifier['original_attribute_name']}"
+                            if not qualifier['original_attribute_name'].startswith("biolink:")
+                            else qualifier['original_attribute_name'],
+                            "qualifier_value": qualifier['value']
+                        })
+                    props['qualifiers'] = formatted_qualifiers
+
+            # create a new list that doesnt have the core properties or qualifiers
             new_attribs = [attrib for attrib in attributes
-                           if attrib['original_attribute_name'] not in props and attrib['original_attribute_name']
-                           not in skip_list
+                           if attrib['original_attribute_name'] not in props and
+                           attrib['original_attribute_name'] not in skip_list and
+                           'qualifie' not in attrib['original_attribute_name']
                            ]
 
             # for the non-core properties
@@ -87,29 +104,29 @@ class Question:
                     if attribute_data:
                         attr.update(attribute_data)
 
-            # create a provenance attribute for plater
-            provenance_attrib = {
-                "attribute_type_id": "biolink:aggregator_knowledge_source",
-                "value": [self.provenance],
-                "value_type_id": "biolink:InformationResource",
-                "original_attribute_name": "biolink:aggregator_knowledge_source"
-            }
-
-            # add plater provenance to the list
+            # update edge provenance with automat infores
             if not node:
-                # Adds attribute source for provenance attributes to edges.
-                new_attribs.append(provenance_attrib)
+                found_previous_aggregator = False
+                for attribute in new_attribs:
+                    if attribute.get('attribute_type_id') == "biolink:primary_knowledge_source":
+                        # setting this to self provenance (eg. infores:automat-biolink).
+                        attribute['attribute_source'] = self.provenance
+                    elif attribute.get('attribute_type_id') == "biolink:aggregator_knowledge_source":
+                        found_previous_aggregator = True
+                        attribute['attribute_source'] = self.provenance
+                        attribute['value'].append(self.provenance)  # add automat infores
+                        attribute['value'] = list(set(attribute['value']))  # force uniqueness
 
-            # setting this to self provenance (eg. infores:automat-biolink).
-            for attribute in new_attribs:
-                if attribute.get('attribute_type_id') in [
-                    "biolink:original_knowledge_source",
-                    "biolink:primary_knowledge_source",
-                    "biolink:aggregator_knowledge_source"
-                ] and attribute.get('value_type_id') == "biolink:InformationResource":
-                    attribute['attribute_source'] = self.provenance
-                    # convert to list for uniformity
-                    attribute['value'] = [attribute['value']] if isinstance(attribute['value'], str) else attribute['value']
+                # create aggregator provenance attribute for plater if not present
+                if not found_previous_aggregator:
+                    provenance_attrib = {
+                        "attribute_type_id": "biolink:aggregator_knowledge_source",
+                        "attribute_source": self.provenance,
+                        "value": [self.provenance],
+                        "value_type_id": "biolink:InformationResource",
+                        "original_attribute_name": "biolink:aggregator_knowledge_source"
+                    }
+                    new_attribs.append(provenance_attrib)
 
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
