@@ -30,7 +30,7 @@ def get_bl_helper():
 def construct_open_api_schema(app, trapi_version, prefix=""):
     plater_title = config.get('PLATER_TITLE', 'Plater API')
     plater_version = os.environ.get('PLATER_VERSION', '1.3.0-10')
-    server_url = os.environ.get('PUBLIC_URL')
+    server_url = os.environ.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema
     open_api_schema = get_openapi(
@@ -80,7 +80,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
                 cnf['x-location'] = os.environ.get("LOCATION_VALUE", "location")
                 cnf['x-translator'] = {}
                 cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "2.1.0")
-                cnf['x-translator']['trapi-version'] = trapi-version
+                cnf['x-trapi'] = trapi_version
                 cnf['x-translator']['testing-data-location'] = [ server_url.strip('/') + "/sri_testing_data"]
         open_api_schema["servers"] = servers_conf
 
