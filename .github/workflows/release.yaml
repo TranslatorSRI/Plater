@@ -43,7 +43,7 @@ jobs:
                   tags: ${{ steps.meta_base_image.outputs.tags }}
                   labels: ${{ steps.meta_base_image.outputs.labels }}
                   build-args: VERSION=${{ steps.get_version.outputs.VERSION }}
-            - name: Build and push base image
+            - name: Build and push clustered image
               uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
               with:
                   context: ./PLATER/plater-clustered-docker
