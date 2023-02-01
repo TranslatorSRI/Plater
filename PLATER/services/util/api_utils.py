@@ -78,6 +78,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
                 cnf['url'] = cnf['url'] + prefix
                 cnf['x-maturity'] = os.environ.get("MATURITY_VALUE", "maturity")
                 cnf['x-location'] = os.environ.get("LOCATION_VALUE", "location")
+                cnf['x-translator'] = {}
                 cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "2.1.0")
                 cnf['x-translator']['trapi-version'] = trapi-version
                 cnf['x-translator']['testing-data-location'] = [ server_url.strip('/') + "/sri_testing_data"]
