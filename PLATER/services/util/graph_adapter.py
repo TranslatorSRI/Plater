@@ -170,8 +170,6 @@ class GraphInterface:
             # used to keep track of derived inverted predicates
             self.inverted_predicates = defaultdict(lambda: defaultdict(set))
             # self.summary = None
-            self.meta_kg = None
-            self.sri_testing_data = None
             self.query_timeout = query_timeout
             self.toolkit = Toolkit()
             self.bl_version = bl_version
@@ -432,120 +430,6 @@ class GraphInterface:
                 response = self.convert_to_dict(self.driver.run_sync(query))
                 return response
 
-        def get_curie_prefix_by_node_type(self, node_type):
-            query = f"""
-            MATCH (n:`{node_type}`) return collect(n.id) as ids , collect(keys(n)) as attributes
-            """
-            logger.info(f"starting query {query} on graph... this might take a few")
-            result = self.driver.run_sync(query)
-            logger.info(f"completed query, collecting node curie prefixes")
-            result = self.convert_to_dict(result)
-            curie_prefixes = set()
-            for i in result[0]['ids']:
-                curie_prefixes.add(i.split(':')[0])
-            # sort according to bl model
-            node_bl_def = self.toolkit.get_element(node_type)
-            id_prefixes = node_bl_def.id_prefixes
-            sorted_curie_prefixes = [i for i in id_prefixes if i in curie_prefixes] # gives presidence to what's in BL
-            # add other ids even if not in BL next
-            sorted_curie_prefixes += [i for i in curie_prefixes if i not in sorted_curie_prefixes]
-            all_keys = set()
-            for keys in result[0]['attributes']:
-                for k in keys:
-                    all_keys.add(k)
-
-            attributes_as_bl_types = []
-            for key in all_keys:
-                attr_data = get_attribute_bl_info(key)
-                if attr_data:
-                    attr_data['original_attribute_names'] = [key]
-                    attributes_as_bl_types.append(attr_data)
-            return sorted_curie_prefixes, attributes_as_bl_types
-
-        def generate_meta_kg_and_test_data(self):
-            schema = self.get_schema()
-            nodes = {}
-            predicates = []
-            test_edges = []
-            for subject in schema:
-                if subject not in nodes:
-                    curies, attributes = self.get_curie_prefix_by_node_type(subject)
-                    nodes[subject] = {'id_prefixes': curies, "attributes": attributes}
-                for object in schema[subject]:
-                    if object not in nodes:
-                        curies, attributes = self.get_curie_prefix_by_node_type(object)
-                        nodes[object] = {'id_prefixes': curies, "attributes": attributes}
-                    for predicate in schema[subject][object]:
-                        predicates.append({
-                            'subject': subject,
-                            'object': object,
-                            'predicate': predicate
-                        })
-                        if predicate not in self.inverted_predicates[subject][object]:
-                            has_qualifiers = False
-                            if int(self.bl_version[0]) > 2:
-                                has_qualifiers = self.predicate_has_qualifiers(predicate)
-
-                            example_edges = self.get_examples(subject_node_type=subject,
-                                                              object_node_type=object,
-                                                              predicate=predicate,
-                                                              num_examples=1,
-                                                              use_qualifiers=has_qualifiers)
-
-                            # sometimes a predicate could have qualifiers but there is not an example of one
-                            if not example_edges and has_qualifiers:
-                                example_edges = self.get_examples(subject_node_type=subject,
-                                                                  object_node_type=object,
-                                                                  predicate=predicate,
-                                                                  num_examples=1,
-                                                                  use_qualifiers=False)
-
-                            if example_edges:
-                                neo4j_subject = example_edges[0]['subject']
-                                neo4j_object = example_edges[0]['object']
-                                neo4j_edge = example_edges[0]['edge']
-                                test_edge = {
-                                    "subject_category": subject,
-                                    "object_category": object,
-                                    "predicate": predicate,
-                                    "subject_id": neo4j_subject['id'],
-                                    "object_id": neo4j_object['id']
-                                }
-                                if has_qualifiers:
-                                    qualifiers = []
-                                    for prop in neo4j_edge:
-                                        if 'qualifie' in prop:
-                                            qualifiers.append({
-                                                "qualifier_type_id": f"biolink:{prop}" if not prop.startswith("biolink:") else prop,
-                                                "qualifier_value": neo4j_edge[prop]
-                                            })
-                                    if qualifiers:
-                                        test_edge["qualifiers"] = qualifiers
-                                test_edges.append(test_edge)
-                            else:
-                                logger.info(f'Failed to find an example for {subject}->{predicate}->{object}')
-
-            self.meta_kg = {
-                'nodes': nodes,
-                'edges': predicates
-            }
-            logger.info(f'SRI Testing data complete. Generated {len(test_edges)} test edges.')
-            self.sri_testing_data = {
-                'version': self.bl_version,
-                'source_type': 'primary',
-                'edges': test_edges
-            }
-
-        async def get_meta_kg(self):
-            if not self.meta_kg:
-                self.generate_meta_kg_and_test_data()
-            return self.meta_kg
-
-        async def get_sri_testing_data(self):
-            if not self.sri_testing_data:
-                self.generate_meta_kg_and_test_data()
-            return self.sri_testing_data
-
         def supports_apoc(self):
             """
             Returns true if apoc is supported by backend database.
@@ -597,12 +481,6 @@ class GraphInterface:
                 ]) as result
             """
             return await self.driver.run(query, **kwargs)
-
-        def predicate_has_qualifiers(self, predicate):
-            # TODO some bmt magic and find out if this predicate has qualifiers
-            if predicate in ['biolink:affects', 'biolink:regulates']:
-                return True
-            return False
 
         def convert_to_dict(self, result):
             return self.driver.convert_to_dict(result)
