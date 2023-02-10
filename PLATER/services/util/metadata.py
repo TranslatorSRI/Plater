@@ -20,17 +20,12 @@ class GraphMetadata:
             return self.metadata
 
         def retrieve_metadata(self):
-            with open('about.json') as f:
-                self.metadata = {
-                    'plater': json.load(f)
-                }
-                self.metadata['plater']['warning'] = 'This section comes from the Plater deployment, not ORION. ' \
-                                                     'The rest of the metadata is likely more relevant and specific.'
-            metadata_url = config.get('PLATER_METADATA_URL')
-            if metadata_url:
-                metadata_response = requests.get(metadata_url)
-                self.metadata.update(metadata_response.json())
-            return self.metadata
+            with open('metadata/metadata.json') as f:
+                self.metadata = json.load(f)
+
+            if not self.metadata:
+                with open('metadata/about.json') as f:
+                    self.metadata = json.load(f)
 
         async def get_meta_kg(self):
             if not self.meta_kg:
@@ -38,9 +33,8 @@ class GraphMetadata:
             return self.meta_kg
 
         def retrieve_meta_kg(self):
-            meta_kg_url = config.get('PLATER_METAKG_URL')
-            meta_kg_response = requests.get(meta_kg_url)
-            self.meta_kg = meta_kg_response.json()
+            with open('metadata/meta_knowledge_graph.json') as f:
+                self.meta_kg = json.load(f)
 
             # this avoids errors when attribute_type_id is none/null,
             # which should not happen but does currently due to an interaction with the bmt toolkit
@@ -55,9 +49,8 @@ class GraphMetadata:
             return self.sri_testing_data
 
         def retrieve_sri_test_data(self):
-            test_data_url = config.get('PLATER_TEST_DATA_URL')
-            test_data_response = requests.get(test_data_url)
-            self.sri_testing_data = test_data_response.json()
+            with open('metadata/sri_testing_data.json') as f:
+                self.sri_testing_data = json.load(f)
 
             # version is technically not part of the spec anymore
             # but this ensures validation with the model until it's removed
