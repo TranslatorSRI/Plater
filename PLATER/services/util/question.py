@@ -114,6 +114,8 @@ class Question:
                     elif attribute.get('attribute_type_id') == "biolink:aggregator_knowledge_source":
                         found_previous_aggregator = True
                         attribute['attribute_source'] = self.provenance
+                        if isinstance(attribute['value'], str):
+                            attribute['value'] = [attribute['value']]
                         attribute['value'].append(self.provenance)  # add automat infores
                         attribute['value'] = list(set(attribute['value']))  # force uniqueness
 
