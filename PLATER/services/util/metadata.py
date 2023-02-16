@@ -1,4 +1,4 @@
-import requests
+import os
 import json
 from PLATER.services.config import config
 
@@ -20,11 +20,11 @@ class GraphMetadata:
             return self.metadata
 
         def retrieve_metadata(self):
-            with open('metadata/metadata.json') as f:
+            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'metadata.json')) as f:
                 self.metadata = json.load(f)
 
             if not self.metadata:
-                with open('metadata/about.json') as f:
+                with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'about.json')) as f:
                     self.metadata = json.load(f)
 
         async def get_meta_kg(self):
@@ -33,7 +33,7 @@ class GraphMetadata:
             return self.meta_kg
 
         def retrieve_meta_kg(self):
-            with open('metadata/meta_knowledge_graph.json') as f:
+            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'meta_knowledge_graph.json')) as f:
                 self.meta_kg = json.load(f)
 
             # this avoids errors when attribute_type_id is none/null,
@@ -56,7 +56,6 @@ class GraphMetadata:
             # but this ensures validation with the model until it's removed
             if 'version' not in self.sri_testing_data:
                 self.sri_testing_data['version'] = config.get('BL_VERSION')
-
 
     instance = None
 
