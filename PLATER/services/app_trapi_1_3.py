@@ -5,27 +5,28 @@ from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, Reasone
 from PLATER.models.shared import SRITestData
 
 from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.question import Question
 from PLATER.services.util.overlay import Overlay
-from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
+from PLATER.services.util.api_utils import get_graph_interface, get_graph_metadata, construct_open_api_schema, get_example
 
 # Mount open api at /1.2/openapi.json
 APP_TRAPI_1_3 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.3')
 
 
 async def get_meta_knowledge_graph(
-        graph_interface: GraphInterface = Depends(get_graph_interface),
+        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ) -> MetaKnowledgeGraph:
     """Handle /meta_knowledge_graph."""
-    response = await graph_interface.get_meta_kg()
+    response = await graph_metadata.get_meta_kg()
     return response
 
 
 async def get_sri_testing_data(
-        graph_interface: GraphInterface = Depends(get_graph_interface),
+        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ) -> SRITestData:
     """Handle /sri_testing_data."""
-    response = await graph_interface.get_sri_testing_data()
+    response = await graph_metadata.get_sri_testing_data()
     return response
 
 
