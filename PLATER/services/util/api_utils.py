@@ -4,6 +4,7 @@ from fastapi.openapi.utils import get_openapi
 import json
 import os
 from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.config import config
 
@@ -22,6 +23,10 @@ def get_graph_interface():
     )
 
 
+def get_graph_metadata():
+    return GraphMetadata()
+
+
 def get_bl_helper():
     """Get Biolink helper."""
     return BLHelper(config.get('BL_HOST', 'https://bl-lookup-sri.renci.org'))
@@ -29,7 +34,7 @@ def get_bl_helper():
 
 def construct_open_api_schema(app, trapi_version, prefix=""):
     plater_title = config.get('PLATER_TITLE', 'Plater API')
-    plater_version = os.environ.get('PLATER_VERSION', '1.3.0-11')
+    plater_version = os.environ.get('PLATER_VERSION', '1.3.0-12')
     server_url = os.environ.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema

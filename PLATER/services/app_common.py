@@ -11,9 +11,11 @@ from PLATER.models.models_trapi_1_0 import (
 )
 from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.question import Question
-from PLATER.services.util.api_utils import get_graph_interface, get_bl_helper, construct_open_api_schema, get_example
+from PLATER.services.util.api_utils import get_graph_interface, \
+    get_bl_helper, construct_open_api_schema, get_example, get_graph_metadata
 
 
 APP_COMMON = FastAPI(openapi_url='/common/openapi.json', docs_url='/common/docs')
@@ -75,19 +77,21 @@ APP_COMMON.add_api_route(
 )
 
 
-async def about() -> Any:
-    """Handle /about."""
-    with open('about.json') as f:
-        return json.load(f)
+async def metadata(
+        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
+) -> Any:
+    """Handle /metadata."""
+    response = await graph_metadata.get_metadata()
+    return response
 
 
 APP_COMMON.add_api_route(
-    "/about",
-    about,
+    "/metadata",
+    metadata,
     methods=["GET"],
     response_model=Any,
-    summary="JSON about dataset",
-    description="Returns a JSON describing dataset.",
+    summary="Metadata about the knowledge graph.",
+    description="Returns JSON with metadata about the data sources in this knowledge graph.",
 )
 
 
