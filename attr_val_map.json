@@ -1,6 +1,5 @@
 {
   "attribute_type_map": {
-      "`biolink:original_knowledge_source`": "biolink:original_knowledge_source",
       "`biolink:primary_knowledge_source`": "biolink:primary_knowledge_source",
       "`biolink:aggregator_knowledge_source`": "biolink:aggregator_knowledge_source",
       "equivalent_identifiers": "biolink:same_as",
@@ -8,7 +7,6 @@
   },
   "value_type_map": {
       "equivalent_identifiers": "metatype:uriorcurie",
-      "biolink:original_knowledge_source": "biolink:InformationResource",
       "biolink:primary_knowledge_source": "biolink:InformationResource",
       "biolink:aggregator_knowledge_source": "biolink:InformationResource",
       "endogenous": "xsd:boolean"

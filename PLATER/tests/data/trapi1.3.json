@@ -215,12 +215,10 @@
             "attribute_source": "infores:automat-robokop"
           },
           {
-            "attribute_type_id": "biolink:original_knowledge_source",
-            "value": [
-              "infores:sider"
-            ],
+            "attribute_type_id": "biolink:primary_knowledge_source",
+            "value": "infores:sider",
             "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:original_knowledge_source",
+            "original_attribute_name": "biolink:primary_knowledge_source",
             "attribute_source": "infores:automat-robokop"
           },
           {
@@ -258,12 +256,10 @@
             "attributes": null
           },
           {
-            "attribute_type_id": "biolink:original_knowledge_source",
-            "value": [
-              "infores:original_source_1"
-            ],
+            "attribute_type_id": "biolink:primary_knowledge_source",
+            "value": "infores:original_source_1",
             "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:original_knowledge_source",
+            "original_attribute_name": "biolink:primary_knowledge_source",
             "value_url": null,
             "attribute_source": "infores:automat-robokop",
             "description": null,
@@ -299,12 +295,10 @@
         "predicate": "biolink:contributes_to",
         "attributes": [
           {
-            "attribute_type_id": "biolink:original_knowledge_source",
-            "value": [
-              "infores:ctd"
-            ],
+            "attribute_type_id": "biolink:primary_knowledge_source",
+            "value": "infores:ctd",
             "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:original_knowledge_source",
+            "original_attribute_name": "biolink:primary_knowledge_source",
             "attribute_source": "infores:automat-robokop"
           },
           {

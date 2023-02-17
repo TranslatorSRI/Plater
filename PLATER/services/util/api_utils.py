@@ -17,7 +17,8 @@ def get_graph_interface():
             config.get('NEO4J_USERNAME'),
             config.get('NEO4J_PASSWORD')
         ),
-        query_timeout=int(config.get('NEO4J_QUERY_TIMEOUT'))
+        query_timeout=int(config.get('NEO4J_QUERY_TIMEOUT')),
+        bl_version=config.get('BL_VERSION')
     )
 
 
@@ -28,8 +29,8 @@ def get_bl_helper():
 
 def construct_open_api_schema(app, trapi_version, prefix=""):
     plater_title = config.get('PLATER_TITLE', 'Plater API')
-    plater_version = os.environ.get('PLATER_VERSION', '1.3.0-7')
-    server_url = os.environ.get('PUBLIC_URL')
+    plater_version = os.environ.get('PLATER_VERSION', '1.3.0-11')
+    server_url = os.environ.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema
     open_api_schema = get_openapi(
@@ -77,12 +78,19 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
                 cnf['url'] = cnf['url'] + prefix
                 cnf['x-maturity'] = os.environ.get("MATURITY_VALUE", "maturity")
                 cnf['x-location'] = os.environ.get("LOCATION_VALUE", "location")
+                cnf['x-trapi'] = trapi_version
+                cnf['x-translator'] = {}
+                cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "2.1.0")
+                cnf['x-translator']['test-data-location'] = server_url.strip('/') + "/sri_testing_data"
         open_api_schema["servers"] = servers_conf
-
 
     open_api_schema["info"]["x-trapi"] = x_trapi_extension
     if server_url:
-        open_api_schema["info"]["x-trapi"]["test_data_location"] = server_url.strip('/') + "/sri_testing_data"
+        open_api_schema["info"]["x-trapi"]["test_data_location"] = {
+            os.environ.get("MATURITY_VALUE", "maturity"): {
+                'url': server_url.strip('/') + "/sri_testing_data"
+            }
+        }
     return open_api_schema
 
 

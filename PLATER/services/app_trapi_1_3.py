@@ -33,7 +33,7 @@ async def reasoner_api(
         request: ReasonerRequest = Body(
             ...,
             # Works for now but in deployment would be replaced by a mount, specific to backend dataset
-            example=get_example("reasoner-trapi-1.2"),
+            example=get_example("reasoner-trapi-1.3"),
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ):
@@ -72,6 +72,7 @@ APP_TRAPI_1_3.add_api_route(
     get_sri_testing_data,
     methods=["GET"],
     response_model=SRITestData,
+    response_model_exclude_none=True,
     summary="Test data for usage by the SRI Testing Harness.",
     description="Returns a list of edges that are representative examples of the knowledge graph.",
     tags=["trapi"]

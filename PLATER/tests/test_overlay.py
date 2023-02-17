@@ -137,8 +137,7 @@ def get_kg_ids(bindings):
 
 def test_overlay_adds_support_bindings(graph_interface_apoc_supported, reasoner_json):
     ov = Overlay(graph_interface=graph_interface_apoc_supported)
-    event_loop = asyncio.get_event_loop()
-    response = event_loop.run_until_complete(ov.connect_k_nodes(reasoner_json))
+    response = asyncio.run(ov.connect_k_nodes(reasoner_json))
     edges = response['knowledge_graph']['edges']
     edge_ids = edges.keys()
     assert len(edge_ids) == 2

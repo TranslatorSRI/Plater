@@ -1,5 +1,5 @@
 from pydantic import validator, root_validator
-from typing import Dict, List
+from typing import Dict, List, Optional
 from pydantic import BaseModel
 from reasoner_pydantic import Query as ReasonerRequestBaseClass, \
     Message, \
@@ -14,15 +14,17 @@ from reasoner_pydantic import Query as ReasonerRequestBaseClass, \
 
 
 class SRITestEdge(BaseModel):
-    subject: str
-    object: str
+    subject_id: str
+    object_id: str
     predicate: str
     subject_category: str
     object_category: str
+    qualifiers: Optional[List] = None
 
 
 class SRITestData(BaseModel):
-    url: str
+    version: str
+    source_type: str
     edges: List[SRITestEdge]
 
 

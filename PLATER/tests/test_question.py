@@ -30,16 +30,33 @@ def test_format_attribute():
     # note that this test does not run through the reasoner code that does the attribute mapping.
     # so the values in the expected results must account for that
 
-    trapi_kg_response = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [
-        {"original_attribute_name": "pub", "attribute_type_id": "CURIE:x"},
-        {"original_attribute_name": "biolink:original_knowledge_source", "value": "infores:kg_source"}]
-    }}}}
-
-    expected_trapi = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [
-        {"original_attribute_name": "pub", "attribute_type_id": "CURIE:x", "value_type_id": "EDAM:data_0006"},
-        {"attribute_source": "infores:automat.notspecified", "original_attribute_name": "biolink:original_knowledge_source", "value": ["infores:kg_source"], "attribute_type_id": "biolink:original_knowledge_source", "value_type_id": "biolink:InformationResource"}]
-    }}}}
-
+    trapi_kg_response = {"knowledge_graph":
+        {"nodes":
+            {"CURIE:1":
+                {"attributes": [{"original_attribute_name": "pub", "attribute_type_id": "CURIE:x"}]}
+             },
+         "edges":
+             {"123123":
+                  {"attributes": [{"original_attribute_name": "biolink:primary_knowledge_source", "value": "infores:kg_source"}]}
+              }
+         }
+    }
+    expected_trapi = {"knowledge_graph":
+        {"nodes":
+            {"CURIE:1":
+                {"attributes": [{"original_attribute_name": "pub", "attribute_type_id": "CURIE:x", "value_type_id": "EDAM:data_0006"}]}
+             },
+         "edges":
+             {"123123":
+                  {"attributes": [{"original_attribute_name": "biolink:primary_knowledge_source", "value": "infores:kg_source",
+                                   "attribute_source": "infores:automat.notspecified", "attribute_type_id": "biolink:primary_knowledge_source",
+                                   "value_type_id": "biolink:InformationResource"},
+                                  {'attribute_type_id': 'biolink:aggregator_knowledge_source',  'attribute_source': 'infores:automat.notspecified',
+                                   'value': ['infores:automat.notspecified'],
+                                   'value_type_id': 'biolink:InformationResource', 'original_attribute_name': 'biolink:aggregator_knowledge_source'}]}
+              }
+         }
+    }
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
     transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
@@ -54,8 +71,7 @@ def test_format_attribute():
         {"original_attribute_name": "endogenous", "value": "false"},
         {"original_attribute_name": "p-value", "value": "1.234"},
         {"original_attribute_name": "chi-squared-statistic", "value": "2.345"},
-        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"]},
-        {"original_attribute_name": "biolink:original_knowledge_source", "value": "infores:kg_source"}]
+        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"]}]
     }}}}
 
     t2_expected_trapi = {'knowledge_graph': {'nodes': {'CURIE:1': {'attributes': [
@@ -64,8 +80,7 @@ def test_format_attribute():
         {'original_attribute_name': 'endogenous', 'value': 'false', 'value_type_id': 'xsd:boolean', 'attribute_type_id': 'aragorn:endogenous'},
         {'original_attribute_name': 'p-value', 'value': '1.234', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:Attribute'},
         {'original_attribute_name': 'chi-squared-statistic', 'value': '2.345', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:Attribute'},
-        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"], 'value_type_id': 'metatype:uriorcurie'},
-        {"attribute_source": "infores:automat.notspecified", "original_attribute_name": "biolink:original_knowledge_source", "value": ["infores:kg_source"], "attribute_type_id": "biolink:original_knowledge_source", "value_type_id": "biolink:InformationResource"}
+        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"], 'value_type_id': 'metatype:uriorcurie'}
     ]
     }}}}
 
@@ -84,9 +99,10 @@ def test_format_edge_qualifiers():
     trapi_kg_response ={ "knowledge_graph": {
        "edges":{
           "some_id":{
-             "predicate":"biolink:affects",
-             "subject":"PUBCHEM.COMPOUND:5311062",
-             "attributes":[
+              "object": "NCBIGene:283871",
+              "predicate": "biolink:affects",
+              "subject": "PUBCHEM.COMPOUND:5311062",
+              "attributes": [
                 {
                    "attribute_type_id":"NA",
                    "original_attribute_name":"qualified_predicate",
@@ -94,41 +110,43 @@ def test_format_edge_qualifiers():
                 },
                 {
                    "attribute_type_id":"NA",
-                   "original_attribute_name":"object_aspect",
+                   "original_attribute_name":"object_aspect_qualifier",
                    "value":"activity"
                 },
                 {
                    "attribute_type_id":"NA",
-                   "original_attribute_name":"object_direction",
+                   "original_attribute_name":"object_direction_qualifier",
                    "value":"decreased"
-                }
-             ],
-             "object":"NCBIGene:283871"
+                }],
           }
        }
-    } }
+    }}
     expected_trapi = {"knowledge_graph": {"edges": {'some_id': {
-                                              'attributes': [{'attribute_type_id': 'biolink:qualified_predicate',
-                                                              'original_attribute_name': 'qualified_predicate',
-                                                              'value': 'biolink:causes',
-                                                              'value_type_id': 'EDAM:data_0006'},
-                                                             {'attribute_type_id': 'biolink:object_aspect_qualifier',
-                                                              'original_attribute_name': 'object_aspect',
-                                                              'value': 'activity',
-                                                              'value_type_id': 'EDAM:data_0006'},
-                                                             {'attribute_type_id': 'biolink:object_direction_qualifier',
-                                                              'original_attribute_name': 'object_direction',
-                                                              'value': 'decreased',
-                                                              'value_type_id': 'EDAM:data_0006'},
-                                                             {'attribute_source': 'infores:automat.notspecified',
-                                                              'attribute_type_id': 'biolink:aggregator_knowledge_source',
-                                                              'original_attribute_name': 'biolink:aggregator_knowledge_source',
-                                                              'value': ['infores:automat.notspecified'],
-                                                              'value_type_id': 'biolink:InformationResource'}],
-                                              'object': 'NCBIGene:283871',
-                                              'predicate': 'biolink:affects',
-                                              'subject': 'PUBCHEM.COMPOUND:5311062'}}
-                                          }}
+        'object': 'NCBIGene:283871',
+        'predicate': 'biolink:affects',
+        'subject': 'PUBCHEM.COMPOUND:5311062',
+        'attributes': [
+            {'attribute_type_id': 'biolink:aggregator_knowledge_source',
+             'attribute_source': 'infores:automat.notspecified',
+             'value': ['infores:automat.notspecified'],
+             'value_type_id': 'biolink:InformationResource',
+             'original_attribute_name': 'biolink:aggregator_knowledge_source'}],
+        "qualifiers": [
+            {
+                "qualifier_type_id": "biolink:qualified_predicate",
+                "qualifier_value": "biolink:causes"
+            },
+            {
+                "qualifier_type_id": "biolink:object_aspect_qualifier",
+                "qualifier_value": "activity"
+            },
+            {
+                "qualifier_type_id": "biolink:object_direction_qualifier",
+                "qualifier_value": "decreased"
+            },
+        ],
+        }}
+    }}
 
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
@@ -207,7 +225,7 @@ def test_attribute_constraint_filter_edge(message):
            result['knowledge_graph']['edges']['57de50b7d36a7b952a12376ae39c1f92']
     assert len(result['results']) == 1
     edge_constraints = [
-        {"id": "biolink:original_knowledge_source", "name": "eq_id_filter", "value": ['infores:original_source_1'], "operator": "=="}
+        {"id": "biolink:primary_knowledge_source", "name": "eq_id_filter", "value": 'infores:original_source_1', "operator": "=="}
     ]
     message['query_graph']['edges']['e0']['attribute_constraints'] = edge_constraints
     result = Question.apply_attribute_constraints(message)
