@@ -49,7 +49,7 @@ class GraphMetadata:
             return self.sri_testing_data
 
         def retrieve_sri_test_data(self):
-            with open('metadata/sri_testing_data.json') as f:
+            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'sri_testing_data.json')) as f:
                 self.sri_testing_data = json.load(f)
 
             # version is technically not part of the spec anymore
