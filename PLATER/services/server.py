@@ -45,11 +45,18 @@ APP.add_middleware(
 
 if os.environ.get("OTEL_ENABLED"):
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     from opentelemetry import trace
     from opentelemetry.exporter.jaeger.thrift import JaegerExporter
     from opentelemetry.sdk.resources import SERVICE_NAME as telemetery_service_name_key, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    import logging, warnings
+    # httpx connections need to be open a little longer by the otel decorators
+    # but some libs display warnings of resource being unclosed.
+    # these supresses such warnings.
+    logging.captureWarnings(capture=True)
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     service_name = os.environ.get('PLATER_TITLE', 'PLATER')
     assert service_name and isinstance(service_name, str)
     trace.set_tracer_provider(
@@ -67,6 +74,7 @@ if os.environ.get("OTEL_ENABLED"):
     tracer = trace.get_tracer(__name__)
     FastAPIInstrumentor.instrument_app(APP, tracer_provider=trace, excluded_urls=
                                        "docs,openapi.json") #,*cypher,*1.3/sri_testing_data")
+    HTTPXClientInstrumentor().instrument()
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(APP, host='0.0.0.0', port=8080)
