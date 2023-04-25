@@ -128,29 +128,6 @@ class Question:
                         for resource_id in temp[resource_role]
                                           ]
                 kg_items[identifier]["sources"] = formatted_sources
-                # for attribute in new_attribs:
-                #     if attribute.get('attribute_type_id') == "biolink:primary_knowledge_source":
-                #         # setting this to self provenance (eg. infores:automat-biolink).
-                #         attribute['attribute_source'] = self.provenance
-                #     elif attribute.get('attribute_type_id') == "biolink:aggregator_knowledge_source":
-                #         found_previous_aggregator = True
-                #         attribute['attribute_source'] = self.provenance
-                #         if isinstance(attribute['value'], str):
-                #             attribute['value'] = [attribute['value']]
-                #         attribute['value'].append(self.provenance)  # add automat infores
-                # #         attribute['value'] = list(set(attribute['value']))  # force uniqueness
-                #
-                # # create aggregator provenance attribute for plater if not present
-                # if not found_previous_aggregator:
-                #     provenance_attrib = {
-                #         "attribute_type_id": "biolink:aggregator_knowledge_source",
-                #         "attribute_source": self.provenance,
-                #         "value": [self.provenance],
-                #         "value_type_id": "biolink:InformationResource",
-                #         "original_attribute_name": "biolink:aggregator_knowledge_source"
-                #     }
-                #     new_attribs.append(provenance_attrib)
-
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
 
