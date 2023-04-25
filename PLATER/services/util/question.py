@@ -104,31 +104,52 @@ class Question:
                     if attribute_data:
                         attr.update(attribute_data)
 
-            # update edge provenance with automat infores
+            # update edge provenance with automat infores, filter empty ones, expand list type resource ids
             if not node:
-                found_previous_aggregator = False
-                for attribute in new_attribs:
-                    if attribute.get('attribute_type_id') == "biolink:primary_knowledge_source":
-                        # setting this to self provenance (eg. infores:automat-biolink).
-                        attribute['attribute_source'] = self.provenance
-                    elif attribute.get('attribute_type_id') == "biolink:aggregator_knowledge_source":
-                        found_previous_aggregator = True
-                        attribute['attribute_source'] = self.provenance
-                        if isinstance(attribute['value'], str):
-                            attribute['value'] = [attribute['value']]
-                        attribute['value'].append(self.provenance)  # add automat infores
-                        attribute['value'] = list(set(attribute['value']))  # force uniqueness
-
-                # create aggregator provenance attribute for plater if not present
-                if not found_previous_aggregator:
-                    provenance_attrib = {
-                        "attribute_type_id": "biolink:aggregator_knowledge_source",
-                        "attribute_source": self.provenance,
-                        "value": [self.provenance],
-                        "value_type_id": "biolink:InformationResource",
-                        "original_attribute_name": "biolink:aggregator_knowledge_source"
-                    }
-                    new_attribs.append(provenance_attrib)
+                formatted_sources = [{
+                    "resource_role": "biolink:aggregator_knowledge_source",
+                    "resource_id": self.provenance
+                }]
+                # filter out source entries that actually have values
+                sources = [x for x in kg_items[identifier].get("sources", [])]
+                temp = {}
+                for source in sources:
+                    if not source['resource_id']:
+                        continue
+                    temp[source['resource_role']] = temp.get(source['resource_role'], set())
+                    if isinstance(source["resource_id"], str):
+                        temp[source["resource_role"]].add(source["resource_id"])
+                    elif isinstance(source["resource_id"], list):
+                        for resource_id in source["resource_id"]:
+                            temp[source["resource_role"]].add(resource_id)
+                for resource_role in temp:
+                    formatted_sources += [
+                        {"resource_id": resource_id, "resource_role": resource_role}
+                        for resource_id in temp[resource_role]
+                                          ]
+                kg_items[identifier]["sources"] = formatted_sources
+                # for attribute in new_attribs:
+                #     if attribute.get('attribute_type_id') == "biolink:primary_knowledge_source":
+                #         # setting this to self provenance (eg. infores:automat-biolink).
+                #         attribute['attribute_source'] = self.provenance
+                #     elif attribute.get('attribute_type_id') == "biolink:aggregator_knowledge_source":
+                #         found_previous_aggregator = True
+                #         attribute['attribute_source'] = self.provenance
+                #         if isinstance(attribute['value'], str):
+                #             attribute['value'] = [attribute['value']]
+                #         attribute['value'].append(self.provenance)  # add automat infores
+                # #         attribute['value'] = list(set(attribute['value']))  # force uniqueness
+                #
+                # # create aggregator provenance attribute for plater if not present
+                # if not found_previous_aggregator:
+                #     provenance_attrib = {
+                #         "attribute_type_id": "biolink:aggregator_knowledge_source",
+                #         "attribute_source": self.provenance,
+                #         "value": [self.provenance],
+                #         "value_type_id": "biolink:InformationResource",
+                #         "original_attribute_name": "biolink:aggregator_knowledge_source"
+                #     }
+                #     new_attribs.append(provenance_attrib)
 
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
@@ -138,6 +159,10 @@ class Question:
     def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), node=True)
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
+        for r in trapi_message.get("results", []):
+            # add resource id
+            for analyses in r["analyses"]:
+                analyses["resource_id"] = self.provenance
         return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):
@@ -181,8 +206,9 @@ class Question:
                 for node in r['node_bindings'][q_id]:
                     constrained_node_ids[node['id']] = node_constraints[q_id]
             for q_id in edge_constraints.keys():
-                for edge in r['edge_bindings'][q_id]:
-                    constrained_edge_ids[edge['id']] = edge_constraints[q_id]
+                for analyses in r['analyses']:
+                    for edge in analyses.get('edge_bindings', {}).get(q_id, []):
+                        constrained_edge_ids[edge['id']] = edge_constraints[q_id]
         # mark nodes for deletion
         nodes_to_filter = set()
         for node_id in constrained_node_ids:
@@ -227,20 +253,22 @@ class Question:
             # if node bindings are empty for a q_id skip the whole result
             if skip_result:
                 continue
-            new_edge_bindings = {}
-            for q_id, binding in result['edge_bindings'].items():
-                binding_new = [x for x in binding if x['id'] not in edges_to_filter]
-                # if this list is empty well, skip the whole result
-                if not binding_new:
-                    skip_result = True
-                    break
-                new_edge_bindings[q_id] = binding_new
+            for analysis in result["analyses"]:
+                new_edge_bindings = {}
+                for q_id, binding in analysis["edge_bindings"].items():
+                    binding_new = [x for x in binding if x['id'] not in edges_to_filter]
+                    # if this list is empty well, skip the whole result
+                    if not binding_new:
+                        skip_result = True
+                        break
+                    new_edge_bindings[q_id] = binding_new
+                analysis["edge_bindings"] = new_edge_bindings
             # if edge bindings are empty for a q_id skip the whole result
             if skip_result:
                 continue
             filtered_bindings.append({
                 "node_bindings": new_node_bindings,
-                "edge_bindings": new_edge_bindings
+                "analyses": result["analyses"]
             })
 
         return {
