@@ -34,7 +34,7 @@ def get_bl_helper():
 
 def construct_open_api_schema(app, trapi_version, prefix=""):
     plater_title = config.get('PLATER_TITLE', 'Plater API')
-    plater_version = os.environ.get('PLATER_VERSION', '1.3.0-13')
+    plater_version = os.environ.get('PLATER_VERSION', '1.4.0-0')
     server_url = os.environ.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema
@@ -53,7 +53,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
     terms_of_service = open_api_extended_spec.get("termsOfService")
     servers_conf = open_api_extended_spec.get("servers")
     tags = open_api_extended_spec.get("tags")
-    title_override = (open_api_extended_spec.get("title") or plater_title) + f' (trapi v-{trapi_version})'
+    title_override = (open_api_extended_spec.get("title") or plater_title)
     description = open_api_extended_spec.get("description")
     x_trapi_extension = open_api_extended_spec.get("x-trapi", {"version": trapi_version, "operations": ["lookup"]})
     if tags:
