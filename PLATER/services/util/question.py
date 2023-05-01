@@ -59,7 +59,45 @@ class Question:
                         item['qualifier_type_id'] = item['qualifier_type_id'].replace('biolink:', '')
         return get_query(query_graph, **kwargs)
 
-    # @staticmethod
+
+    def _construct_sources_tree(self, sources):
+        # if primary source and aggregator source are specified in the graph, upstream_resource_ids of all aggregator_ks
+        # be that source
+
+        # if aggregator ks are coming from db, plater would add itself as aggregator and use other aggregator ids
+        # as upstream resources, if no aggregators are found and only primary ks is provided that would be added
+        # as upstream for the plater entry
+        formatted_sources = []
+        # filter out source entries that actually have values
+        temp = {}
+        for source in sources:
+            if not source['resource_id']:
+                continue
+            temp[source['resource_role']] = temp.get(source['resource_role'], set())
+            if isinstance(source["resource_id"], str):
+                temp[source["resource_role"]].add(source["resource_id"])
+            elif isinstance(source["resource_id"], list):
+                for resource_id in source["resource_id"]:
+                    temp[source["resource_role"]].add(resource_id)
+
+        for resource_role in temp:
+            upstreams = None
+            if resource_role == "biolink:aggregator_knowledge_source":
+                upstreams = temp.get("biolink:primary_knowledge_source", None)
+
+            formatted_sources += [
+                {"resource_id": resource_id, "resource_role": resource_role, "upstream_resource_ids": upstreams}
+                for resource_id in temp[resource_role]
+            ]
+        upstreams_for_plater_entry = temp.get("biolink:aggregator_knowledge_source") or temp.get("biolink:primary_knowledge_source")
+        formatted_sources.append({
+            "resource_id":self.provenance,
+            "resource_role": "biolink:aggregator_knowledge_source",
+            "upstream_resource_ids": upstreams_for_plater_entry
+        })
+        return formatted_sources
+
+
     def format_attribute_trapi(self, kg_items, node=False):
         for identifier in kg_items:
             # get the properties for the record
@@ -106,28 +144,7 @@ class Question:
 
             # update edge provenance with automat infores, filter empty ones, expand list type resource ids
             if not node:
-                formatted_sources = [{
-                    "resource_role": "biolink:aggregator_knowledge_source",
-                    "resource_id": self.provenance
-                }]
-                # filter out source entries that actually have values
-                sources = [x for x in kg_items[identifier].get("sources", [])]
-                temp = {}
-                for source in sources:
-                    if not source['resource_id']:
-                        continue
-                    temp[source['resource_role']] = temp.get(source['resource_role'], set())
-                    if isinstance(source["resource_id"], str):
-                        temp[source["resource_role"]].add(source["resource_id"])
-                    elif isinstance(source["resource_id"], list):
-                        for resource_id in source["resource_id"]:
-                            temp[source["resource_role"]].add(resource_id)
-                for resource_role in temp:
-                    formatted_sources += [
-                        {"resource_id": resource_id, "resource_role": resource_role}
-                        for resource_id in temp[resource_role]
-                                          ]
-                kg_items[identifier]["sources"] = formatted_sources
+                kg_items[identifier]["sources"] = self._construct_sources_tree(kg_items[identifier].get("sources", []))
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
 
