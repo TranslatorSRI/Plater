@@ -165,7 +165,7 @@ class Question:
         :param graph_interface: interface for neo4j
         :return: None
         """
-        cypher = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal"})
+        cypher = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal", "primary_ks_required": True})
         logger.info(f"answering query_graph: {json.dumps(self._question_json)}")
         logger.debug(f"cypher: {cypher}")
         s = time.time()

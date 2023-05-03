@@ -10,6 +10,6 @@
       "biolink:primary_knowledge_source": "biolink:InformationResource",
       "biolink:aggregator_knowledge_source": "biolink:InformationResource",
       "endogenous": "xsd:boolean",
-      "biolink:publication": "metatype:uriorcurie"
+      "biolink:publication": "biolink:Uriorcurie"
   }
 }
