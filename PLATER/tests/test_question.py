@@ -57,10 +57,10 @@ def test_format_attribute():
                                   ],
 
                    "sources": [
-                       {"resource_role": "biolink:primary_knowledge_source",
+                       {"resource_role": "primary_knowledge_source",
                         "resource_id": "infores:primary",
                         "upstream_resource_ids": None},
-                       {"resource_role": "biolink:aggregator_knowledge_source",
+                       {"resource_role": "aggregator_knowledge_source",
                         "resource_id": "infores:automat.notspecified",
                         "upstream_resource_ids": {"infores:primary"}},
                    ]}
@@ -137,7 +137,7 @@ def test_format_edge_qualifiers():
         'subject': 'PUBCHEM.COMPOUND:5311062',
         'attributes': [],
         'sources': [{'resource_id': 'infores:automat.notspecified',
-                     'resource_role': 'biolink:aggregator_knowledge_source',
+                     'resource_role': 'aggregator_knowledge_source',
                      'upstream_resource_ids': None
                      }],
         "qualifiers": [
