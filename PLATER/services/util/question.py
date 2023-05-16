@@ -86,13 +86,13 @@ class Question:
                 upstreams = temp.get("biolink:primary_knowledge_source", None)
 
             formatted_sources += [
-                {"resource_id": resource_id, "resource_role": resource_role, "upstream_resource_ids": upstreams}
+                {"resource_id": resource_id, "resource_role": resource_role.lstrip('biolink:'), "upstream_resource_ids": upstreams}
                 for resource_id in temp[resource_role]
             ]
         upstreams_for_plater_entry = temp.get("biolink:aggregator_knowledge_source") or temp.get("biolink:primary_knowledge_source")
         formatted_sources.append({
             "resource_id":self.provenance,
-            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_role": "aggregator_knowledge_source",
             "upstream_resource_ids": upstreams_for_plater_entry
         })
         return formatted_sources
