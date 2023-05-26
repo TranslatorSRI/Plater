@@ -10,7 +10,7 @@ import copy
 
 @pytest.fixture
 def message():
-    with open(os.path.join(os.path.dirname(__file__), 'data','trapi1.3.json')) as stream:
+    with open(os.path.join(os.path.dirname(__file__), 'data','trapi1.4.json')) as stream:
         message = json.load(stream)
     return message
 
@@ -37,7 +37,10 @@ def test_format_attribute():
              },
          "edges":
              {"123123":
-                  {"attributes": [{"original_attribute_name": "biolink:primary_knowledge_source", "value": "infores:kg_source"}]}
+                  {
+                      "attributes": [{"original_attribute_name": "some_attr", "value": "some_value"}],
+                      "sources": [{"resource_role": "biolink:primary_knowledge_source", "resource_id":"infores:primary"}]
+                  }
               }
          }
     }
@@ -48,12 +51,19 @@ def test_format_attribute():
              },
          "edges":
              {"123123":
-                  {"attributes": [{"original_attribute_name": "biolink:primary_knowledge_source", "value": "infores:kg_source",
-                                   "attribute_source": "infores:automat.notspecified", "attribute_type_id": "biolink:primary_knowledge_source",
-                                   "value_type_id": "biolink:InformationResource"},
-                                  {'attribute_type_id': 'biolink:aggregator_knowledge_source',  'attribute_source': 'infores:automat.notspecified',
-                                   'value': ['infores:automat.notspecified'],
-                                   'value_type_id': 'biolink:InformationResource', 'original_attribute_name': 'biolink:aggregator_knowledge_source'}]}
+                  {"attributes": [{"original_attribute_name": "some_attr", "value": "some_value",
+                                   "attribute_type_id": "biolink:Attribute",
+                                   "value_type_id": "EDAM:data_0006"},
+                                  ],
+
+                   "sources": [
+                       {"resource_role": "primary_knowledge_source",
+                        "resource_id": "infores:primary",
+                        "upstream_resource_ids": None},
+                       {"resource_role": "aggregator_knowledge_source",
+                        "resource_id": "infores:automat.notspecified",
+                        "upstream_resource_ids": {"infores:primary"}},
+                   ]}
               }
          }
     }
@@ -125,12 +135,11 @@ def test_format_edge_qualifiers():
         'object': 'NCBIGene:283871',
         'predicate': 'biolink:affects',
         'subject': 'PUBCHEM.COMPOUND:5311062',
-        'attributes': [
-            {'attribute_type_id': 'biolink:aggregator_knowledge_source',
-             'attribute_source': 'infores:automat.notspecified',
-             'value': ['infores:automat.notspecified'],
-             'value_type_id': 'biolink:InformationResource',
-             'original_attribute_name': 'biolink:aggregator_knowledge_source'}],
+        'attributes': [],
+        'sources': [{'resource_id': 'infores:automat.notspecified',
+                     'resource_role': 'aggregator_knowledge_source',
+                     'upstream_resource_ids': None
+                     }],
         "qualifiers": [
             {
                 "qualifier_type_id": "biolink:qualified_predicate",
@@ -217,7 +226,9 @@ def test_attribute_constraint_filter_edge(message):
     #    "subject": "PUBCHEM.COMPOUND:5453",
     #    "object": "MONDO:0001609",
     # one match and one binding out of three edges is expected
-    result = Question.apply_attribute_constraints(message)
+    m_copy = copy.deepcopy(message)
+    result = Question.apply_attribute_constraints(m_copy)
+
     assert result['query_graph'] == message['query_graph']
     assert len(result['knowledge_graph']['nodes']) == 3
     assert len(result['knowledge_graph']['edges']) == 1
@@ -225,14 +236,15 @@ def test_attribute_constraint_filter_edge(message):
            result['knowledge_graph']['edges']['57de50b7d36a7b952a12376ae39c1f92']
     assert len(result['results']) == 1
     edge_constraints = [
-        {"id": "biolink:primary_knowledge_source", "name": "eq_id_filter", "value": 'infores:original_source_1', "operator": "=="}
+        {"id": "biolink:relation", "name": "eq_id_filter", "value": 'CTD:marker_mechanism', "operator": "=="}
     ]
     message['query_graph']['edges']['e0']['attribute_constraints'] = edge_constraints
-    result = Question.apply_attribute_constraints(message)
+    m_copy_2 = copy.deepcopy(message)
+    result = Question.apply_attribute_constraints(m_copy_2)
     # mondo:0001609 -> pubchem.compund:5453 has two edges with same type
     # hence result binding contains "e0" len 2. filter should return one binding
     # with exactly one edge `304ef8f54494931d8eccb50e1b68be04`
     assert len(result['knowledge_graph']['nodes']) == 3
     assert len(result['knowledge_graph']['edges']) == 1
     assert len(result['results']) == 1
-    assert len(result['results'][0]['edge_bindings']['e0']) == 1
+    assert len(result['results'][0]['analyses'][0]['edge_bindings']['e0']) == 1

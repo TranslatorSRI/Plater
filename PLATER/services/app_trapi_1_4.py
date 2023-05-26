@@ -10,8 +10,8 @@ from PLATER.services.util.question import Question
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.api_utils import get_graph_interface, get_graph_metadata, construct_open_api_schema, get_example
 
-# Mount open api at /1.2/openapi.json
-APP_TRAPI_1_3 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.3')
+# Mount open api at /1.4/openapi.json
+APP_TRAPI_1_4 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.4')
 
 
 async def get_meta_knowledge_graph(
@@ -58,7 +58,7 @@ async def reasoner_api(
     return request_json
 
 
-APP_TRAPI_1_3.add_api_route(
+APP_TRAPI_1_4.add_api_route(
     "/meta_knowledge_graph",
     get_meta_knowledge_graph,
     methods=["GET"],
@@ -68,7 +68,7 @@ APP_TRAPI_1_3.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_3.add_api_route(
+APP_TRAPI_1_4.add_api_route(
     "/sri_testing_data",
     get_sri_testing_data,
     methods=["GET"],
@@ -79,7 +79,7 @@ APP_TRAPI_1_3.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_3.add_api_route(
+APP_TRAPI_1_4.add_api_route(
     "/query",
     reasoner_api,
     methods=["POST"],
@@ -89,4 +89,4 @@ APP_TRAPI_1_3.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_3.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_3, trapi_version="1.3.0", prefix='/1.3')
+APP_TRAPI_1_4.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_4, trapi_version="1.4.0", prefix='/1.4')

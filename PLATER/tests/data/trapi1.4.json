@@ -204,37 +204,26 @@
         "subject": "PUBCHEM.COMPOUND:5453",
         "object": "MONDO:0001609",
         "predicate": "biolink:causes",
+        "sources": [
+          {
+            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_id": "infores:hetio"
+          },
+          {
+            "resource_role": "biolink:primary_knowledge_source",
+            "resource_id": "infores:sider"
+          },
+          {
+            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_id": "infores:automat-robokop"
+          }
+        ],
         "attributes": [
-          {
-            "attribute_type_id": "biolink:aggregator_knowledge_source",
-            "value": [
-              "infores:hetio"
-            ],
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:aggregator_knowledge_source",
-            "attribute_source": "infores:automat-robokop"
-          },
-          {
-            "attribute_type_id": "biolink:primary_knowledge_source",
-            "value": "infores:sider",
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:primary_knowledge_source",
-            "attribute_source": "infores:automat-robokop"
-          },
           {
             "attribute_type_id": "biolink:relation",
             "value": "SEMMEDDB:causes",
             "value_type_id": "EDAM:data_0006",
             "original_attribute_name": "relation"
-          },
-          {
-            "attribute_type_id": "biolink:aggregator_knowledge_source",
-            "value": [
-              "infores:automat-robokop"
-            ],
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:aggregator_knowledge_source",
-            "attribute_source": "infores:automat-robokop"
           }
         ]
       },
@@ -242,29 +231,19 @@
         "subject": "PUBCHEM.COMPOUND:5453",
         "object": "MONDO:0001106",
         "predicate": "biolink:causes",
+        "sources": [
+          {
+            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_id": "infores:hetio"
+          },{
+            "resource_role": "biolink:primary_knowledge_source",
+            "resource_id": "infores:original_source_1"
+          },{
+            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_id": "infores:automat-robokop"
+          }
+        ],
         "attributes": [
-          {
-            "attribute_type_id": "biolink:aggregator_knowledge_source",
-            "value": [
-              "infores:hetio"
-            ],
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:aggregator_knowledge_source",
-            "value_url": null,
-            "attribute_source": "infores:automat-robokop",
-            "description": null,
-            "attributes": null
-          },
-          {
-            "attribute_type_id": "biolink:primary_knowledge_source",
-            "value": "infores:original_source_1",
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:primary_knowledge_source",
-            "value_url": null,
-            "attribute_source": "infores:automat-robokop",
-            "description": null,
-            "attributes": null
-          },
           {
             "attribute_type_id": "biolink:relation",
             "value": "SEMMEDDB:causes",
@@ -274,18 +253,6 @@
             "attribute_source": null,
             "description": null,
             "attributes": null
-          },
-          {
-            "attribute_type_id": "biolink:aggregator_knowledge_source",
-            "value": [
-              "infores:automat-robokop"
-            ],
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:aggregator_knowledge_source",
-            "value_url": null,
-            "attribute_source": "infores:automat-robokop",
-            "description": null,
-            "attributes": null
           }
         ]
       },
@@ -293,14 +260,16 @@
         "subject": "PUBCHEM.COMPOUND:5453",
         "object": "MONDO:0001609",
         "predicate": "biolink:contributes_to",
-        "attributes": [
+        "sources": [
           {
-            "attribute_type_id": "biolink:primary_knowledge_source",
-            "value": "infores:ctd",
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:primary_knowledge_source",
-            "attribute_source": "infores:automat-robokop"
-          },
+            "resource_role": "biolink:primary_knowledge_source",
+            "resource_id": "ctd"
+          },{
+            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_id": "infores:automat-robokop"
+          }
+        ],
+        "attributes": [
           {
             "attribute_type_id": "biolink:relation",
             "value": "CTD:marker_mechanism",
@@ -314,15 +283,6 @@
             ],
             "value_type_id": "EDAM:data_0006",
             "original_attribute_name": "publications"
-          },
-          {
-            "attribute_type_id": "biolink:aggregator_knowledge_source",
-            "value": [
-              "infores:automat-robokop"
-            ],
-            "value_type_id": "biolink:InformationResource",
-            "original_attribute_name": "biolink:aggregator_knowledge_source",
-            "attribute_source": "infores:automat-robokop"
           }
         ]
       }
@@ -343,16 +303,21 @@
           }
         ]
       },
-      "edge_bindings": {
-        "e0": [
-          {
-            "id": "18c8e24d1835c01cd54e07abb5b71b44"
-          },
-          {
-            "id": "57de50b7d36a7b952a12376ae39c1f92"
+      "analyses": [
+        {
+          "resource_id": "infores:automat-robokop",
+          "edge_bindings": {
+            "e0": [
+              {
+                "id": "18c8e24d1835c01cd54e07abb5b71b44"
+              },
+              {
+                "id": "57de50b7d36a7b952a12376ae39c1f92"
+              }
+            ]
           }
-        ]
-      }
+        }
+      ]
     },
     {
       "node_bindings": {
@@ -368,13 +333,18 @@
           }
         ]
       },
-      "edge_bindings": {
-        "e0": [
-          {
-            "id": "304ef8f54494931d8eccb50e1b68be04"
+      "analyses": [
+        {
+          "resouce_id": "infores:automat-robokop",
+          "edge_bindings": {
+            "e0": [
+              {
+                "id": "304ef8f54494931d8eccb50e1b68be04"
+              }
+            ]
           }
-        ]
-      }
+        }
+      ]
     }
   ]
 }

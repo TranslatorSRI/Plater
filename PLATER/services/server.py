@@ -1,12 +1,12 @@
 """FastAPI app."""
-import os
+import logging, warnings, os, json
 
 from fastapi import  FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.app_common import APP_COMMON
-from PLATER.services.app_trapi_1_3 import APP_TRAPI_1_3
+from PLATER.services.app_trapi_1_4 import APP_TRAPI_1_4
 from PLATER.services.util.api_utils import construct_open_api_schema
 
 TITLE = config.get('PLATER_TITLE', 'Plater API')
@@ -22,13 +22,13 @@ logger = LoggingUtil.init_logging(
 
 APP = FastAPI()
 
-# Mount 1.2 app at /1.2
-APP.mount('/1.3', APP_TRAPI_1_3, 'Trapi 1.3')
+# Mount 1.4 app at /1.4
+APP.mount('/1.4', APP_TRAPI_1_4, 'Trapi 1.4')
 # Mount default app at /
 APP.mount('/', APP_COMMON, '')
 # Add all routes of each app for open api generation at /openapi.json
 # This will create an aggregate openapi spec.
-APP.include_router(APP_TRAPI_1_3.router, prefix='/1.3')
+APP.include_router(APP_TRAPI_1_4.router, prefix='/1.4')
 APP.include_router(APP_COMMON.router)
 # Construct app /openapi.json # Note this is not to be registered on smart api . Instead /1.1/openapi.json
 # or /1.2/openapi.json should be used.
@@ -50,6 +50,13 @@ if os.environ.get("OTEL_ENABLED"):
     from opentelemetry.sdk.resources import SERVICE_NAME as telemetery_service_name_key, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+    # httpx connections need to be open a little longer by the otel decorators
+    # but some libs display warnings of resource being unclosed.
+    # these supresses such warnings.
+    logging.captureWarnings(capture=True)
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     service_name = os.environ.get('PLATER_TITLE', 'PLATER')
     assert service_name and isinstance(service_name, str)
     trace.set_tracer_provider(
@@ -67,6 +74,22 @@ if os.environ.get("OTEL_ENABLED"):
     tracer = trace.get_tracer(__name__)
     FastAPIInstrumentor.instrument_app(APP, tracer_provider=trace, excluded_urls=
                                        "docs,openapi.json") #,*cypher,*1.3/sri_testing_data")
+    async def request_hook(span, request):
+        # logs cypher queries set to neo4j
+        # check url
+        if span.attributes.get('http.url').endswith('/db/data/transaction/commit'):
+            # if url matches try to json load the query
+            try:
+                neo4j_query = json.loads(
+                    request.stream._stream.decode('utf-8')
+                )['statements'][0]['statement']
+                span.set_attribute('cypher', neo4j_query)
+            except Exception as ex:
+                logger.error(f"error logging neo4j query when sending to OTEL: {ex}")
+                neo4j_query = ""
+    HTTPXClientInstrumentor().instrument(request_hook=request_hook)
+
+
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(APP, host='0.0.0.0', port=8080)
