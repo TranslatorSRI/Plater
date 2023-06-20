@@ -1,6 +1,7 @@
 """FastAPI app."""
 
-from fastapi import Body, Depends, FastAPI
+from fastapi import Body, Depends, FastAPI, Response, status
+from reasoner_transpiler.exceptions import InvalidPredicateError
 from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
 from PLATER.models.shared import SRITestData
 
@@ -31,6 +32,7 @@ async def get_sri_testing_data(
 
 
 async def reasoner_api(
+        response: Response,
         request: ReasonerRequest = Body(
             ...,
             # Works for now but in deployment would be replaced by a mount, specific to backend dataset
@@ -45,8 +47,13 @@ async def reasoner_api(
     workflows = {wkfl['id']: wkfl for wkfl in workflow}
     if 'lookup' in workflows:
         question = Question(request_json["message"])
-        response = await question.answer(graph_interface)
-        request_json.update({'message': response, 'workflow': workflow})
+        try:
+            answer = await question.answer(graph_interface)
+            request_json.update({'message': answer, 'workflow': workflow})
+        except InvalidPredicateError as e:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            request_json["description"] = str(e)
+            return request_json
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
         response = await overlay.connect_k_nodes(request_json['message'])
