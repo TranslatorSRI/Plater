@@ -19,16 +19,16 @@ async def get_meta_knowledge_graph(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ) -> MetaKnowledgeGraph:
     """Handle /meta_knowledge_graph."""
-    response = await graph_metadata.get_meta_kg()
-    return response
+    meta_kg = await graph_metadata.get_meta_kg()
+    return meta_kg
 
 
 async def get_sri_testing_data(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ) -> SRITestData:
     """Handle /sri_testing_data."""
-    response = await graph_metadata.get_sri_testing_data()
-    return response
+    sri_test_data = await graph_metadata.get_sri_testing_data()
+    return sri_test_data
 
 
 async def reasoner_api(
@@ -48,20 +48,20 @@ async def reasoner_api(
     if 'lookup' in workflows:
         question = Question(request_json["message"])
         try:
-            answer = await question.answer(graph_interface)
-            request_json.update({'message': answer, 'workflow': workflow})
+            response_message = await question.answer(graph_interface)
+            request_json.update({'message': response_message, 'workflow': workflow})
         except InvalidPredicateError as e:
             response.status_code = status.HTTP_400_BAD_REQUEST
             request_json["description"] = str(e)
             return request_json
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
-        response = await overlay.connect_k_nodes(request_json['message'])
-        request_json.update({'message': response, 'workflow': workflow})
+        response_message = await overlay.connect_k_nodes(request_json['message'])
+        request_json.update({'message': response_message, 'workflow': workflow})
     elif 'annotate_nodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
-        response = await overlay.annotate_node(request_json['message'])
-        request_json.update({'message': response, 'workflow': workflow})
+        response_message = await overlay.annotate_node(request_json['message'])
+        request_json.update({'message': response_message, 'workflow': workflow})
     return request_json
 
 
