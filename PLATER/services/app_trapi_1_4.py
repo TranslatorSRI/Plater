@@ -1,6 +1,7 @@
 """FastAPI app."""
 
-from fastapi import Body, Depends, FastAPI
+from fastapi import Body, Depends, FastAPI, Response, status
+from reasoner_transpiler.exceptions import InvalidPredicateError
 from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
 from PLATER.models.shared import SRITestData
 
@@ -18,19 +19,20 @@ async def get_meta_knowledge_graph(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ) -> MetaKnowledgeGraph:
     """Handle /meta_knowledge_graph."""
-    response = await graph_metadata.get_meta_kg()
-    return response
+    meta_kg = await graph_metadata.get_meta_kg()
+    return meta_kg
 
 
 async def get_sri_testing_data(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ) -> SRITestData:
     """Handle /sri_testing_data."""
-    response = await graph_metadata.get_sri_testing_data()
-    return response
+    sri_test_data = await graph_metadata.get_sri_testing_data()
+    return sri_test_data
 
 
 async def reasoner_api(
+        response: Response,
         request: ReasonerRequest = Body(
             ...,
             # Works for now but in deployment would be replaced by a mount, specific to backend dataset
@@ -45,16 +47,21 @@ async def reasoner_api(
     workflows = {wkfl['id']: wkfl for wkfl in workflow}
     if 'lookup' in workflows:
         question = Question(request_json["message"])
-        response = await question.answer(graph_interface)
-        request_json.update({'message': response, 'workflow': workflow})
+        try:
+            response_message = await question.answer(graph_interface)
+            request_json.update({'message': response_message, 'workflow': workflow})
+        except InvalidPredicateError as e:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            request_json["description"] = str(e)
+            return request_json
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
-        response = await overlay.connect_k_nodes(request_json['message'])
-        request_json.update({'message': response, 'workflow': workflow})
+        response_message = await overlay.connect_k_nodes(request_json['message'])
+        request_json.update({'message': response_message, 'workflow': workflow})
     elif 'annotate_nodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
-        response = await overlay.annotate_node(request_json['message'])
-        request_json.update({'message': response, 'workflow': workflow})
+        response_message = await overlay.annotate_node(request_json['message'])
+        request_json.update({'message': response_message, 'workflow': workflow})
     return request_json
 
 
