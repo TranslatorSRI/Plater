@@ -1,7 +1,7 @@
-FROM neo4j:5.3.0
+FROM neo4j:5.10.0
 
-ARG GDS_VERSION=2.2.6
-ARG APOC_VERSION=5.3.0
+ARG GDS_VERSION=2.4.2
+ARG APOC_VERSION=5.10.1
 ENV APOC_URI https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/${APOC_VERSION}/apoc-${APOC_VERSION}-extended.jar
 ENV GDS_URL https://graphdatascience.ninja/neo4j-graph-data-science-${GDS_VERSION}.zip
 
