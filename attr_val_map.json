@@ -3,7 +3,8 @@
       "`biolink:primary_knowledge_source`": "biolink:primary_knowledge_source",
       "`biolink:aggregator_knowledge_source`": "biolink:aggregator_knowledge_source",
       "equivalent_identifiers": "biolink:same_as",
-      "endogenous": "aragorn:endogenous"
+      "endogenous": "aragorn:endogenous",
+      "publications": "EDAM:data_0971"
   },
   "value_type_map": {
       "equivalent_identifiers": "metatype:uriorcurie",

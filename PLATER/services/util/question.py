@@ -3,8 +3,8 @@ import json
 
 from PLATER.services.util.graph_adapter import GraphInterface
 import time
-import reasoner_transpiler as reasoner
-from reasoner_transpiler.cypher import get_query, RESERVED_NODE_PROPS, cypher_expression
+import PLATER.transpiler as transpiler
+from PLATER.transpiler.cypher import get_query as get_cypher_query
 from reasoner_pydantic.qgraph import AttributeConstraint
 from reasoner_pydantic.shared import Attribute
 from PLATER.services.util.constraints import check_attributes
@@ -13,7 +13,8 @@ from PLATER.services.util.attribute_mapping import map_data, skip_list, get_attr
 from PLATER.services.util.logutil import LoggingUtil
 
 # set the transpiler attribute mappings
-reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
+# TODO - this is ugly (monkey patching), especially now with transpiler code inside of plater
+transpiler.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
 
 # set the value type mappings
 VALUE_TYPES = map_data['value_type_map']
@@ -57,7 +58,7 @@ class Question:
                 for qualifier in edges[e]['qualifier_constraints']:
                     for item in qualifier['qualifier_set']:
                         item['qualifier_type_id'] = item['qualifier_type_id'].replace('biolink:', '')
-        return get_query(query_graph, **kwargs)
+        return get_cypher_query(query_graph, **kwargs)
 
 
     def _construct_sources_tree(self, sources):

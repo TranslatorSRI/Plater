@@ -1,5 +1,6 @@
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.question import Question, cypher_expression, RESERVED_NODE_PROPS
+from PLATER.services.util.question import Question
+from PLATER.transpiler.cypher import cypher_expression, RESERVED_NODE_PROPS
 import os
 import json
 
