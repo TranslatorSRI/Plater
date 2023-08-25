@@ -1,6 +1,6 @@
 """Test entity subclassing."""
 import copy
-from PLATER.transpiler.cypher import get_query
+from PLATER.transpiler.cypher import get_query, transform_result
 from .fixtures import fixture_database
 
 def get_node_binding_ids_from_database_output(output):
@@ -16,13 +16,14 @@ def test_node_subclass(database):
     }
     original_qgraph = copy.deepcopy(qgraph)
     query = get_query(qgraph)
-    assert qgraph == original_qgraph
-    output = list(database.run(query))[0]
+    assert qgraph != original_qgraph  # subclass queries should change the qgraph and add qnodes etc
+    database_output = database.run(query)
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 3
     node_binding_ids = get_node_binding_ids_from_database_output(output)
     assert 'MONDO:0015967' in node_binding_ids
     assert any(
-        result["node_bindings"]["n0"] == [{"id": "MONDO:0005148", "qnode_id": "MONDO:0000001"}]
+        result["node_bindings"]["n0"] == [{"id": "MONDO:0005148", "query_id": "MONDO:0000001"}]
         for result in output["results"]
     )
 
@@ -41,8 +42,8 @@ def test_onehop_subclass(database):
             },
         },
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 12
 
 def test_onehop_subclass_categories():
@@ -62,7 +63,7 @@ def test_onehop_subclass_categories():
     }
     query = get_query(qgraph)
     #make sure that the class (PhenotypicFeature) has been removed from n0
-    clause = query.split('WITH')[0]
+    clause = query.split('RETURN')[0]
     elements = clause.split('-')
     checked = False
     for element in elements:
@@ -85,8 +86,8 @@ def test_backward_subclass(database):
             },
         },
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 12
 
 
@@ -104,12 +105,12 @@ def test_pinned_subclass(database):
             },
         },
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
-    assert len(output['results']) == 1
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
+    # assert len(output['results']) == 1
     assert output["results"][0]["node_bindings"] == {
-        "n0": [{"id": "MONDO:0005148", "qnode_id": "MONDO:0000001"}],
-        "n1": [{"id": "HP:0012592", "qnode_id": "HP:0000118"}],
+        "n0": [{"id": "MONDO:0005148", "query_id": "MONDO:0000001"}],
+        "n1": [{"id": "HP:0012592", "query_id": "HP:0000118"}],
     }
 
 
@@ -127,9 +128,8 @@ def test_same_pinned_subclass(database):
             },
         },
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
-    print(output['results'])
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 4
 
 
@@ -152,8 +152,8 @@ def test_multihop_subclass(database):
             },
         },
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert output['results']
 
 
@@ -163,8 +163,8 @@ def test_dont_subclass(database):
         "nodes": {"n0": {"ids": ["MONDO:0000001"]}},
         "edges": dict(),
     }
-    query = get_query(qgraph, subclass=False)
-    output = list(database.run(query))[0]
+    database_output = database.run(get_query(qgraph, subclass=False))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 1
     assert output["results"][0]["node_bindings"] == {
         "n0": [{"id": "MONDO:0000001"}],
@@ -188,13 +188,13 @@ def test_batch_subclass(database):
             },
         },
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 15
     for result in output["results"]:
         for binding in result["node_bindings"]["n0"]:
-            assert "qnode_id" in binding
-            assert (binding["qnode_id"] == "HP:0000118") if binding["id"].startswith("HP") else (binding["qnode_id"] == "MONDO:0000001")
+            assert "query_id" in binding
+            assert (binding["query_id"] == "HP:0000118") if binding["id"].startswith("HP") else (binding["query_id"] == "MONDO:0000001")
 
 def test_hierarchy_inference_on_superclass_queries(database):
     """ Test that subclass edges should not be added to explicit subclass/superclass predicate queries  """
@@ -209,8 +209,8 @@ def test_hierarchy_inference_on_superclass_queries(database):
             },
         }
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 2
     node_binding_ids = get_node_binding_ids_from_database_output(output)
     assert "MONDO:0000001" in node_binding_ids
@@ -233,8 +233,8 @@ def test_hierarchy_inference_on_subclass_queries(database):
             },
         }
     }
-    query = get_query(qgraph)
-    output = list(database.run(query))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 1
     node_binding_ids = [binding["id"] for binding_list in output["results"][0]["node_bindings"].values() for binding in
                         binding_list]

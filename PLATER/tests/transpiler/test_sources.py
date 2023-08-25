@@ -1,12 +1,12 @@
 import pytest
 
-from PLATER.transpiler.cypher import get_query
+from PLATER.transpiler.cypher import get_query, transform_result
 from .fixtures import fixture_database
 
 
 
 def test_primary_source(database):
-    q_graph = {
+    qgraph = {
             "nodes": {
                 "n0": {
                     "categories": ["biolink:ChemicalSubstance"]
@@ -25,8 +25,9 @@ def test_primary_source(database):
                 }
             }
         }
-    cypher = get_query(q_graph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
+
     assert len(output["results"]) == 3
     assert len(output["knowledge_graph"]["edges"]) == 3
     # sample edge

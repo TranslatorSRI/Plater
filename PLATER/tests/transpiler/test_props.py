@@ -1,5 +1,5 @@
 """Test querying with properties."""
-from PLATER.transpiler.cypher import get_query
+from PLATER.transpiler.cypher import get_query, transform_result
 from .fixtures import fixture_database
 
 
@@ -14,18 +14,18 @@ def test_numeric(database):
         },
         "edges": {},
     }
-    output = database.run(get_query(qgraph))
-    for record in output:
-        assert len(record["results"]) == 1
-        results = sorted(
-            record["knowledge_graph"]["nodes"].values(),
-            key=lambda node: node["name"],
-        )
-        expected_nodes = [
-            "CASP3",
-        ]
-        for ind, result in enumerate(results):
-            assert result["name"] == expected_nodes[ind]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
+    assert len(output["results"]) == 1
+    results = sorted(
+        output["knowledge_graph"]["nodes"].values(),
+        key=lambda node: node["name"],
+    )
+    expected_nodes = [
+        "CASP3",
+    ]
+    for ind, result in enumerate(results):
+        assert result["name"] == expected_nodes[ind]
 
 
 def test_string(database):
@@ -39,18 +39,18 @@ def test_string(database):
         },
         "edges": {},
     }
-    output = database.run(get_query(qgraph))
-    for record in output:
-        assert len(record["results"]) == 1
-        results = sorted(
-            record["knowledge_graph"]["nodes"].values(),
-            key=lambda node: node["name"],
-        )
-        expected_nodes = [
-            "BRCA1",
-        ]
-        for ind, result in enumerate(results):
-            assert result["name"] == expected_nodes[ind]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
+    assert len(output["results"]) == 1
+    results = sorted(
+        output["knowledge_graph"]["nodes"].values(),
+        key=lambda node: node["name"],
+    )
+    expected_nodes = [
+        "BRCA1",
+    ]
+    for ind, result in enumerate(results):
+        assert result["name"] == expected_nodes[ind]
 
 
 def test_bool(database):
@@ -73,18 +73,18 @@ def test_bool(database):
             },
         },
     }
-    output = database.run(get_query(qgraph))
-    for record in output:
-        assert len(record["results"]) == 1
-        results = sorted(
-            record["knowledge_graph"]["nodes"].values(),
-            key=lambda node: node["name"],
-        )
-        expected_nodes = [
-            "metformin", "type 2 diabetes mellitus",
-        ]
-        for ind, result in enumerate(results):
-            assert result["name"] == expected_nodes[ind]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
+    assert len(output["results"]) == 1
+    results = sorted(
+        output["knowledge_graph"]["nodes"].values(),
+        key=lambda node: node["name"],
+    )
+    expected_nodes = [
+        "metformin", "type 2 diabetes mellitus",
+    ]
+    for ind, result in enumerate(results):
+        assert result["name"] == expected_nodes[ind]
 
 
 def test_publications(database):
@@ -105,8 +105,8 @@ def test_publications(database):
             },
         },
     }
-    cypher = get_query(qgraph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     edges = output["knowledge_graph"]["edges"]
     assert len(edges) == 1
     attributes = list(edges.values())[0]["attributes"]
@@ -138,5 +138,6 @@ def test_constraints(database):
             },
         },
     }
-    output = list(database.run(get_query(qgraph)))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 10

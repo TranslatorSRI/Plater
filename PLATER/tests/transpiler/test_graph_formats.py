@@ -1,5 +1,5 @@
 """Test query graph formats."""
-from PLATER.transpiler.cypher import get_query
+from PLATER.transpiler.cypher import get_query, transform_result
 from .fixtures import fixture_database
 
 
@@ -28,22 +28,22 @@ def test_curie_formats(database):
             },
         },
     }
-    output = database.run(get_query(qgraph))
-    for record in output:
-        assert len(record["results"]) == 5
-        results = sorted(
-            record["knowledge_graph"]["nodes"].values(),
-            key=lambda node: node["name"],
-        )
-        expected_nodes = [
-            "anagliptin",
-            "bezafibrate",
-            "metformin",
-            "obesity disorder",
-            "type 2 diabetes mellitus",
-        ]
-        for ind, result in enumerate(results):
-            assert result["name"] == expected_nodes[ind]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
+    assert len(output["results"]) == 5
+    results = sorted(
+        output["knowledge_graph"]["nodes"].values(),
+        key=lambda node: node["name"],
+    )
+    expected_nodes = [
+        "anagliptin",
+        "bezafibrate",
+        "metformin",
+        "obesity disorder",
+        "type 2 diabetes mellitus",
+    ]
+    for ind, result in enumerate(results):
+        assert result["name"] == expected_nodes[ind]
 
 
 # def test_complex_query(database):

@@ -1,7 +1,6 @@
 """Test transpiler edge cases."""
-from PLATER.transpiler.cypher import get_query
+from PLATER.transpiler.cypher import get_query, transform_result
 from .fixtures import fixture_database
-
 
 def test_categories(database):
     """Test multiple categories."""
@@ -12,7 +11,8 @@ def test_categories(database):
         ]}},
         "edges": dict(),
     }
-    output = list(database.run(get_query(qgraph)))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output['results']) == 10
 
 
@@ -22,12 +22,13 @@ def test_empty(database):
         "nodes": dict(),
         "edges": dict(),
     }
-    output = list(database.run(get_query(qgraph)))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 1
     assert output["results"][0]["node_bindings"] == dict()
     assert output["results"][0]["analyses"] == list([{"edge_bindings": {}}])
-    assert output["knowledge_graph"]["nodes"] == []
-    assert output["knowledge_graph"]["edges"] == []
+    assert output["knowledge_graph"]["nodes"] == {}
+    assert output["knowledge_graph"]["edges"] == {}
 
 
 def test_category_none(database):
@@ -41,8 +42,8 @@ def test_category_none(database):
         },
         "edges": dict(),
     }
-    cypher = get_query(qgraph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 1
 
 
@@ -65,8 +66,8 @@ def test_relation_none(database):
             }
         },
     }
-    cypher = get_query(qgraph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 5
 
 
@@ -89,8 +90,8 @@ def test_qnode_addl_null(database):
             }
         },
     }
-    cypher = get_query(qgraph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 5
 
 
@@ -113,8 +114,8 @@ def test_predicate_none(database):
             }
         },
     }
-    cypher = get_query(qgraph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 5
 
 
@@ -136,8 +137,8 @@ def test_fancy_key(database):
             }
         },
     }
-    cypher = get_query(qgraph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 5
 
 
@@ -161,8 +162,8 @@ def test_backwards_predicate(database):
             }
         },
     }
-    cypher = get_query(qgraph)
-    output = list(database.run(cypher))[0]
+    database_output = database.run(get_query(qgraph))
+    output = transform_result(database_output, qgraph)
     assert len(output["results"]) == 3
 
 
