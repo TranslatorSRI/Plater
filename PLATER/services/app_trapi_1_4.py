@@ -2,7 +2,7 @@
 
 from fastapi import Body, Depends, FastAPI, Response, status
 from PLATER.transpiler.exceptions import InvalidPredicateError
-from PLATER.models.modelsp_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
+from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
 from PLATER.models.shared import SRITestData
 
 from PLATER.services.util.graph_adapter import GraphInterface
