@@ -79,7 +79,7 @@ class NodeReference():
             props["id"] = str(curie)
 
         if max_connectivity > -1:
-            self._filters.append("size( ({0})-[]-() ) < {1} + 1".format(
+            self._filters.append("COUNT {{ ({0})-[]-() }} < {1} + 1".format(
                 self.name,
                 max_connectivity,
             ))
@@ -328,7 +328,7 @@ def build_match_clause(
     qualifier_filters_cypher = ""
     combine_op = ""
     has_filters = False
-    if kwargs.get("use_hints", False) and hints:
+    if kwargs.get("use_hints", True) and hints:
         query += " " + " ".join(hints)
     if filters or qualifier_filters:
         if len(filters):
@@ -385,13 +385,12 @@ def match_query(qgraph, subclass=True, **kwargs):
 
     Returns the query fragment as a string.
     """
-    #If there's no label on a query node, neo4j can't use an index.  This makes such queries basically
-    # neo4j killers.   So when there is no category, we add NamedThing which will use an indx.
+    # If there's no label on a query node, neo4j can't use an index. Add the root entity type as a category.
     for qnode_id, qnode in qgraph["nodes"].items():
         if qnode.get("ids", None) is not None and qnode.get("categories",None) is None:
             qnode["categories"] = ["biolink:NamedThing"]
 
-    # find all of the qnode ids that have subclass or superclass edges connected to them
+    # Find all of the qnode ids that have subclass or superclass edges connected to them
     qnode_ids_with_hierarchy_edges = set()
     for qedge_id, qedge in qgraph["edges"].items():
         predicates = qedge.get("predicates", None)
