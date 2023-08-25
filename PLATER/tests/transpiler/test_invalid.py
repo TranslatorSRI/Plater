@@ -5,7 +5,7 @@ from PLATER.transpiler.cypher import get_query
 from PLATER.transpiler.exceptions import InvalidPredicateError
 from .fixtures import fixture_database
 
-
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_too_many_xor():
     """Test too many XOR operands."""
     qgraph = [
@@ -27,7 +27,7 @@ def test_too_many_xor():
         get_query(qgraph)
     assert "XOR must have exactly two operands" in str(excinfo.value)
 
-
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_too_many_not():
     """Test too many NOT operands."""
     qgraph = [
@@ -45,7 +45,7 @@ def test_too_many_not():
         get_query(qgraph)
     assert "NOT must have exactly one operand" in str(excinfo.value)
 
-
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_unknown_operator():
     """Test unknown operator."""
     qgraph = [

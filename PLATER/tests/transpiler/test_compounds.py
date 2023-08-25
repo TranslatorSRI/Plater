@@ -5,6 +5,7 @@ from PLATER.transpiler.cypher import get_query
 from .fixtures import fixture_database
 
 
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_multiedge_or_complicated(database):
     """Test parsing of compound qgraph."""
     qgraph = [
@@ -64,6 +65,7 @@ def test_multiedge_or_complicated(database):
             assert node["name"] == expected_nodes[ind]
 
 
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_complex_and(database):
     """Test parsing of compound qgraph."""
     qgraph = [
@@ -146,6 +148,7 @@ def test_complex_and(database):
         assert record["results"]
 
 
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_multiedge_or(database):
     """Test parsing of compound qgraph."""
     qgraph = [
@@ -214,6 +217,7 @@ def test_multiedge_or(database):
             assert node["name"] == expected_nodes[ind]
 
 
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_or(database):
     """Test parsing of compound qgraph."""
     qgraph = [
@@ -288,6 +292,7 @@ def test_or(database):
             assert node["name"] == expected_nodes[ind]
 
 
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_xor(database):
     """Test transpiling of compound qgraph."""
     qgraph = [
@@ -340,6 +345,7 @@ def test_xor(database):
         assert len(record["knowledge_graph"]["nodes"]) == 3
 
 
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_not(database):
     """Test transpiling of compound qgraph."""
     qgraph = [
@@ -394,6 +400,7 @@ def test_not(database):
             assert node["name"] == expected_nodes[ind]
 
 
+@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
 def test_not_or(database):
     """Test transpiling of compound qgraph."""
     qgraph = [
