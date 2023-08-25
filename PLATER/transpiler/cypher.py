@@ -2,8 +2,8 @@
 import copy
 from functools import reduce
 import json
-from operator import and_
 from pathlib import Path
+
 
 from PLATER.transpiler import cypher_expression
 from PLATER.transpiler.matching import match_query
@@ -14,17 +14,18 @@ with open(DIR_PATH / "attribute_types.json", "r") as stream:
 
 RESERVED_NODE_PROPS = [
     "id",
-    "category",
+    "name"
 ]
 RESERVED_EDGE_PROPS = [
     "id",
-    "predicate",
+    "predicate"
 ]
 
 EDGE_SOURCE_PROPS = [
     "biolink:aggregator_knowledge_source",
     "biolink:primary_knowledge_source"
 ]
+
 
 def nest_op(operator, *args):
     """Generate a nested set of operations from a flat expression."""
@@ -34,150 +35,27 @@ def nest_op(operator, *args):
         return [operator, *args]
 
 
-def transpile_compound(qgraph, **kwargs):
-    """Transpile compound qgraph."""
-    if isinstance(qgraph, dict):
-        return match_query(
-            qgraph,
-            **kwargs,
-        )
-    if qgraph[0] == "OR":
-        qgraph = nest_op(*qgraph)
-
-    args = [
-        transpile_compound(arg, **kwargs)
-        for arg in qgraph[1:]
-    ]
-    if qgraph[0] == "AND":
-        return reduce(and_, args)
-    elif qgraph[0] == "OR":
-        return args[0] | args[1]
-    elif qgraph[0] == "XOR":
-        if len(args) != 2:
-            raise ValueError("XOR must have exactly two operands")
-        return args[0] ^ args[1]
-    elif qgraph[0] == "NOT":
-        if len(args) != 1:
-            raise ValueError("NOT must have exactly one operand")
-        return ~args[0]
-    raise ValueError(f"Unrecognized operator \"{qgraph[0]}\"")
-
-
 def assemble_results(qnodes, qedges, **kwargs):
     """Assemble results into Reasoner format."""
     clauses = []
-
-    # assemble result (bindings) and associated (result) kgraph
-    node_bindings = [
-        (
-            "`{0}`: [ni IN collect(DISTINCT `{0}`.id) "
-            "WHERE ni IS NOT null "
-            "| {{id: ni}}]"
-        ).format(
-            qnode_id,
-        ) if qnode.get("is_set", False) else
-        (
-            "`{0}`: (CASE "
-            "WHEN `{0}` IS NOT NULL THEN [{{id: `{0}`.id{1}}}] "
-            "ELSE [] "
-            "END)"
-        ).format(
-            qnode_id,
-            f", qnode_id: `{qnode_id}_superclass`.id" if f"{qnode_id}_superclass" in qnodes else "",
-        )
-        for qnode_id, qnode in qnodes.items()
-        if qnode.get("_return", True)
+    nodes = [
+        f"`{qnode_id}`" for qnode_id in qnodes
     ]
-    edge_bindings = [
-        (
-            "`{0}`: [ei IN collect(DISTINCT toString(id(`{0}`))) "
-            "WHERE ei IS NOT null "
-            "| {{id: ei}}]"
-        ).format(
-            qedge_id,
-        ) if kwargs.get("relationship_id", "property") == "internal" else
-        (
-            "`{0}`: [ei IN collect(DISTINCT `{0}`.id) "
-            "WHERE ei IS NOT null "
-            "| {{id: ei}}]"
-        ).format(
-            qedge_id,
-        )
-        for qedge_id, qedge in qedges.items()
-        if qedge.get("_return", True)
+    edges = [
+        f"`{qedge_id}`" for qedge_id in qedges
     ]
-    knodes = [
-        "collect(DISTINCT `{0}`)".format(qnode_id)
-        for qnode_id, qnode in qnodes.items()
-        if qnode.get("_return", True)
-    ]
-    kedges = [
-        "collect(DISTINCT `{0}`)".format(qedge_id)
-        for qedge_id, qedge in qedges.items()
-        if qedge.get("_return", True)
-    ]
-    assemble_clause = (
-        "WITH {{node_bindings: {{{0}}}, analyses: [{{edge_bindings: {{{1}}}}}]}} AS result, "
-        "{{nodes: {2}, edges: {3}}} AS knowledge_graph"
-    ).format(
-        ", ".join(node_bindings) or "",
-        ", ".join(edge_bindings) or "",
-        " + ".join(knodes) or "[]",
-        " + ".join(kedges) or "[]",
-    )
-    clauses.append(assemble_clause)
-
+    return_clause = 'RETURN '
+    if nodes:
+        return_clause += ', '.join(nodes)
+        if edges:
+            return_clause += ', '
+    if edges:
+        return_clause += ', '.join(edges)
+    if not (nodes or edges):
+        return_clause += '1'
+    clauses.append(return_clause)
     # add SKIP and LIMIT sub-clauses
     clauses.extend(pagination(**kwargs))
-
-    # collect results and aggregate kgraphs
-    # also fetch extra knode/kedge properties
-    if knodes:
-        clauses.append("UNWIND knowledge_graph.nodes AS knode")
-    if kedges:
-        clauses.append("UNWIND knowledge_graph.edges AS kedge")
-    aggregate_clause = "WITH collect(DISTINCT result) AS results, {"
-    aggregate_clause += (
-        (
-            "nodes: apoc.map.fromLists("
-            "[n IN collect(DISTINCT knode) | n.id], "
-            "[n IN collect(DISTINCT knode) | {"
-            "categories: labels(n), name: n.name, "
-            "attributes: [key in apoc.coll.subtract(keys(n), "
-            + cypher_expression.dumps(RESERVED_NODE_PROPS) +
-            ") | {original_attribute_name: key, attribute_type_id: COALESCE("
-            + cypher_expression.dumps(ATTRIBUTE_TYPES) +
-            "[key], \"NA\"), value: n[key]}]}]), "
-        )
-        if qnodes else
-        "nodes: [], "
-    )
-    aggregate_clause += (
-        (
-            "edges: apoc.map.fromLists(" + (
-            "[e IN collect(DISTINCT kedge) | toString(ID(e)) ], " if kwargs.get("relationship_id", "property") == "internal" else
-            "[e IN collect(DISTINCT kedge) | e.id], "
-            ) +
-            "[e IN collect(DISTINCT kedge) | {"
-            "predicate: type(e), subject: startNode(e).id, object: endNode(e).id, "
-            "attributes: [key in apoc.coll.subtract(keys(e), "
-            + cypher_expression.dumps(RESERVED_EDGE_PROPS + EDGE_SOURCE_PROPS) +
-            ") | {original_attribute_name: key, attribute_type_id: COALESCE("
-            + cypher_expression.dumps(ATTRIBUTE_TYPES) +
-            "[key], \"NA\"), value: e[key]}]," +
-            "sources: [key IN " + cypher_expression.dumps(EDGE_SOURCE_PROPS) +" | "
-            " {resource_id: e[key] , resource_role: key }]"
-            "}])"
-        )
-        if kedges else
-        "edges: []"
-    )
-    aggregate_clause += "} AS knowledge_graph"
-    clauses.append(aggregate_clause)
-
-    # return results and knowledge graph
-    return_clause = "RETURN results, knowledge_graph"
-    clauses.append(return_clause)
     return clauses
 
 
@@ -196,9 +74,11 @@ def get_query(qgraph, **kwargs):
 
     Returns the query as a string.
     """
-    qgraph = copy.deepcopy(qgraph)
+    # commented this out because now we rely on the altering the qgraph to transform results into TRAPI,
+    # leaving as a reminder in case that breaks something
+    # qgraph = copy.deepcopy(qgraph)
     clauses = []
-    query = transpile_compound(qgraph, **kwargs)
+    query = match_query(qgraph, **kwargs)
     clauses.extend(query.compile())
     where_clause = query.where_clause()
     if where_clause:
@@ -217,4 +97,102 @@ def get_query(qgraph, **kwargs):
             **kwargs,
         ))
 
-    return " ".join(clauses)
+    cypher_query = " ".join(clauses)
+    return cypher_query
+
+
+def transform_result(cypher_result,  # type neo4j.Result
+                     qgraph: dict):
+    kg_nodes = {}
+    kg_edges = {}
+    all_qnode_ids = []
+    qnode_ids_to_return = []
+    qnodes_that_are_sets = set()
+    for qnode_id, qnode in qgraph["nodes"].items():
+        all_qnode_ids.append(qnode_id)
+        if qnode.get('_return', True):
+            qnode_ids_to_return.append(qnode_id)
+            if qnode.get('is_set', False):
+                qnodes_that_are_sets.add(qnode_id)
+
+    results = {}  # results are grouped by unique sets of result node ids
+    for cypher_record in cypher_result:
+        node_bindings = {}
+        result_node_ids_key = ''
+        for qnode_id in qnode_ids_to_return:
+            if not cypher_record[qnode_id]:
+                node_bindings[qnode_id] = []
+                continue
+
+            result_node_id = cypher_record[qnode_id].get('id')
+            result_node_ids_key += result_node_id
+            if qnode_id in qnodes_that_are_sets:
+                # if qnode has is_set there won't be any superclass bindings
+                node_bindings[qnode_id] = [{'id': result_node_id}]
+            else:
+                # otherwise create a list of the id mappings including superclass qnode ids if they exist
+                node_bindings[qnode_id] = \
+                    [{'id': result_node_id, 'query_id': cypher_record[f'{qnode_id}_superclass'].get('id')}
+                     if f'{qnode_id}_superclass' in all_qnode_ids else
+                     {'id': result_node_id}]
+
+            if result_node_id not in kg_nodes:
+                result_node = cypher_record[qnode_id]
+                kg_nodes[result_node_id] = {
+                    'name': result_node.get('name'),
+                    'categories': list(cypher_record[qnode_id].labels),
+                    'attributes': [
+                        {'original_attribute_name': key,
+                         'value': value,
+                         'attribute_type_id': ATTRIBUTE_TYPES.get(key, 'NA')}
+                        for key, value in result_node.items()
+                        if key not in RESERVED_NODE_PROPS
+                    ]
+                }
+
+        edge_bindings = {}
+        for qedge_id, qedge in qgraph['edges'].items():
+            result_edge = cypher_record[qedge_id]
+            if qedge.get('_return', True) and result_edge:
+                graph_edge_id = result_edge.get('id', result_edge.element_id)
+                edge_bindings[qedge_id] = [{'id': graph_edge_id}]
+                if graph_edge_id not in kg_edges:
+                    kg_edges[graph_edge_id] = {
+                        'subject': result_edge.start_node.get('id'),
+                        'predicate': result_edge.type,
+                        'object': result_edge.end_node.get('id'),
+                        'sources': [
+                            {'resource_role': edge_source_prop,
+                             'resource_id': result_edge.get(edge_source_prop)}
+                            for edge_source_prop in EDGE_SOURCE_PROPS
+                        ],
+                        'attributes': [
+                            {'original_attribute_name': key,
+                             'value': value,
+                             'attribute_type_id': ATTRIBUTE_TYPES.get(key, 'NA')}
+                            for key, value in result_edge.items()
+                            if key not in EDGE_SOURCE_PROPS + RESERVED_EDGE_PROPS
+                        ]
+                    }
+
+        # if we haven't encountered this specific group of result nodes before, create a new result
+        if result_node_ids_key not in results:
+            results[result_node_ids_key] = {'analyses': [{'edge_bindings': edge_bindings}],
+                                            'node_bindings': node_bindings}
+        else:
+            # otherwise append new edge bindings to the existing result
+            for qedge_id, edge_binding_list in edge_bindings.items():
+                results[result_node_ids_key]['analyses'][0]['edge_bindings'][qedge_id].extend(
+                    [new_edge_bind for new_edge_bind in edge_binding_list if new_edge_bind['id'] not in
+                     [existing_edge_bind['id'] for existing_edge_bind in results[result_node_ids_key]['analyses'][0]['edge_bindings'][qedge_id]]]
+                )
+
+    knowledge_graph = {
+            'nodes': kg_nodes,
+            'edges': kg_edges
+        }
+    transformed_results = {
+        'results': list(results.values()),  # convert the results dictionary to a flattened list
+        'knowledge_graph': knowledge_graph
+    }
+    return transformed_results
