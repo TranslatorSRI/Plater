@@ -21,7 +21,7 @@ def get_driver(url):
             driver = GraphDatabase.driver(url, auth=None)
             # make sure we can start and finish a session
             with driver.session() as session:
-                session.run("CALL dbms.procedures()")
+                session.run("SHOW PROCEDURES")
             return driver
         except (OSError, ServiceUnavailable, DatabaseUnavailable) as err:
             if seconds >= 256:

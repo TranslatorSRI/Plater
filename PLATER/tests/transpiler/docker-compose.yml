@@ -5,7 +5,7 @@ services:
     image: neo4j:5.10.0
     environment:
       - NEO4J_AUTH=none
-      - NEO4JLABS_PLUGINS=["apoc"]
+      - NEO4J_PLUGINS=["apoc"]
     ports:
       - '7474:7474'
       - '7687:7687'

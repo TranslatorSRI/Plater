@@ -1,6 +1,5 @@
 """Initialize neo4j database helper function."""
 import pytest
-
 from neo4j import GraphDatabase
 
 
@@ -11,3 +10,4 @@ def fixture_database():
     driver = GraphDatabase.driver(url, auth=None)
     with driver.session() as session:
         yield session
+    driver.close()
