@@ -22,8 +22,7 @@ jobs:
         ports:
           - '7474:7474'
           - '7687:7687'
-        volumes:
-          - ${{ github.workspace }}/PLATER/tests/neo4j_csv/:/var/lib/neo4j/import
+
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v3
@@ -44,7 +43,7 @@ jobs:
 
       - name: Set up Neo4j data
         run: |
-          python PLATER/tests/initialize_db.py "${GITHUB_SHA}"
+          python PLATER/tests/initialize_db.py "${{ github.sha }}"
 
       - name: Run the tests
         run: |
