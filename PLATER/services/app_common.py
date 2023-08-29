@@ -44,9 +44,7 @@ APP_COMMON.add_api_route(
     response_model=CypherResponse,
     summary="Run cypher query",
     description=(
-        "Runs cypher query against the Neo4j instance, and returns an "
-        "equivalent response expected from a Neo4j HTTP endpoint "
-        "(https://neo4j.com/docs/rest-docs/current/)."
+        "Runs a cypher query against the Neo4j database and returns results and/or errors from the database."
     ),
 )
 
