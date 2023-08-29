@@ -77,7 +77,7 @@ if os.environ.get("OTEL_ENABLED"):
     async def request_hook(span, request):
         # logs cypher queries set to neo4j
         # check url
-        if span.attributes.get('http.url').endswith('/db/data/transaction/commit'):
+        if span.attributes.get('http.url').endswith('/db/neo4j/tx/commit'):
             # if url matches try to json load the query
             try:
                 neo4j_query = json.loads(
