@@ -19,6 +19,7 @@ def get_graph_interface():
             config.get('NEO4J_PASSWORD')
         ),
         query_timeout=int(config.get('NEO4J_QUERY_TIMEOUT')),
+        protocol=config.get('NEO4J_CONNECTION_PROTOCOL', 'bolt'),
         bl_version=config.get('BL_VERSION')
     )
 
