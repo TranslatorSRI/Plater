@@ -23,7 +23,7 @@ jobs:
           - '7474:7474'
           - '7687:7687'
         volumes:
-          - PLATER/tests/neo4j_csv/:/var/lib/neo4j/import
+          - ${{ github.workspace }}/PLATER/tests/neo4j_csv/:/var/lib/neo4j/import
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v3
