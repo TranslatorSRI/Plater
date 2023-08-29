@@ -24,14 +24,14 @@ jobs:
           - '7687:7687'
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Create environment variables
         run: |
           echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -42,7 +42,7 @@ jobs:
 
       - name: Set up Neo4j data
         run: |
-          python tests/initialize_db.py "${GITHUB_SHA}"
+          python PLATER/tests/initialize_db.py "${GITHUB_SHA}"
 
       - name: Run the tests
         run: |
