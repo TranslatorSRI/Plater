@@ -436,22 +436,8 @@ class GraphInterface:
             :rtype: list
             """
             query = f"MATCH (c:`{node_type}`{{id: '{curie}'}}) return c"
-            response = await self.driver.run(query)
-
-            data = response.get('results',[{}])[0].get('data', [])
-            '''
-            data looks like 
-            [
-            {'row': [{...node data..}], 'meta': [{...}]},
-            {'row': [{...node data..}], 'meta': [{...}]},
-            {'row': [{...node data..}], 'meta': [{...}]}
-            ]            
-            '''
-            rows = []
-            if len(data):
-                from functools import reduce
-                rows = reduce(lambda x, y: x + y.get('row', []), data, [])
-            return rows
+            response = await self.driver.run(query, convert_to_dict=True)
+            return [response[0]['c']]
 
         async def get_single_hops(self, source_type: str, target_type: str, curie: str) -> list:
             """
@@ -467,12 +453,15 @@ class GraphInterface:
             """
 
             query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})-[e]->(b:`{target_type}`) return distinct c , e, b'
-            response = await self.driver.run(query)
-            rows = list(map(lambda data: data['row'], response['results'][0]['data']))
+            response = await self.driver.run(query, convert_to_dict=True)
+            rows = [[{key: value for key, value in record['c'].items()},
+                     {key: value for key, value in record['e'].items()},
+                     {key: value for key, value in record['b'].items()}] for record in response]
             query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})<-[e]-(b:`{target_type}`) return distinct b , e, c'
-            response = await self.driver.run(query)
-            rows += list(map(lambda data: data['row'], response['results'][0]['data']))
-
+            response = await self.driver.run(query, convert_to_dict=True)
+            rows += [[{key: value for key, value in record['b'].items()},
+                     {key: value for key, value in record['e'].items()},
+                     {key: value for key, value in record['c'].items()}] for record in response]
             return rows
 
         async def run_cypher(self,
