@@ -1,9 +1,10 @@
 """Test query arguments."""
-from PLATER.transpiler.cypher import get_query, transform_result
-from .fixtures import fixture_database
+import pytest
+from PLATER.transpiler.cypher import get_query
+from .transpiler_fixtures import fixture_database
 
-
-def test_skip_limit(database):
+@pytest.mark.asyncio
+async def test_skip_limit(database):
     """Test SKIP and LIMIT."""
     qgraph = {
         "nodes": {
@@ -24,12 +25,10 @@ def test_skip_limit(database):
         },
     }
     all_results = []
-    database_output = database.run(get_query(qgraph, limit=2))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph, limit=2), convert_to_trapi_message=True, qgraph=qgraph)
     all_results.extend(output["results"])
     assert len(output["results"]) == 2
-    database_output = database.run(get_query(qgraph, skip=2, limit=2))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph, skip=2, limit=2), convert_to_trapi_message=True, qgraph=qgraph)
     all_results.extend(output["results"])
     assert len(output["results"]) == 1
     assert {
@@ -39,8 +38,8 @@ def test_skip_limit(database):
         for result in all_results
     )
 
-
-def test_max_connectivity(database):
+@pytest.mark.asyncio
+async def test_max_connectivity(database):
     """Test max_connectivity option."""
     qgraph = {
         "nodes": {
@@ -60,11 +59,10 @@ def test_max_connectivity(database):
             },
         },
     }
-    database_output = database.run(get_query(
+    output = await database.run(get_query(
         qgraph,
         max_connectivity=5,
-    ))
-    output = transform_result(database_output, qgraph)
+    ), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 2
     results = sorted(
         output["knowledge_graph"]["nodes"].values(),
@@ -74,8 +72,8 @@ def test_max_connectivity(database):
     for ind, node in enumerate(results):
         assert node["name"] == expected_nodes[ind]
 
-
-def test_use_hints():
+@pytest.mark.asyncio
+async def test_use_hints():
     """Test unusual curie formats."""
     qgraph = {
         "nodes": {

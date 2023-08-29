@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
 import pytest
-
-from PLATER.services.util.question import Question
-from bmt import Toolkit
-import asyncio, json
+import json
 import os
 import copy
+
+from PLATER.services.util.question import Question
+from .plater_fixtures import bolt_graph_adapter
 
 @pytest.fixture
 def message():
@@ -68,8 +68,7 @@ def test_format_attribute():
          }
     }
     q = Question(question_json={})
-    graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default 'biolink:Attribute'
@@ -96,7 +95,7 @@ def test_format_attribute():
 
     q = Question(question_json={})
 
-    transformed = q.transform_attributes(t2_trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(t2_trapi_kg_response)
 
     # test default attribute to be EDAM:data_0006
     # test if value_type is preserved if in response from neo4j
@@ -158,8 +157,7 @@ def test_format_edge_qualifiers():
     }}
 
     q = Question(question_json={})
-    graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default "biolink:Attribute"
@@ -167,27 +165,68 @@ def test_format_edge_qualifiers():
 
 class MOCK_GRAPH_ADAPTER():
     called = False
-    toolkit = Toolkit()
+    toolkit = None
+    protocol = 'bolt'
 
-    async def run_cypher(self, cypher):
+    async def run_cypher(self, cypher, convert_to_dict=False, convert_to_trapi_message=False, qgraph=None):
         assert cypher == "SOME CYPHER"
         self.called = True
+        return {'query_graph': {'nodes': {}, 'edges': {}},
+                       'results': [],
+                       'knowledge_graph': {'nodes': {}, 'edges': {}}}
 
-    @staticmethod
-    def convert_to_dict(item):
-        return [{"trapi": {"compatible_ result"}}]
 
-
-def test_answer():
+@pytest.mark.asyncio
+async def test_mock_answer():
     def compile_cypher_mock(**kwargs):
         return "SOME CYPHER"
-    question = Question({"query_graph": {}})
+    question = Question({"query_graph": {"nodes": {}, "edges": {}}})
     question.compile_cypher = compile_cypher_mock
     graph_interface = MOCK_GRAPH_ADAPTER()
-    result = asyncio.run(question.answer(graph_interface=graph_interface))
-    expected_result = graph_interface.convert_to_dict('')[0]
-    expected_result.update({"query_graph": {}})
+    result = await question.answer(graph_interface=graph_interface)
+    expected_result = {'query_graph': {'nodes': {}, 'edges': {}},
+                       'results': [],
+                       'knowledge_graph': {'nodes': {}, 'edges': {}}}
     assert result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_real_answer(bolt_graph_adapter):
+    question = Question({
+        "query_graph": {
+          "nodes": {
+            "n0": {
+              "categories": [
+                "biolink:ChemicalSubstance"
+              ],
+              "ids": [
+                "CHEBI:136043"
+              ]
+            },
+            "n1": {
+              "categories": [
+                "biolink:Disease"
+              ],
+              "ids": [
+                "MONDO:0005148"
+              ]
+            }
+          },
+          "edges": {
+            "e01": {
+              "subject": "n0",
+              "object": "n1",
+              "predicates": [
+                "biolink:treats"
+              ]
+            }
+          }
+        }
+    })
+    trapi_message = await question.answer(graph_interface=bolt_graph_adapter)
+    assert len(trapi_message['results']) == 1
+    assert 'CHEBI:136043' in trapi_message['knowledge_graph']['nodes']
+    assert 'MONDO:0005148' in trapi_message['knowledge_graph']['nodes']
 
 
 def test_attribute_constraint_basic(message):

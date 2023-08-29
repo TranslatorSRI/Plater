@@ -1,8 +1,10 @@
 """Test transpiler edge cases."""
-from PLATER.transpiler.cypher import get_query, transform_result
-from .fixtures import fixture_database
+from PLATER.transpiler.cypher import get_query
+from .transpiler_fixtures import fixture_database
+import pytest
 
-def test_categories(database):
+@pytest.mark.asyncio
+async def test_categories(database):
     """Test multiple categories."""
     qgraph = {
         "nodes": {"n0": {"categories": [
@@ -11,27 +13,23 @@ def test_categories(database):
         ]}},
         "edges": dict(),
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output['results']) == 10
 
-
-def test_empty(database):
+@pytest.mark.asyncio
+async def test_empty(database):
     """Test empty qgraph."""
     qgraph = {
         "nodes": dict(),
         "edges": dict(),
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
-    assert len(output["results"]) == 1
-    assert output["results"][0]["node_bindings"] == dict()
-    assert output["results"][0]["analyses"] == list([{"edge_bindings": {}}])
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
+    assert len(output["results"]) == 0
     assert output["knowledge_graph"]["nodes"] == {}
     assert output["knowledge_graph"]["edges"] == {}
 
-
-def test_category_none(database):
+@pytest.mark.asyncio
+async def test_category_none(database):
     """Test node with type None."""
     qgraph = {
         "nodes": {
@@ -42,12 +40,11 @@ def test_category_none(database):
         },
         "edges": dict(),
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 1
 
-
-def test_relation_none(database):
+@pytest.mark.asyncio
+async def test_relation_none(database):
     """Test edge with relation None."""
     qgraph = {
         "nodes": {
@@ -66,12 +63,11 @@ def test_relation_none(database):
             }
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 5
 
-
-def test_qnode_addl_null(database):
+@pytest.mark.asyncio
+async def test_qnode_addl_null(database):
     """Test qnode with null-valued additional property."""
     qgraph = {
         "nodes": {
@@ -90,12 +86,11 @@ def test_qnode_addl_null(database):
             }
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 5
 
-
-def test_predicate_none(database):
+@pytest.mark.asyncio
+async def test_predicate_none(database):
     """Test edge with predicate None."""
     qgraph = {
         "nodes": {
@@ -114,12 +109,11 @@ def test_predicate_none(database):
             }
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 5
 
-
-def test_fancy_key(database):
+@pytest.mark.asyncio
+async def test_fancy_key(database):
     """Test qnode/qedge keys with unusual characters."""
     qgraph = {
         "nodes": {
@@ -137,12 +131,11 @@ def test_fancy_key(database):
             }
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 5
 
-
-def test_backwards_predicate(database):
+@pytest.mark.asyncio
+async def test_backwards_predicate(database):
     """Test an extra backwards predicate."""
     qgraph = {
         "nodes": {
@@ -162,12 +155,11 @@ def test_backwards_predicate(database):
             }
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 3
 
-
-def test_index_usage_single_labels():
+@pytest.mark.asyncio
+async def test_index_usage_single_labels():
     """
     Test when using single labels, checks if id index is with the node type is used
     """
@@ -184,8 +176,8 @@ def test_index_usage_single_labels():
     # superclass node_id is suffixed with _superclass
     assert "USING INDEX `n0_superclass`:`biolink:Disease`(id)" in cypher
 
-
-def test_index_usage_multiple_labels():
+@pytest.mark.asyncio
+async def test_index_usage_multiple_labels():
     """
     When multiple labels are used `biolink:NamedThing` index to be used
     """

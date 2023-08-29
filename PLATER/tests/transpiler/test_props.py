@@ -1,9 +1,10 @@
 """Test querying with properties."""
-from PLATER.transpiler.cypher import get_query, transform_result
-from .fixtures import fixture_database
+import pytest
+from PLATER.transpiler.cypher import get_query
+from .transpiler_fixtures import fixture_database
 
-
-def test_numeric(database):
+@pytest.mark.asyncio
+async def test_numeric(database):
     """Test querying with numeric property."""
     qgraph = {
         "nodes": {
@@ -14,8 +15,7 @@ def test_numeric(database):
         },
         "edges": {},
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 1
     results = sorted(
         output["knowledge_graph"]["nodes"].values(),
@@ -28,7 +28,8 @@ def test_numeric(database):
         assert result["name"] == expected_nodes[ind]
 
 
-def test_string(database):
+@pytest.mark.asyncio
+async def test_string(database):
     """Test querying with string property."""
     qgraph = {
         "nodes": {
@@ -39,8 +40,7 @@ def test_string(database):
         },
         "edges": {},
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 1
     results = sorted(
         output["knowledge_graph"]["nodes"].values(),
@@ -53,7 +53,8 @@ def test_string(database):
         assert result["name"] == expected_nodes[ind]
 
 
-def test_bool(database):
+@pytest.mark.asyncio
+async def test_bool(database):
     """Test querying with boolean property."""
     qgraph = {
         "nodes": {
@@ -73,8 +74,7 @@ def test_bool(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 1
     results = sorted(
         output["knowledge_graph"]["nodes"].values(),
@@ -87,7 +87,8 @@ def test_bool(database):
         assert result["name"] == expected_nodes[ind]
 
 
-def test_publications(database):
+@pytest.mark.asyncio
+async def test_publications(database):
     """Test publications."""
     qgraph = {
         "nodes": {
@@ -105,8 +106,7 @@ def test_publications(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     edges = output["knowledge_graph"]["edges"]
     assert len(edges) == 1
     attributes = list(edges.values())[0]["attributes"]
@@ -118,7 +118,8 @@ def test_publications(database):
     }
 
 
-def test_constraints(database):
+@pytest.mark.asyncio
+async def test_constraints(database):
     """Test querying with 'constraints' property."""
     qgraph = {
         "nodes": {
@@ -138,6 +139,5 @@ def test_constraints(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 10

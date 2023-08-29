@@ -1,0 +1,13 @@
+version: '3'
+services:
+  neo4j:
+    container_name: neo4j
+    image: neo4j:5.10.0
+    environment:
+      - NEO4J_AUTH=neo4j/plater_testing_pw
+      - NEO4J_PLUGINS=["apoc"]
+    ports:
+      - '7474:7474'
+      - '7687:7687'
+    volumes:
+      - ./neo4j_csv/:/var/lib/neo4j/import

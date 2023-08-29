@@ -3,61 +3,7 @@ import pytest
 
 from PLATER.transpiler.cypher import get_query
 from PLATER.transpiler.exceptions import InvalidPredicateError
-from .fixtures import fixture_database
-
-@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
-def test_too_many_xor():
-    """Test too many XOR operands."""
-    qgraph = [
-        "XOR",
-        {
-            "nodes": dict(),
-            "edges": dict(),
-        },
-        {
-            "nodes": dict(),
-            "edges": dict(),
-        },
-        {
-            "nodes": dict(),
-            "edges": dict(),
-        },
-    ]
-    with pytest.raises(ValueError) as excinfo:
-        get_query(qgraph)
-    assert "XOR must have exactly two operands" in str(excinfo.value)
-
-@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
-def test_too_many_not():
-    """Test too many NOT operands."""
-    qgraph = [
-        "NOT",
-        {
-            "nodes": dict(),
-            "edges": dict(),
-        },
-        {
-            "nodes": dict(),
-            "edges": dict(),
-        },
-    ]
-    with pytest.raises(ValueError) as excinfo:
-        get_query(qgraph)
-    assert "NOT must have exactly one operand" in str(excinfo.value)
-
-@pytest.mark.skip(reason="Compound qgraph queries are deprecated")
-def test_unknown_operator():
-    """Test unknown operator."""
-    qgraph = [
-        "DNE",
-        {
-            "nodes": dict(),
-            "edges": dict(),
-        },
-    ]
-    with pytest.raises(ValueError) as excinfo:
-        get_query(qgraph)
-    assert "Unrecognized operator" in str(excinfo.value)
+from .transpiler_fixtures import fixture_database
 
 
 def test_invalid_node():

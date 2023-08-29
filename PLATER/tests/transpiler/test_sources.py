@@ -1,11 +1,11 @@
 import pytest
 
-from PLATER.transpiler.cypher import get_query, transform_result
-from .fixtures import fixture_database
+from PLATER.transpiler.cypher import get_query
+from .transpiler_fixtures import fixture_database
 
 
-
-def test_primary_source(database):
+@pytest.mark.asyncio
+async def test_primary_source(database):
     qgraph = {
             "nodes": {
                 "n0": {
@@ -25,9 +25,7 @@ def test_primary_source(database):
                 }
             }
         }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
-
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 3
     assert len(output["knowledge_graph"]["edges"]) == 3
     # sample edge

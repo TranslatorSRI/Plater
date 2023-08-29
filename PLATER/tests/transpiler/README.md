@@ -6,10 +6,6 @@
 
   We test the utilities for converting between space case, snake_case, and PascalCase.
 
-* [`test_compounds.py`](test_compounds.py):
-
-  We test transpiling "compound" query graphs that use AND, OR, XOR, and NOT.
-
 * [`test_cypher_expression.py`](test_cypher_expression.py):
 
   We test the utility for converting Python objects into cypher expressions.

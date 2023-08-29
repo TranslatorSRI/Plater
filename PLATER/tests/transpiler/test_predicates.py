@@ -1,11 +1,11 @@
 """Test predicate handling."""
 import pytest
 
-from PLATER.transpiler.cypher import get_query, transform_result
-from .fixtures import fixture_database
+from PLATER.transpiler.cypher import get_query
+from .transpiler_fixtures import fixture_database
 
-
-def test_symmetric(database):
+@pytest.mark.asyncio
+async def test_symmetric(database):
     """Test symmetric predicate."""
     qgraph = {
         "nodes": {
@@ -22,12 +22,11 @@ def test_symmetric(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 2
 
-
-def test_any(database):
+@pytest.mark.asyncio
+async def test_any(database):
     """Test any predicate."""
     qgraph = {
         "nodes": {
@@ -43,11 +42,11 @@ def test_any(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 4
 
-def test_root_predicate(database):
+@pytest.mark.asyncio
+async def test_root_predicate(database):
     """Test root/related_to predicate."""
     qgraph = {
         "nodes": {
@@ -64,12 +63,11 @@ def test_root_predicate(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 4
 
-
-def test_sub(database):
+@pytest.mark.asyncio
+async def test_sub(database):
     """Test sub predicate."""
     qgraph = {
         "nodes": {
@@ -86,12 +84,11 @@ def test_sub(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 2
 
-
-def test_inverse(database):
+@pytest.mark.asyncio
+async def test_inverse(database):
     """Test inverse predicate."""
     qgraph = {
         "nodes": {
@@ -108,6 +105,5 @@ def test_inverse(database):
             },
         },
     }
-    database_output = database.run(get_query(qgraph))
-    output = transform_result(database_output, qgraph)
+    output = await database.run(get_query(qgraph), convert_to_trapi_message=True, qgraph=qgraph)
     assert len(output["results"]) == 1
