@@ -1,33 +1,36 @@
 """FastAPI app."""
 
-from fastapi import Body, Depends, FastAPI, Response, status
+from fastapi import Body, Depends, FastAPI, Response, Request, status
 from PLATER.transpiler.exceptions import InvalidPredicateError
-from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
-from PLATER.models.shared import SRITestData
+from PLATER.models.shared import SRITestData, MetaKnowledgeGraph, Message, ReasonerRequest
 
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.question import Question
 from PLATER.services.util.overlay import Overlay
-from PLATER.services.util.api_utils import get_graph_interface, get_graph_metadata, construct_open_api_schema, get_example
+from PLATER.services.util.api_utils import get_graph_interface, get_graph_metadata, construct_open_api_schema
 
 # Mount open api at /1.4/openapi.json
 APP_TRAPI_1_4 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.4')
 
 
-async def get_meta_knowledge_graph(
+def get_meta_knowledge_graph(
+        response: Response,
+        request: Request,
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-) -> MetaKnowledgeGraph:
+):
     """Handle /meta_knowledge_graph."""
-    meta_kg = await graph_metadata.get_meta_kg()
+    meta_kg = graph_metadata.get_meta_kg()
     return meta_kg
 
 
-async def get_sri_testing_data(
+def get_sri_testing_data(
+        response: Response,
+        request: Request,
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-) -> SRITestData:
+):
     """Handle /sri_testing_data."""
-    sri_test_data = await graph_metadata.get_sri_testing_data()
+    sri_test_data = graph_metadata.get_sri_testing_data()
     return sri_test_data
 
 
@@ -36,7 +39,7 @@ async def reasoner_api(
         request: ReasonerRequest = Body(
             ...,
             # Works for now but in deployment would be replaced by a mount, specific to backend dataset
-            example=get_example("reasoner-trapi-1.3"),
+            example=get_graph_metadata().get_example_qgraph()
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ):

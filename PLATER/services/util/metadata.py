@@ -14,7 +14,7 @@ class GraphMetadata:
             self.meta_kg = None
             self.sri_testing_data = None
 
-        async def get_metadata(self):
+        def get_metadata(self):
             if not self.metadata:
                 self.retrieve_metadata()
             return self.metadata
@@ -27,7 +27,7 @@ class GraphMetadata:
                 with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'about.json')) as f:
                     self.metadata = json.load(f)
 
-        async def get_meta_kg(self):
+        def get_meta_kg(self):
             if not self.meta_kg:
                 self.retrieve_meta_kg()
             return self.meta_kg
@@ -43,7 +43,7 @@ class GraphMetadata:
                     if not attribute_info['attribute_type_id']:
                         attribute_info['attribute_type_id'] = 'biolink:Attribute'
 
-        async def get_sri_testing_data(self):
+        def get_sri_testing_data(self):
             if not self.sri_testing_data:
                 self.retrieve_sri_test_data()
             return self.sri_testing_data
@@ -56,6 +56,49 @@ class GraphMetadata:
             # but this ensures validation with the model until it's removed
             if 'version' not in self.sri_testing_data:
                 self.sri_testing_data['version'] = config.get('BL_VERSION')
+
+        def get_example_qgraph(self):
+            sri_test_data = self.get_sri_testing_data()
+            test_edge = sri_test_data['edges'][0]
+            example_trapi = {
+                "message": {
+                    "query_graph": {
+                        "nodes": {
+                            "n0": {
+                                "categories": [
+                                    test_edge['subject_category']
+                                ],
+                                "ids": [
+                                    test_edge['subject_id']
+                                ]
+                            },
+                            "n1": {
+                                "categories": [
+                                    test_edge['object_category']
+                                ],
+                                "ids": [
+                                    test_edge['object_id']
+                                ]
+                            }
+                        },
+                        "edges": {
+                            "e01": {
+                                "subject": "n0",
+                                "object": "n1",
+                                "predicates": [
+                                    test_edge['predicate']
+                                ]
+                            }
+                        }
+                    }
+                },
+                "workflow": [
+                    {
+                        "id": "lookup"
+                    }
+                ]
+            }
+            return example_trapi
 
     instance = None
 
