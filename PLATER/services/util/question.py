@@ -44,22 +44,13 @@ class Question:
 
     def __init__(self, question_json):
         self._question_json = copy.deepcopy(question_json)
+        self._transpiler_qgraph = None
 
         # self.toolkit = toolkit
         self.provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
     def compile_cypher(self, **kwargs):
-        query_graph = copy.deepcopy(self._question_json[Question.QUERY_GRAPH_KEY])
-        edges = query_graph.get('edges')
-        for e in edges:
-            # removes "biolink:" from constraint names. since these are not encoded in the graph.
-            # TODO revert this when we switch to having biolink: in the graphs
-            if edges[e]['qualifier_constraints']:
-                for qualifier in edges[e]['qualifier_constraints']:
-                    for item in qualifier['qualifier_set']:
-                        item['qualifier_type_id'] = item['qualifier_type_id'].replace('biolink:', '')
-        return get_cypher_query(query_graph, **kwargs)
-
+        return get_cypher_query(self._transpiler_qgraph, **kwargs)
 
     def _construct_sources_tree(self, sources):
         # if primary source and aggregator source are specified in the graph, upstream_resource_ids of all aggregator_ks
@@ -97,7 +88,6 @@ class Question:
             "upstream_resource_ids": upstreams_for_plater_entry
         })
         return formatted_sources
-
 
     def format_attribute_trapi(self, kg_items, node=False):
         for identifier in kg_items:
@@ -151,7 +141,7 @@ class Question:
 
         return kg_items
 
-    def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
+    def transform_attributes(self, trapi_message):
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), node=True)
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
         for r in trapi_message.get("results", []):
@@ -166,15 +156,23 @@ class Question:
         :param graph_interface: interface for neo4j
         :return: None
         """
-        cypher = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal", "primary_ks_required": True})
+        self._transpiler_qgraph = copy.deepcopy(self._question_json[Question.QUERY_GRAPH_KEY])
+        cypher = self.compile_cypher(**{})
         logger.info(f"answering query_graph: {json.dumps(self._question_json)}")
-        logger.debug(f"cypher: {cypher}")
+        logger.info(f"cypher: {cypher}")
         s = time.time()
-        results = await graph_interface.run_cypher(cypher)
+        if graph_interface.protocol == 'bolt':
+            result_qgraph = await graph_interface.run_cypher(cypher,
+                                                             convert_to_trapi_message=True,
+                                                             qgraph=self._transpiler_qgraph)
+        elif graph_interface.protocol == 'http':
+            raise Exception(f'TRAPI queries not supported by HTTP protocol')
+            # result_qgraph = await graph_interface.run_cypher(cypher)
+        else:
+            raise Exception(f'TRAPI queries not supported by {graph_interface.protocol} protocol')
         end = time.time()
         logger.info(f"getting answers took {end - s} seconds")
-        results_dict = graph_interface.convert_to_dict(results)
-        self._question_json.update(self.transform_attributes(results_dict[0], graph_interface))
+        self._question_json.update(self.transform_attributes(result_qgraph))
         self._question_json = Question.apply_attribute_constraints(self._question_json)
         return self._question_json
 
@@ -184,11 +182,11 @@ class Question:
         q_edges = message['query_graph'].get('edges', {})
         node_constraints = {
             q_id: [AttributeConstraint(**constraint) for constraint in q_nodes[q_id]['constraints']] for q_id in q_nodes
-            if q_nodes[q_id]['constraints']
+            if 'constraints' in q_nodes[q_id]
         }
         edge_constraints = {
             q_id: [AttributeConstraint(**constraint) for constraint in q_edges[q_id]['attribute_constraints']] for q_id in q_edges
-            if q_edges[q_id]['attribute_constraints']
+            if 'attribute_constraints' in q_edges[q_id]
         }
         # if there are no constraints no need to do stuff.
         if not(len(node_constraints) or len(edge_constraints)):

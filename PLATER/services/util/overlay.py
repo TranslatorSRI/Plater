@@ -106,12 +106,10 @@ class Overlay:
         node_ids = list(message['knowledge_graph'].get('nodes').keys())
         node_ids = cypher_expression.dumps(node_ids)
         # skip name , id , categories from being returned in attributes array
-        core_properties = cypher_expression.dumps(RESERVED_NODE_PROPS + ['name'])
+        core_properties = cypher_expression.dumps(RESERVED_NODE_PROPS)
         # mapping for attributes
         attribute_types = cypher_expression.dumps(ATTRIBUTE_TYPES)
-        response = self.graph_interface.convert_to_dict(
-            await self.graph_interface.get_nodes(node_ids, core_properties, attribute_types)
-        )[0]['result']
+        response = await self.graph_interface.get_nodes(node_ids, core_properties, attribute_types, convert_to_dict=True)[0]
         response = Question({}).format_attribute_trapi(response, self.graph_interface)
         # overides based on original attribute names
         for n_id in message['knowledge_graph']['nodes']:

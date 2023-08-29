@@ -1,6 +1,4 @@
 """Tools for compiling QGraph into Cypher query."""
-import copy
-from functools import reduce
 import json
 from pathlib import Path
 
@@ -101,8 +99,8 @@ def get_query(qgraph, **kwargs):
     return cypher_query
 
 
-def transform_result(cypher_result,  # type neo4j.Result
-                     qgraph: dict):
+async def transform_result(cypher_result,  # type neo4j.Result
+                           qgraph: dict):
     kg_nodes = {}
     kg_edges = {}
     all_qnode_ids = []
@@ -116,7 +114,7 @@ def transform_result(cypher_result,  # type neo4j.Result
                 qnodes_that_are_sets.add(qnode_id)
 
     results = {}  # results are grouped by unique sets of result node ids
-    for cypher_record in cypher_result:
+    async for cypher_record in cypher_result:
         node_bindings = {}
         result_node_ids_key = ''
         for qnode_id in qnode_ids_to_return:
@@ -175,17 +173,18 @@ def transform_result(cypher_result,  # type neo4j.Result
                         ]
                     }
 
-        # if we haven't encountered this specific group of result nodes before, create a new result
-        if result_node_ids_key not in results:
-            results[result_node_ids_key] = {'analyses': [{'edge_bindings': edge_bindings}],
-                                            'node_bindings': node_bindings}
-        else:
-            # otherwise append new edge bindings to the existing result
-            for qedge_id, edge_binding_list in edge_bindings.items():
-                results[result_node_ids_key]['analyses'][0]['edge_bindings'][qedge_id].extend(
-                    [new_edge_bind for new_edge_bind in edge_binding_list if new_edge_bind['id'] not in
-                     [existing_edge_bind['id'] for existing_edge_bind in results[result_node_ids_key]['analyses'][0]['edge_bindings'][qedge_id]]]
-                )
+        if result_node_ids_key != '':  # avoid adding results for the default node binding key ''
+            # if we haven't encountered this specific group of result nodes before, create a new result
+            if result_node_ids_key not in results:
+                results[result_node_ids_key] = {'analyses': [{'edge_bindings': edge_bindings}],
+                                                'node_bindings': node_bindings}
+            else:
+                # otherwise append new edge bindings to the existing result
+                for qedge_id, edge_binding_list in edge_bindings.items():
+                    results[result_node_ids_key]['analyses'][0]['edge_bindings'][qedge_id].extend(
+                        [new_edge_bind for new_edge_bind in edge_binding_list if new_edge_bind['id'] not in
+                         [existing_edge_bind['id'] for existing_edge_bind in results[result_node_ids_key]['analyses'][0]['edge_bindings'][qedge_id]]]
+                    )
 
     knowledge_graph = {
             'nodes': kg_nodes,

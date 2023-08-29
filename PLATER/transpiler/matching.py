@@ -284,9 +284,16 @@ class EdgeReference():
                     to_append = bmt.get_enum_value_descendants(enum, constraint_filter['qualifier_value'])
                     if to_append:
                         qualifiers_values += to_append
+
+                constraint_filter['qualifier_type_id'] = constraint_filter['qualifier_type_id'].replace('biolink:', '')
+
+                # TODO right now "biolink:" is removed from qualifier constraint type ids since these are not encoded in the graph.
+                # we need to remove this if we switch to having biolink:quailifer_type_id keys in the graphs
+
                 # Join qualifier value hierarchy with an or
-                qualifier_where_condition =  " ( "+ " OR ".join([f"`{edge_id}`.{constraint_filter['qualifier_type_id']} = {cypher_prop_string(qualifier_value)}"
-                                                 for qualifier_value in set(qualifiers_values)]) + " ) "
+                qualifier_where_condition =  " ( "+ " OR ".join(
+                    [f"`{edge_id}`.{constraint_filter['qualifier_type_id'].replace('biolink:', '')} "
+                     f"= {cypher_prop_string(qualifier_value)}" for qualifier_value in set(qualifiers_values)]) + " ) "
                 ands.append(qualifier_where_condition)
             # if qualifier set is empty ; loop to the next
             if not len(ands):
