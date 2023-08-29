@@ -40,8 +40,8 @@ def main(hash: str = None):
     driver = get_driver(url)
     LOGGER.info("Connected to Neo4j. Initializing...")
     if hash is not None:
-        node_file = f"https://raw.githubusercontent.com/ranking-agent/reasoner/{hash}/tests/neo4j_csv/nodes.csv"
-        edge_file = f"https://raw.githubusercontent.com/ranking-agent/reasoner/{hash}/tests/neo4j_csv/edges.csv"
+        node_file = f"https://raw.githubusercontent.com/TranslatorSRI/Plater/{hash}/PLATER/tests/neo4j_csv/nodes.csv"
+        edge_file = f"https://raw.githubusercontent.com/TranslatorSRI/Plater/{hash}/PLATER/tests/neo4j_csv/edges.csv"
     else:
         node_file = f"file:///nodes.csv"
         edge_file = f"file:///edges.csv"
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "commit_hash",
         type=str,
-        help="a commit hash from github.com/ranking-agent/reasoner",
+        help="a commit hash from github.com/TranslatorSRI/Plater",
         nargs="?",
     )
 
