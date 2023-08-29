@@ -9,12 +9,12 @@ import os
 
 
 def test_neo4j_http_driver_ping_success(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
 
 
 def test_neo4j_http_driver_ping_fail(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=500)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=500)
     try:
         driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
         assert False
@@ -24,7 +24,7 @@ def test_neo4j_http_driver_ping_fail(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_neo4j_http_driver_run_cypher(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
     test_response = {"some": "response"}
     query = "some test cypher"
@@ -45,7 +45,7 @@ async def test_neo4j_http_driver_run_cypher(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_neo4j_http_driver_run_cypher_fail(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
     test_response = {"errors": "some_error"}
     query = "some test cypher"
@@ -72,7 +72,7 @@ async def test_neo4j_http_driver_run_cypher_fail(httpx_mock: HTTPXMock):
 @pytest.mark.asyncio
 async def test_neo4j_http_driver_apoc(httpx_mock: HTTPXMock):
     query = 'call apoc.help("meta")'
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     httpx_mock.add_response(url="http://localhost:7474/db/neo4j/tx/commit", method="POST", status_code=200,
                             match_content=json.dumps({
                                 "statements": [
@@ -122,7 +122,7 @@ async def test_driver_convert_to_dict():
 
 @pytest.mark.asyncio
 async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='http')
     list_1 = [
       "biolink:SmallMolecule",
@@ -142,7 +142,7 @@ async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='http')
     non_exist_predicate = "biolink:some_predicate"
     assert gi.invert_predicate(non_exist_predicate) == None
@@ -161,7 +161,7 @@ async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
                 MATCH (a)-[x]->(b)
                 RETURN DISTINCT labels(a) as source_labels, type(x) as predicate, labels(b) as target_labels
                 """
-    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='http')
     with open( os.path.join(os.path.dirname(__file__), 'data', 'schema_cypher_response.json'))as f:
         get_schema_response_json = json.load(f)
