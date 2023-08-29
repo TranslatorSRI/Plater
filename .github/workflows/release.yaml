@@ -29,6 +29,12 @@ jobs:
               with:
                 images:
                     ghcr.io/${{ github.repository }}-clustered
+            - name: Extract metadata (tags, labels) for Docker
+              id: meta_neo4j_image
+              uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+              with:
+                images:
+                  ghcr.io/${{ github.repository }}-neo4j
             - name: Login to ghcr
               uses: docker/login-action@v1
               with:
@@ -43,6 +49,13 @@ jobs:
                   tags: ${{ steps.meta_base_image.outputs.tags }}
                   labels: ${{ steps.meta_base_image.outputs.labels }}
                   build-args: VERSION=${{ steps.get_version.outputs.VERSION }}
+            - name: Build and push neo4j image
+              uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+              with:
+                  context: ./PLATER/neo4j-docker
+                  push: true
+                  tags: ${{ steps.meta_neo4j_image.outputs.tags }}
+                  labels: ${{ steps.meta_neo4j_image.outputs.labels }}
             - name: Build and push clustered image
               uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
               with:
