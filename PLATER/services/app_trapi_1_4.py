@@ -24,6 +24,14 @@ async def get_meta_knowledge_graph(
     return JSONResponse(content=meta_kg, media_type="application/json")
 
 
+async def get_meta_knowledge_graph_pydantic(
+        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
+):
+    """Handle /meta_knowledge_graph."""
+    meta_kg = await graph_metadata.get_meta_kg()
+    return meta_kg
+
+
 async def get_sri_testing_data(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ):
@@ -71,6 +79,16 @@ APP_TRAPI_1_4.add_api_route(
     get_meta_knowledge_graph,
     methods=["GET"],
     response_model=None,
+    summary="Meta knowledge graph representation of this TRAPI web service.",
+    description="Returns meta knowledge graph representation of this TRAPI web service.",
+    tags=["trapi"]
+)
+
+APP_TRAPI_1_4.add_api_route(
+    "/meta_knowledge_graph_pydantic",
+    get_meta_knowledge_graph_pydantic,
+    methods=["GET"],
+    response_model=MetaKnowledgeGraph,
     summary="Meta knowledge graph representation of this TRAPI web service.",
     description="Returns meta knowledge graph representation of this TRAPI web service.",
     tags=["trapi"]
