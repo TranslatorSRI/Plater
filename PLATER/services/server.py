@@ -47,9 +47,11 @@ if os.environ.get("OTEL_ENABLED"):
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry import trace
     from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-    from opentelemetry.sdk.resources import SERVICE_NAME as telemetery_service_name_key, Resource
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    # from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+
     from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
     # httpx connections need to be open a little longer by the otel decorators
@@ -57,23 +59,25 @@ if os.environ.get("OTEL_ENABLED"):
     # these supresses such warnings.
     logging.captureWarnings(capture=True)
     warnings.filterwarnings("ignore", category=ResourceWarning)
-    service_name = os.environ.get('PLATER_TITLE', 'PLATER')
-    assert service_name and isinstance(service_name, str)
-    trace.set_tracer_provider(
-        TracerProvider(
-            resource=Resource.create({telemetery_service_name_key: service_name})
-        )
-    )
+    plater_service_name = os.environ.get('PLATER_TITLE', 'PLATER')
+    assert plater_service_name and isinstance(plater_service_name, str)
+
     jaeger_exporter = JaegerExporter(
         agent_host_name=os.environ.get("JAEGER_HOST", "localhost"),
         agent_port=int(os.environ.get("JAEGER_PORT", "6831")),
     )
-    trace.get_tracer_provider().add_span_processor(
-        BatchSpanProcessor(jaeger_exporter)
-    )
-    tracer = trace.get_tracer(__name__)
-    FastAPIInstrumentor.instrument_app(APP, tracer_provider=trace, excluded_urls=
-                                       "docs,openapi.json") #,*cypher,*1.3/sri_testing_data")
+
+    resource = Resource(attributes={
+        SERVICE_NAME: plater_service_name
+    })
+    provider = TracerProvider(resource=resource)
+    # processor = BatchSpanProcessor(ConsoleSpanExporter())
+    processor = BatchSpanProcessor(jaeger_exporter)
+    provider.add_span_processor(processor)
+    trace.set_tracer_provider(provider)
+    FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls=
+                                       "docs,openapi.json")
+
     async def request_hook(span, request):
         # logs cypher queries set to neo4j
         # check url
@@ -86,7 +90,6 @@ if os.environ.get("OTEL_ENABLED"):
                 span.set_attribute('cypher', neo4j_query)
             except Exception as ex:
                 logger.error(f"error logging neo4j query when sending to OTEL: {ex}")
-                neo4j_query = ""
     HTTPXClientInstrumentor().instrument(request_hook=request_hook)
 
 
