@@ -36,12 +36,19 @@ class GraphMetadata:
             with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'meta_knowledge_graph.json')) as f:
                 self.meta_kg = json.load(f)
 
-            # this avoids errors when attribute_type_id is none/null,
-            # which should not happen but does currently due to an interaction with the bmt toolkit
+            # we removed pydantic validation for the meta kg for performance reasons,
+            # (and because it is static and should be validated upstream),
+            # but this ensures required fields aren't missing from attributes, as can be the case currently
             for node_type, node_properties in self.meta_kg['nodes'].items():
                 for attribute_info in node_properties['attributes']:
                     if not attribute_info['attribute_type_id']:
                         attribute_info['attribute_type_id'] = 'biolink:Attribute'
+                    if not attribute_info['attribute_source']:
+                        attribute_info['attribute_source'] = None
+                    if not attribute_info['constraint_use']:
+                        attribute_info['constraint_use'] = False
+                    if not attribute_info['constraint_name']:
+                        attribute_info['constraint_name'] = None
 
         async def get_sri_testing_data(self):
             if not self.sri_testing_data:

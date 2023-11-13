@@ -1,6 +1,6 @@
 """FastAPI app."""
-
 from fastapi import Body, Depends, FastAPI, Response, status
+from fastapi.responses import JSONResponse
 from reasoner_transpiler.exceptions import InvalidPredicateError
 from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
 from PLATER.models.shared import SRITestData
@@ -17,15 +17,16 @@ APP_TRAPI_1_4 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path
 
 async def get_meta_knowledge_graph(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-) -> MetaKnowledgeGraph:
+) -> JSONResponse:
     """Handle /meta_knowledge_graph."""
+    # NOTE - we are intentionally returning a JSONResponse directly and skipping pydantic validation for speed
     meta_kg = await graph_metadata.get_meta_kg()
-    return meta_kg
+    return JSONResponse(content=meta_kg, media_type="application/json")
 
 
 async def get_sri_testing_data(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-) -> SRITestData:
+):
     """Handle /sri_testing_data."""
     sri_test_data = await graph_metadata.get_sri_testing_data()
     return sri_test_data
@@ -69,7 +70,7 @@ APP_TRAPI_1_4.add_api_route(
     "/meta_knowledge_graph",
     get_meta_knowledge_graph,
     methods=["GET"],
-    response_model=MetaKnowledgeGraph,
+    response_model=None,
     summary="Meta knowledge graph representation of this TRAPI web service.",
     description="Returns meta knowledge graph representation of this TRAPI web service.",
     tags=["trapi"]
