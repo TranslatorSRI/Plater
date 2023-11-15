@@ -13,7 +13,6 @@ TITLE = config.get('PLATER_TITLE', 'Plater API')
 
 VERSION = os.environ.get('PLATER_VERSION', '1.4.0-2')
 
-
 logger = LoggingUtil.init_logging(
     __name__,
     config.get('logging_level'),
@@ -66,9 +65,8 @@ if os.environ.get("OTEL_ENABLED"):
         agent_host_name=os.environ.get("JAEGER_HOST", "localhost"),
         agent_port=int(os.environ.get("JAEGER_PORT", "6831")),
     )
-
     resource = Resource(attributes={
-        SERVICE_NAME: plater_service_name
+        SERVICE_NAME: os.environ.get("JAEGER_SERVICE_NAME", plater_service_name),
     })
     provider = TracerProvider(resource=resource)
     # processor = BatchSpanProcessor(ConsoleSpanExporter())
