@@ -2,7 +2,7 @@
 from fastapi import Body, Depends, FastAPI, Response, status
 from fastapi.responses import JSONResponse
 from reasoner_transpiler.exceptions import InvalidPredicateError
-from PLATER.models.models_trapi_1_1 import (MetaKnowledgeGraph, Message, ReasonerRequest)
+from PLATER.models.models_trapi_1_1 import ReasonerRequest
 from PLATER.models.shared import SRITestData
 
 from PLATER.services.util.graph_adapter import GraphInterface
@@ -24,14 +24,6 @@ async def get_meta_knowledge_graph(
     return JSONResponse(content=meta_kg, media_type="application/json")
 
 
-async def get_meta_knowledge_graph_pydantic(
-        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-):
-    """Handle /meta_knowledge_graph."""
-    meta_kg = await graph_metadata.get_meta_kg()
-    return meta_kg
-
-
 async def get_sri_testing_data(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ):
@@ -48,7 +40,7 @@ async def reasoner_api(
             example=get_example("reasoner-trapi-1.3"),
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-):
+) -> ReasonerRequest:
     """Handle TRAPI request."""
     request_json = request.dict(by_alias=True)
     # default workflow
@@ -79,16 +71,6 @@ APP_TRAPI_1_4.add_api_route(
     get_meta_knowledge_graph,
     methods=["GET"],
     response_model=None,
-    summary="Meta knowledge graph representation of this TRAPI web service.",
-    description="Returns meta knowledge graph representation of this TRAPI web service.",
-    tags=["trapi"]
-)
-
-APP_TRAPI_1_4.add_api_route(
-    "/meta_knowledge_graph_pydantic",
-    get_meta_knowledge_graph_pydantic,
-    methods=["GET"],
-    response_model=MetaKnowledgeGraph,
     summary="Meta knowledge graph representation of this TRAPI web service.",
     description="Returns meta knowledge graph representation of this TRAPI web service.",
     tags=["trapi"]
