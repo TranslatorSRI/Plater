@@ -10,37 +10,35 @@ from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.question import Question
 from PLATER.services.util.overlay import Overlay
-from PLATER.services.util.api_utils import get_graph_interface, get_graph_metadata, construct_open_api_schema, get_example
+from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
 
 # Mount open api at /1.4/openapi.json
 APP_TRAPI_1_4 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.4')
 
+graph_metadata_reader = GraphMetadata()
+META_KG_RESPONSE = jsonable_encoder(graph_metadata_reader.get_meta_kg())
+SRI_TEST_DATA = graph_metadata_reader.get_sri_testing_data()
+TRAPI_QUERY_EXAMPLE = graph_metadata_reader.get_example_qgraph()
 
-async def get_meta_knowledge_graph(
-        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-) -> JSONResponse:
+
+async def get_meta_knowledge_graph() -> JSONResponse:
     """Handle /meta_knowledge_graph."""
-    meta_kg = await graph_metadata.get_meta_kg()
     # we are intentionally returning a JSONResponse directly and skipping pydantic validation for speed
     return JSONResponse(status_code=200,
-                        content=jsonable_encoder(meta_kg),
+                        content=META_KG_RESPONSE,
                         media_type="application/json")
 
 
-async def get_sri_testing_data(
-        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-):
+async def get_sri_testing_data():
     """Handle /sri_testing_data."""
-    sri_test_data = await graph_metadata.get_sri_testing_data()
-    return sri_test_data
+    return SRI_TEST_DATA
 
 
 async def reasoner_api(
         response: Response,
         request: ReasonerRequest = Body(
             ...,
-            # Works for now but in deployment would be replaced by a mount, specific to backend dataset
-            example=get_example("reasoner-trapi-1.3"),
+            examples=[TRAPI_QUERY_EXAMPLE],
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ):

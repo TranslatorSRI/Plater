@@ -23,10 +23,6 @@ def get_graph_interface():
     )
 
 
-def get_graph_metadata():
-    return GraphMetadata()
-
-
 def get_bl_helper():
     """Get Biolink helper."""
     return BLHelper(config.get('BL_HOST', 'https://bl-lookup-sri.renci.org'))
