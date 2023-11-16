@@ -1,10 +1,11 @@
 """FastAPI app."""
-from fastapi import Body, Depends, FastAPI, Response, status
+from fastapi import Body, Depends, FastAPI, Response
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from reasoner_transpiler.exceptions import InvalidPredicateError
-from PLATER.models.models_trapi_1_1 import ReasonerRequest
-from PLATER.models.shared import SRITestData
+from typing import Dict
 
+from reasoner_transpiler.exceptions import InvalidPredicateError
+from PLATER.models.shared import ReasonerRequest, MetaKnowledgeGraph, SRITestData
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.question import Question
@@ -19,9 +20,11 @@ async def get_meta_knowledge_graph(
         graph_metadata: GraphMetadata = Depends(get_graph_metadata),
 ) -> JSONResponse:
     """Handle /meta_knowledge_graph."""
-    # NOTE - we are intentionally returning a JSONResponse directly and skipping pydantic validation for speed
     meta_kg = await graph_metadata.get_meta_kg()
-    return JSONResponse(content=meta_kg, media_type="application/json")
+    # we are intentionally returning a JSONResponse directly and skipping pydantic validation for speed
+    return JSONResponse(status_code=200,
+                        content=jsonable_encoder(meta_kg),
+                        media_type="application/json")
 
 
 async def get_sri_testing_data(
@@ -40,7 +43,7 @@ async def reasoner_api(
             example=get_example("reasoner-trapi-1.3"),
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> ReasonerRequest:
+):
     """Handle TRAPI request."""
     request_json = request.dict(by_alias=True)
     # default workflow
@@ -52,9 +55,7 @@ async def reasoner_api(
             response_message = await question.answer(graph_interface)
             request_json.update({'message': response_message, 'workflow': workflow})
         except InvalidPredicateError as e:
-            response.status_code = status.HTTP_400_BAD_REQUEST
-            request_json["description"] = str(e)
-            return request_json
+            return JSONResponse(status_code=400, content={"description": str(e)})
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
         response_message = await overlay.connect_k_nodes(request_json['message'])
@@ -71,6 +72,7 @@ APP_TRAPI_1_4.add_api_route(
     get_meta_knowledge_graph,
     methods=["GET"],
     response_model=None,
+    responses={200: {"model": MetaKnowledgeGraph}},
     summary="Meta knowledge graph representation of this TRAPI web service.",
     description="Returns meta knowledge graph representation of this TRAPI web service.",
     tags=["trapi"]
@@ -92,6 +94,7 @@ APP_TRAPI_1_4.add_api_route(
     reasoner_api,
     methods=["POST"],
     response_model=ReasonerRequest,
+    responses={400: {"model": Dict}},
     summary="Query reasoner via one of several inputs.",
     description="",
     tags=["trapi"]
