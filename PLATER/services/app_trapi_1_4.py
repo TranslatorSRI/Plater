@@ -38,7 +38,7 @@ async def reasoner_api(
         response: Response,
         request: ReasonerRequest = Body(
             ...,
-            examples=[TRAPI_QUERY_EXAMPLE],
+            example=TRAPI_QUERY_EXAMPLE,
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ):

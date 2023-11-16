@@ -21,7 +21,7 @@ GRAPH_METADATA = GraphMetadata().get_metadata()
 async def cypher(
         request: CypherRequest = Body(
             ...,
-            examples=[{"query": "MATCH (n) RETURN count(n)"}],
+            example={"query": "MATCH (n) RETURN count(n)"},
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> CypherResponse:
@@ -51,7 +51,7 @@ APP_COMMON.add_api_route(
 async def overlay(
         request: ReasonerRequest = Body(
             ...,
-            examples=[{"message": get_example("overlay")}],
+            example={"message": get_example("overlay")},
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> Message:
