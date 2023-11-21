@@ -3,6 +3,7 @@ from fastapi import Body, Depends, FastAPI, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from typing import Dict
+from pydantic import ValidationError
 
 from reasoner_transpiler.exceptions import InvalidPredicateError
 from PLATER.models.shared import ReasonerRequest, MetaKnowledgeGraph, SRITestData
@@ -11,22 +12,49 @@ from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.question import Question
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
+from PLATER.services.config import config
+from PLATER.services.util.logutil import LoggingUtil
+
+logger = LoggingUtil.init_logging(
+    __name__,
+    config.get('logging_level'),
+    config.get('logging_format'),
+)
 
 # Mount open api at /1.4/openapi.json
 APP_TRAPI_1_4 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.4')
 
+
+def get_meta_kg_response(graph_metadata_reader: GraphMetadata):
+    meta_kg_json = graph_metadata_reader.get_meta_kg()
+    try:
+        MetaKnowledgeGraph.parse_obj(meta_kg_json)
+        logger.info('Successfully validated meta kg')
+        return jsonable_encoder(meta_kg_json)
+    except ValidationError as e:
+        logger.error(f'Error validating meta kg: {e}')
+        return None
+
+
 graph_metadata_reader = GraphMetadata()
-META_KG_RESPONSE = jsonable_encoder(graph_metadata_reader.get_meta_kg())
+META_KG_RESPONSE = get_meta_kg_response(graph_metadata_reader)
 SRI_TEST_DATA = graph_metadata_reader.get_sri_testing_data()
 TRAPI_QUERY_EXAMPLE = graph_metadata_reader.get_example_qgraph()
 
 
 async def get_meta_knowledge_graph() -> JSONResponse:
     """Handle /meta_knowledge_graph."""
-    # we are intentionally returning a JSONResponse directly and skipping pydantic validation for speed
-    return JSONResponse(status_code=200,
-                        content=META_KG_RESPONSE,
-                        media_type="application/json")
+    if META_KG_RESPONSE:
+        # we are intentionally returning a JSONResponse directly,
+        # we already validated with pydantic above and the content won't change
+        return JSONResponse(status_code=200,
+                            content=META_KG_RESPONSE,
+                            media_type="application/json")
+    else:
+        return JSONResponse(status_code=500,
+                            media_type="application/json",
+                            content={"description": "MetaKnowledgeGraph failed validation - "
+                                                    "please notify maintainers."})
 
 
 async def get_sri_testing_data():
