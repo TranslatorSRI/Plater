@@ -154,6 +154,11 @@ class Question:
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), node=True)
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
         for r in trapi_message.get("results", []):
+            for node_binding_list in r["node_bindings"].values():
+                for node_binding in node_binding_list:
+                    query_id = node_binding.pop('qnode_id', None)
+                    if query_id != node_binding['id']:
+                        node_binding['query_id'] = query_id
             # add resource id
             for analyses in r["analyses"]:
                 analyses["resource_id"] = self.provenance
