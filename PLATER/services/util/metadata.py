@@ -11,7 +11,7 @@ class GraphMetadata:
         self.sri_testing_data = None
 
     def get_metadata(self):
-        if not self.metadata:
+        if self.metadata is None:
             self.retrieve_metadata()
         return self.metadata
 
@@ -24,7 +24,7 @@ class GraphMetadata:
                 self.metadata = json.load(f)
 
     def get_meta_kg(self):
-        if not self.meta_kg:
+        if self.meta_kg is None:
             self.retrieve_meta_kg()
         return self.meta_kg
 
@@ -32,22 +32,24 @@ class GraphMetadata:
         with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'meta_knowledge_graph.json')) as f:
             self.meta_kg = json.load(f)
 
-        # we removed pydantic validation for the meta kg for performance reasons,
-        # (and because it is static and should be validated upstream),
-        # but this ensures required fields aren't missing from attributes, as can be the case currently
-        for node_type, node_properties in self.meta_kg['nodes'].items():
-            for attribute_info in node_properties['attributes']:
-                if not attribute_info['attribute_type_id']:
-                    attribute_info['attribute_type_id'] = 'biolink:Attribute'
-                if not attribute_info['attribute_source']:
-                    attribute_info['attribute_source'] = None
-                if not attribute_info['constraint_use']:
-                    attribute_info['constraint_use'] = False
-                if not attribute_info['constraint_name']:
-                    attribute_info['constraint_name'] = None
+        try:
+            # We removed pydantic model conversion during a response for the meta kg for performance reasons,
+            # instead it is validated once on startup. This attempts to populate some optional but preferred
+            # fields that may not be coming from upstream tools.
+            for node_type, node_properties in self.meta_kg['nodes'].items():
+                for attribute_info in node_properties['attributes']:
+                    if 'attribute_source' not in attribute_info:
+                        attribute_info['attribute_source'] = None
+                    if 'constraint_use' not in attribute_info:
+                        attribute_info['constraint_use'] = False
+                    if 'constraint_name' not in attribute_info:
+                        attribute_info['constraint_name'] = None
+        except KeyError as e:
+            # just move on if a key is missing here, it won't validate but don't crash the rest of the app
+            pass
 
     def get_sri_testing_data(self):
-        if not self.sri_testing_data:
+        if self.sri_testing_data is None:
             self.retrieve_sri_test_data()
         return self.sri_testing_data
 
