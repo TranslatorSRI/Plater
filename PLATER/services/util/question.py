@@ -1,9 +1,11 @@
 import copy
-import json
-
-from PLATER.services.util.graph_adapter import GraphInterface
+import orjson
 import time
 import reasoner_transpiler as reasoner
+
+from secrets import token_hex
+from opentelemetry import trace
+from PLATER.services.util.graph_adapter import GraphInterface
 from reasoner_transpiler.cypher import get_query, RESERVED_NODE_PROPS, cypher_expression
 from reasoner_pydantic.qgraph import AttributeConstraint
 from reasoner_pydantic.shared import Attribute
@@ -170,13 +172,30 @@ class Question:
         :param graph_interface: interface for neo4j
         :return: None
         """
-        cypher = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal", "primary_ks_required": True})
-        logger.info(f"answering query_graph: {json.dumps(self._question_json)}")
-        logger.debug(f"cypher: {cypher}")
-        s = time.time()
-        results = await graph_interface.run_cypher(cypher)
-        end = time.time()
-        logger.info(f"getting answers took {end - s} seconds")
+        # get a reference to the current opentelemetry span
+        otel_span = trace.get_current_span()
+        if not otel_span or not otel_span.is_recording():
+            otel_span = None
+
+        # compile a cypher query and return a string
+        cypher_query = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal", "primary_ks_required": True})
+        # convert the incoming TRAPI query into a string for logging and tracing
+        trapi_query = str(orjson.dumps(self._question_json), "utf-8")
+        # create a probably-unique id to be associated with this query in the logs
+        query_logging_id = token_hex(10)
+        logger.info(f"querying neo4j for query {query_logging_id}, trapi: {trapi_query}")
+        start_time = time.time()
+        results = await graph_interface.run_cypher(cypher_query)
+        neo4j_duration = time.time() - start_time
+        logger.info(f"returned results from neo4j for {query_logging_id}, neo4j_duration: {neo4j_duration}")
+        if otel_span is not None:
+            otel_span.set_attributes(
+                {
+                    "trapi": trapi_query,
+                    "neo4j_duration": neo4j_duration,
+                    "query_logging_id": query_logging_id
+                }
+            )
         results_dict = graph_interface.convert_to_dict(results)
         self._question_json.update(self.transform_attributes(results_dict[0], graph_interface))
         self._question_json = Question.apply_attribute_constraints(self._question_json)
