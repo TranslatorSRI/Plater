@@ -2,6 +2,7 @@
 from typing import Any, Dict, List
 
 from fastapi import Body, Depends, FastAPI
+from fastapi.responses import RedirectResponse
 
 from PLATER.models.models_trapi_1_0 import (
     Message, ReasonerRequest, CypherRequest, SimpleSpecResponse, SimpleSpecElement,
@@ -202,6 +203,17 @@ APP_COMMON.add_api_route(
         "or target curie. Calling this endpoint with no query parameters will "
         "return all possible hops for all types."
     ),
+)
+
+
+async def redirect_to_docs():
+    return RedirectResponse(url="/docs")
+
+APP_COMMON.add_api_route(
+    "/",
+    redirect_to_docs,
+    include_in_schema=False,
+    methods=["GET"]
 )
 
 
