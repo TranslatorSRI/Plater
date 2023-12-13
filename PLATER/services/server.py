@@ -53,7 +53,8 @@ if os.environ.get("OTEL_ENABLED", False):
     if OTEL_USE_CONSOLE_EXPORTER:
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
     else:
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        # from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 
     plater_service_name = os.environ.get('PLATER_TITLE', 'PLATER')
     assert plater_service_name and isinstance(plater_service_name, str)
@@ -64,9 +65,15 @@ if os.environ.get("OTEL_ENABLED", False):
     if OTEL_USE_CONSOLE_EXPORTER:
         processor = BatchSpanProcessor(ConsoleSpanExporter())
     else:
-        otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost").rstrip('/')
-        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}/v1/traces')
-        processor = BatchSpanProcessor(otlp_exporter)
+        # otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost").rstrip('/')
+        # otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}/v1/traces')
+        # processor = BatchSpanProcessor(otlp_exporter)
+        jaeger_exporter = JaegerExporter(
+            agent_host_name=os.environ.get("JAEGER_HOST", "localhost"),
+            agent_port=int(os.environ.get("JAEGER_PORT", "6831")),
+        )
+        processor = BatchSpanProcessor(jaeger_exporter)
+
     provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
     FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls=
