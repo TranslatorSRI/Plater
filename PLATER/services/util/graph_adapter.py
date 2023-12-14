@@ -199,10 +199,10 @@ class GraphInterface:
             if element is None:
                 return None
             # If its symmetric
-            if 'symmetric' in element and element.symmetric:
+            if element.symmetric:
                 return biolink_predicate
             # if neither symmetric nor an inverse is found
-            if 'inverse' not in element or not element['inverse']:
+            if not element.inverse:
                 return None
             # if an inverse is found
             return self.toolkit.get_element(element['inverse']).slot_uri

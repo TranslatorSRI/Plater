@@ -145,14 +145,13 @@ async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
     httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''))
     non_exist_predicate = "biolink:some_predicate"
-    assert gi.invert_predicate(non_exist_predicate) == None
+    assert gi.invert_predicate(non_exist_predicate) is None
     symmetric_predicate = "biolink:related_to"
     assert gi.invert_predicate(symmetric_predicate) == symmetric_predicate
     predicate_with_inverse = "biolink:part_of"
     assert gi.invert_predicate(predicate_with_inverse) == "biolink:has_part"
-    # biolink 3.1.0 seems to be pretty good on inverses.
-    # predicate_no_inverse_and_not_symmetric = "biolink:associated_with_increased_likelihood_of"
-    # assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) == None
+    predicate_no_inverse_and_not_symmetric = "biolink:has_part"
+    assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) is None
     GraphInterface.instance = None
 
 @pytest.mark.asyncio
@@ -179,8 +178,8 @@ async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
     # gi.instance.summary = True
     schema = gi.get_schema()
     expected = defaultdict(lambda: defaultdict(set))
-    expected['biolink:Disease']['biolink:Disease'] = {'biolink:has_phenotype', 'biolink:phenotype_of'}
-    expected['biolink:PhenotypicFeature']['biolink:Disease'] = {'biolink:phenotype_of'}
+    expected['biolink:Disease']['biolink:Disease'] = {'biolink:has_phenotype'}
+    expected['biolink:PhenotypicFeature']['biolink:Disease'] = set()
     expected['biolink:Disease']['biolink:PhenotypicFeature'] = {'biolink:has_phenotype'}
 
     assert schema == expected
