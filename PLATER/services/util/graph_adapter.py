@@ -1,9 +1,8 @@
 import base64
 import traceback
-import os
 import httpx
 import time
-
+from opentelemetry import trace
 from collections import defaultdict
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
@@ -200,10 +199,10 @@ class GraphInterface:
             if element is None:
                 return None
             # If its symmetric
-            if 'symmetric' in element and element.symmetric:
+            if element.symmetric:
                 return biolink_predicate
             # if neither symmetric nor an inverse is found
-            if 'inverse' not in element or not element['inverse']:
+            if not element.inverse:
                 return None
             # if an inverse is found
             return self.toolkit.get_element(element['inverse']).slot_uri
@@ -378,7 +377,19 @@ class GraphInterface:
             :rtype: list
             """
             kwargs['timeout'] = self.query_timeout
-            return await self.driver.run(cypher, **kwargs)
+            # get a reference to the current opentelemetry span
+            otel_span = trace.get_current_span()
+            if not otel_span or not otel_span.is_recording():
+                otel_span = None
+            else:
+                otel_span.add_event("neo4j_query_start",
+                                    attributes={
+                                        'cypher_query': cypher
+                                    })
+            cypher_results = await self.driver.run(cypher, **kwargs)
+            if otel_span is not None:
+                otel_span.add_event("neo4j_query_end")
+            return cypher_results
 
         async def get_sample(self, node_type):
             """

@@ -1,9 +1,8 @@
 """FastAPI app."""
-import json
 from typing import Any, Dict, List
 
 from fastapi import Body, Depends, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import RedirectResponse
 
 from PLATER.models.models_trapi_1_0 import (
     Message, ReasonerRequest, CypherRequest, SimpleSpecResponse, SimpleSpecElement,
@@ -13,13 +12,12 @@ from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.overlay import Overlay
-from PLATER.services.util.question import Question
 from PLATER.services.util.api_utils import get_graph_interface, \
-    get_bl_helper, construct_open_api_schema, get_example, get_graph_metadata
+    get_bl_helper, construct_open_api_schema, get_example
 
 
 APP_COMMON = FastAPI(openapi_url='/common/openapi.json', docs_url='/common/docs')
-
+GRAPH_METADATA = GraphMetadata().get_metadata()
 
 async def cypher(
         request: CypherRequest = Body(
@@ -77,12 +75,9 @@ APP_COMMON.add_api_route(
 )
 
 
-async def metadata(
-        graph_metadata: GraphMetadata = Depends(get_graph_metadata),
-) -> Any:
+async def metadata() -> Any:
     """Handle /metadata."""
-    response = await graph_metadata.get_metadata()
-    return response
+    return GRAPH_METADATA
 
 
 APP_COMMON.add_api_route(
@@ -208,6 +203,17 @@ APP_COMMON.add_api_route(
         "or target curie. Calling this endpoint with no query parameters will "
         "return all possible hops for all types."
     ),
+)
+
+
+async def redirect_to_docs():
+    return RedirectResponse(url="/docs")
+
+APP_COMMON.add_api_route(
+    "/",
+    redirect_to_docs,
+    include_in_schema=False,
+    methods=["GET"]
 )
 
 

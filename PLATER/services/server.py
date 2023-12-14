@@ -13,7 +13,6 @@ TITLE = config.get('PLATER_TITLE', 'Plater API')
 
 VERSION = os.environ.get('PLATER_VERSION', '1.4.0-2')
 
-
 logger = LoggingUtil.init_logging(
     __name__,
     config.get('logging_level'),
@@ -43,52 +42,42 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
-if os.environ.get("OTEL_ENABLED"):
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+if os.environ.get("OTEL_ENABLED", False):
     from opentelemetry import trace
-    from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-    from opentelemetry.sdk.resources import SERVICE_NAME as telemetery_service_name_key, Resource
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-    # httpx connections need to be open a little longer by the otel decorators
-    # but some libs display warnings of resource being unclosed.
-    # these supresses such warnings.
-    logging.captureWarnings(capture=True)
-    warnings.filterwarnings("ignore", category=ResourceWarning)
-    service_name = os.environ.get('PLATER_TITLE', 'PLATER')
-    assert service_name and isinstance(service_name, str)
-    trace.set_tracer_provider(
-        TracerProvider(
-            resource=Resource.create({telemetery_service_name_key: service_name})
+    OTEL_USE_CONSOLE_EXPORTER = os.environ.get("OTEL_USE_CONSOLE_EXPORTER", False)
+    if OTEL_USE_CONSOLE_EXPORTER:
+        from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+    else:
+        # from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+
+    plater_service_name = os.environ.get('PLATER_TITLE', 'PLATER')
+    assert plater_service_name and isinstance(plater_service_name, str)
+    resource = Resource(attributes={
+        SERVICE_NAME: os.environ.get("OTEL_SERVICE_NAME", plater_service_name),
+    })
+    provider = TracerProvider(resource=resource)
+    if OTEL_USE_CONSOLE_EXPORTER:
+        processor = BatchSpanProcessor(ConsoleSpanExporter())
+    else:
+        # otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost").rstrip('/')
+        # otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}/v1/traces')
+        # processor = BatchSpanProcessor(otlp_exporter)
+        jaeger_exporter = JaegerExporter(
+            agent_host_name=os.environ.get("JAEGER_HOST", "localhost"),
+            agent_port=int(os.environ.get("JAEGER_PORT", "6831")),
         )
-    )
-    jaeger_exporter = JaegerExporter(
-        agent_host_name=os.environ.get("JAEGER_HOST", "localhost"),
-        agent_port=int(os.environ.get("JAEGER_PORT", "6831")),
-    )
-    trace.get_tracer_provider().add_span_processor(
-        BatchSpanProcessor(jaeger_exporter)
-    )
-    tracer = trace.get_tracer(__name__)
-    FastAPIInstrumentor.instrument_app(APP, tracer_provider=trace, excluded_urls=
-                                       "docs,openapi.json") #,*cypher,*1.3/sri_testing_data")
-    async def request_hook(span, request):
-        # logs cypher queries set to neo4j
-        # check url
-        if span.attributes.get('http.url').endswith('/db/data/transaction/commit'):
-            # if url matches try to json load the query
-            try:
-                neo4j_query = json.loads(
-                    request.stream._stream.decode('utf-8')
-                )['statements'][0]['statement']
-                span.set_attribute('cypher', neo4j_query)
-            except Exception as ex:
-                logger.error(f"error logging neo4j query when sending to OTEL: {ex}")
-                neo4j_query = ""
-    HTTPXClientInstrumentor().instrument(request_hook=request_hook)
+        processor = BatchSpanProcessor(jaeger_exporter)
 
+    provider.add_span_processor(processor)
+    trace.set_tracer_provider(provider)
+    FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls=
+                                       "docs,openapi.json")
 
 if __name__ == '__main__':
     import uvicorn

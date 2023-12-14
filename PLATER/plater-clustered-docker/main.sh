@@ -26,7 +26,7 @@ function heartbeat {
     echo "starting heartbeat logic... "
     if [[ ! -z "${AUTOMAT_HOST}" ]]; then
         echo "Checking Plater status..."
-        testEndpoint=${PLATER_SERVICE_ADDRESS}:${WEB_PORT}/1.3/meta_knowledge_graph
+        testEndpoint=${PLATER_SERVICE_ADDRESS}:${WEB_PORT}/1.4/meta_knowledge_graph
         response=$(curl --write-out %{http_code} --silent --output /dev/null ${testEndpoint})
         until [ $response = "200" ]; do
             response=$(curl --write-out %{http_code} --silent --output /dev/null ${testEndpoint})

@@ -41,7 +41,7 @@ def send_heart_beat(automat_host):
             resp = httpx.post(
                 automat_heart_beat_url,
                 json=payload,
-                timeout=0.5,
+                timeout=10,
             )
             logger.debug(
                 'heartbeat to %s returned %d',

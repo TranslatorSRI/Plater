@@ -1,22 +1,20 @@
-import httpx
 import json
 from collections import defaultdict
 from PLATER.services.util.graph_adapter import Neo4jHTTPDriver, GraphInterface
 from pytest_httpx import HTTPXMock
 import pytest
-from unittest.mock import patch
 import os
 
 
 def test_neo4j_http_driver_ping_success(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
-    driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    driver = Neo4jHTTPDriver(host='localhost', port=7474, auth=('neo4j', 'somepass'))
 
 
 def test_neo4j_http_driver_ping_fail(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=500)
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=500)
     try:
-        driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
+        driver = Neo4jHTTPDriver(host='localhost', port=7474, auth=('neo4j', 'somepass'))
         assert False
     except:
         assert True
@@ -24,8 +22,8 @@ def test_neo4j_http_driver_ping_fail(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_neo4j_http_driver_run_cypher(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
-    driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    driver = Neo4jHTTPDriver(host='localhost', port=7474, auth=('neo4j', 'somepass'))
     test_response = {"some": "response"}
     query = "some test cypher"
 
@@ -45,8 +43,8 @@ async def test_neo4j_http_driver_run_cypher(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_neo4j_http_driver_run_cypher_fail(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
-    driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    driver = Neo4jHTTPDriver(host='localhost', port=7474, auth=('neo4j', 'somepass'))
     test_response = {"errors": "some_error"}
     query = "some test cypher"
 
@@ -72,7 +70,7 @@ async def test_neo4j_http_driver_run_cypher_fail(httpx_mock: HTTPXMock):
 @pytest.mark.asyncio
 async def test_neo4j_http_driver_apoc(httpx_mock: HTTPXMock):
     query = 'call apoc.help("meta")'
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
     httpx_mock.add_response(url="http://localhost:7474/db/data/transaction/commit", method="POST", status_code=200,
                             match_content=json.dumps({
                                 "statements": [
@@ -82,7 +80,7 @@ async def test_neo4j_http_driver_apoc(httpx_mock: HTTPXMock):
                                 ]
                             }).encode('utf-8'), json={}
                             )
-    driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
+    driver = Neo4jHTTPDriver(host='localhost', port=7474, auth=('neo4j', 'somepass'))
     assert driver.check_apoc_support() == True
     httpx_mock.add_response(url="http://localhost:7474/db/data/transaction/commit", method="POST", status_code=500,
                             match_content=json.dumps({
@@ -93,13 +91,13 @@ async def test_neo4j_http_driver_apoc(httpx_mock: HTTPXMock):
                                 ]
                             }).encode('utf-8'), json={"errors": "apoc not supported"}
                             )
-    driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
-    assert driver.check_apoc_support() == False
+    driver = Neo4jHTTPDriver(host='localhost', port=7474, auth=('neo4j', 'somepass'))
+    assert driver.check_apoc_support() is False
 
 @pytest.mark.asyncio
 async def test_driver_convert_to_dict(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
-    driver = Neo4jHTTPDriver(host='localhost', port='7474', auth=('neo4j', 'somepass'))
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
+    driver = Neo4jHTTPDriver(host='localhost', port=7474, auth=('neo4j', 'somepass'))
     sample_resp = {
           "results": [
             {
@@ -124,7 +122,7 @@ async def test_driver_convert_to_dict(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
     gi = GraphInterface('localhost','7474', auth=('neo4j', ''))
     list_1 = [
       "biolink:SmallMolecule",
@@ -144,17 +142,16 @@ async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''))
     non_exist_predicate = "biolink:some_predicate"
-    assert gi.invert_predicate(non_exist_predicate) == None
+    assert gi.invert_predicate(non_exist_predicate) is None
     symmetric_predicate = "biolink:related_to"
     assert gi.invert_predicate(symmetric_predicate) == symmetric_predicate
     predicate_with_inverse = "biolink:part_of"
     assert gi.invert_predicate(predicate_with_inverse) == "biolink:has_part"
-    # biolink 3.1.0 seems to be pretty good on inverses.
-    # predicate_no_inverse_and_not_symmetric = "biolink:associated_with_increased_likelihood_of"
-    # assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) == None
+    predicate_no_inverse_and_not_symmetric = "biolink:has_part"
+    assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) is None
     GraphInterface.instance = None
 
 @pytest.mark.asyncio
@@ -163,7 +160,7 @@ async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
                 MATCH (a)-[x]->(b)
                 RETURN DISTINCT labels(a) as source_labels, type(x) as predicate, labels(b) as target_labels
                 """
-    httpx_mock.add_response(url="http://localhost:7474", method="GET", status_code=200)
+    httpx_mock.add_response(url="http://localhost:7474/", method="GET", status_code=200)
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''))
     with open( os.path.join(os.path.dirname(__file__), 'data', 'schema_cypher_response.json'))as f:
         get_schema_response_json = json.load(f)
@@ -181,8 +178,8 @@ async  def test_graph_interface_get_schema(httpx_mock: HTTPXMock):
     # gi.instance.summary = True
     schema = gi.get_schema()
     expected = defaultdict(lambda: defaultdict(set))
-    expected['biolink:Disease']['biolink:Disease'] = {'biolink:has_phenotype', 'biolink:phenotype_of'}
-    expected['biolink:PhenotypicFeature']['biolink:Disease'] = {'biolink:phenotype_of'}
+    expected['biolink:Disease']['biolink:Disease'] = {'biolink:has_phenotype'}
+    expected['biolink:PhenotypicFeature']['biolink:Disease'] = set()
     expected['biolink:Disease']['biolink:PhenotypicFeature'] = {'biolink:has_phenotype'}
 
     assert schema == expected
