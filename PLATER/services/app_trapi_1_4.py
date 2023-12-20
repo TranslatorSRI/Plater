@@ -1,9 +1,10 @@
 """FastAPI app."""
 from fastapi import Body, Depends, FastAPI, Response
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 from typing import Dict
 from pydantic import ValidationError
+import orjson
 
 from reasoner_transpiler.exceptions import InvalidPredicateError
 from PLATER.models.shared import ReasonerRequest, MetaKnowledgeGraph, SRITestData
@@ -42,24 +43,35 @@ SRI_TEST_DATA = graph_metadata_reader.get_sri_testing_data()
 TRAPI_QUERY_EXAMPLE = graph_metadata_reader.get_example_qgraph()
 
 
-async def get_meta_knowledge_graph() -> JSONResponse:
+async def get_meta_knowledge_graph() -> ORJSONResponse:
     """Handle /meta_knowledge_graph."""
     if META_KG_RESPONSE:
-        # we are intentionally returning a JSONResponse directly,
+        # we are intentionally returning a ORJSONResponse directly,
         # we already validated with pydantic above and the content won't change
-        return JSONResponse(status_code=200,
-                            content=META_KG_RESPONSE,
-                            media_type="application/json")
+        return ORJSONResponse(status_code=200,
+                              content=META_KG_RESPONSE,
+                              media_type="application/json")
     else:
-        return JSONResponse(status_code=500,
-                            media_type="application/json",
-                            content={"description": "MetaKnowledgeGraph failed validation - "
-                                                    "please notify maintainers."})
+        return ORJSONResponse(status_code=500,
+                              media_type="application/json",
+                              content={"description": "MetaKnowledgeGraph failed validation - "
+                                                      "please notify maintainers."})
 
 
 async def get_sri_testing_data():
     """Handle /sri_testing_data."""
     return SRI_TEST_DATA
+
+
+def orjson_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError
+
+
+class CustomORJSONResponse(Response):
+    def render(self, content: dict) -> bytes:
+        return orjson.dumps(content, default=orjson_default)
 
 
 async def reasoner_api(
@@ -69,7 +81,7 @@ async def reasoner_api(
             example=TRAPI_QUERY_EXAMPLE,
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-):
+) -> CustomORJSONResponse:
     """Handle TRAPI request."""
     request_json = request.dict(by_alias=True)
     # default workflow
@@ -81,7 +93,7 @@ async def reasoner_api(
             response_message = await question.answer(graph_interface)
             request_json.update({'message': response_message, 'workflow': workflow})
         except InvalidPredicateError as e:
-            return JSONResponse(status_code=400, content={"description": str(e)})
+            return CustomORJSONResponse(status_code=400, content={"description": str(e)})
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
         response_message = await overlay.connect_k_nodes(request_json['message'])
@@ -90,7 +102,10 @@ async def reasoner_api(
         overlay = Overlay(graph_interface=graph_interface)
         response_message = await overlay.annotate_node(request_json['message'])
         request_json.update({'message': response_message, 'workflow': workflow})
-    return request_json
+
+    # we are intentionally returning a CustomORJSONResponse and not a pydantic model for performance reasons
+    json_response = CustomORJSONResponse(content=request_json, media_type="application/json")
+    return json_response
 
 
 APP_TRAPI_1_4.add_api_route(
@@ -115,12 +130,27 @@ APP_TRAPI_1_4.add_api_route(
     tags=["trapi"]
 )
 
+set_up_profiling = False
+if set_up_profiling:
+    from fastapi import Request
+    from fastapi.responses import HTMLResponse
+    from pyinstrument import Profiler
+    from pyinstrument.renderers import SpeedscopeRenderer
+    @APP_TRAPI_1_4.middleware("http")
+    async def profile_request(request: Request, call_next):
+        profiler = Profiler(interval=.5, async_mode="enabled")
+        profiler.start()
+        await call_next(request)
+        profiler.stop()
+        return HTMLResponse(profiler.output(renderer=SpeedscopeRenderer()))
+
+
 APP_TRAPI_1_4.add_api_route(
     "/query",
     reasoner_api,
     methods=["POST"],
-    response_model=ReasonerRequest,
-    responses={400: {"model": Dict}},
+    response_model=None,
+    responses={400: {"model": Dict}, 200: {"model": ReasonerRequest}},
     summary="Query reasoner via one of several inputs.",
     description="",
     tags=["trapi"]
