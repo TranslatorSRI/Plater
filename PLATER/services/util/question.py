@@ -159,7 +159,7 @@ class Question:
             for node_binding_list in r["node_bindings"].values():
                 for node_binding in node_binding_list:
                     query_id = node_binding.pop('query_id', None)
-                    if query_id != node_binding['id']:
+                    if query_id != node_binding['id'] and query_id is not None:
                         node_binding['query_id'] = query_id
             # add resource id
             for analyses in r["analyses"]:
