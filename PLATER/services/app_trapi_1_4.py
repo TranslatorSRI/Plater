@@ -72,8 +72,7 @@ def orjson_default(obj):
 class CustomORJSONResponse(Response):
     def render(self, content: dict) -> bytes:
         return orjson.dumps(content,
-                            default=orjson_default,
-                            option=orjson.OPT_INDENT_2)
+                            default=orjson_default)
 
 
 async def reasoner_api(
