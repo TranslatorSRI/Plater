@@ -27,6 +27,7 @@ logger = LoggingUtil.init_logging(
     config.get('logging_format'),
 )
 
+
 class Question:
     # SPEC VARS
     QUERY_GRAPH_KEY = 'query_graph'
@@ -61,7 +62,6 @@ class Question:
                     for item in qualifier['qualifier_set']:
                         item['qualifier_type_id'] = item['qualifier_type_id'].replace('biolink:', '')
         return get_query(query_graph, **kwargs)
-
 
     def _construct_sources_tree(self, sources: List[Dict]) -> List[Dict]:
         """
@@ -142,7 +142,6 @@ class Question:
 
         return formatted_sources
 
-
     def format_attribute_trapi(self, kg_items, node=False):
         for identifier in kg_items:
             # get the properties for the record
@@ -153,8 +152,10 @@ class Question:
 
             # separate the qualifiers from attributes for edges and format them
             if not node:
-                qualifier_results = [attrib for attrib in attributes
-                                     if 'qualifie' in attrib['original_attribute_name']]
+                qualifier_results = [
+                    attrib for attrib in attributes
+                    if 'original_attribute_name' in attrib and 'qualifie' in attrib['original_attribute_name']
+                ]
                 if qualifier_results:
                     formatted_qualifiers = []
                     for qualifier in qualifier_results:
@@ -166,20 +167,26 @@ class Question:
                         })
                     props['qualifiers'] = formatted_qualifiers
 
-            # create a new list that doesnt have the core properties or qualifiers
-            new_attribs = [attrib for attrib in attributes
-                           if attrib['original_attribute_name'] not in props and
-                           attrib['original_attribute_name'] not in skip_list and
-                           'qualifie' not in attrib['original_attribute_name']
-                           ]
+            # create a new list that doesn't have the core properties or qualifiers
+            new_attribs: List = list()
+            for attrib in attributes:
+                if 'original_attribute_name' not in attrib or (
+                        attrib['original_attribute_name'] not in props and
+                        attrib['original_attribute_name'] not in skip_list and
+                        'qualifie' not in attrib['original_attribute_name']
+                ):
+                    new_attribs.append(attrib)
 
             # for the non-core properties
             for attr in new_attribs:
                 # make sure the original_attribute_name has something other than none
-                attr['original_attribute_name'] = attr['original_attribute_name'] or ''
+                attr['original_attribute_name'] = \
+                    ('original_attribute_name' in attr and attr['original_attribute_name']) or ''
 
                 # map the attribute type to the list above, otherwise generic default
-                attr["value_type_id"] = VALUE_TYPES.get(attr["original_attribute_name"], "EDAM:data_0006")
+                attr["value_type_id"] = \
+                    ("value_type_id" in attr and attr["value_type_id"]) or \
+                    VALUE_TYPES.get(attr["original_attribute_name"], "EDAM:data_0006")
 
                 # uses generic data as attribute type id if not defined
                 if not ("attribute_type_id" in attr and attr["attribute_type_id"] != 'NA'):
@@ -187,9 +194,12 @@ class Question:
                     if attribute_data:
                         attr.update(attribute_data)
 
-            # update edge provenance with automat infores, filter empty ones, expand list type resource ids
+            # update edge provenance with infores,
+            # filter empty ones, expand list type resource ids
             if not node:
-                kg_items[identifier]["sources"] = self._construct_sources_tree(kg_items[identifier].get("sources", []))
+                kg_items[identifier]["sources"] = \
+                    self._construct_sources_tree(kg_items[identifier].get("sources", []))
+
             # assign these attribs back to the original attrib list without the core properties
             props['attributes'] = new_attribs
 
