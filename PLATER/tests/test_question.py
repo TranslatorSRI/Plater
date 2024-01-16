@@ -1,18 +1,27 @@
 from unittest.mock import patch
-
-import pytest
-
-from PLATER.services.util.question import Question
-from bmt import Toolkit
-import asyncio, json
+from typing import List, Dict
+import json
 import os
 import copy
+import asyncio
+import pytest
+from deepdiff.diff import DeepDiff
+
+from bmt import Toolkit
+
+from PLATER.services.config import config
+from PLATER.services.util.question import Question
+
+
+DEFAULT_PROVENANCE = config.get("PROVENANCE_TAG", "infores:automat.notspecified")
+
 
 @pytest.fixture
 def message():
-    with open(os.path.join(os.path.dirname(__file__), 'data','trapi1.4.json')) as stream:
+    with open(os.path.join(os.path.dirname(__file__), 'data', 'trapi1.4.json')) as stream:
         message = json.load(stream)
     return message
+
 
 def test_init():
     reasoner_dict = {
@@ -24,6 +33,163 @@ def test_init():
     question = Question(reasoner_dict)
     assert question._question_json == reasoner_dict
     assert question._question_json == reasoner_dict
+
+
+@pytest.mark.parametrize(
+    "sources,output",
+    [
+        (   # Query 0 - Empty sources, return instance of top level system source
+            [],
+            [
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                }
+            ]
+        ),
+        (   # Query 1 - Add primary knowledge source
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:my-kp"]
+                }
+            ]
+        ),
+        (   # Query 2 - Add a supporting data source, below the primary knowledge source
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source"
+                },
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": ["infores:hpo-annotations"]
+                },
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:my-kp"]
+                }
+            ]
+        ),
+        (   # Query 3 - Add a supporting data source, below the main application
+            #           aggregator (lacking primary knowledge source)
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:hpo-annotations"]
+                }
+            ]
+        ),
+        (   # Query 4 - Same query as 3 above except adding some
+            #           source_record_urls for the supporting data source
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": ["https://hpo.jax.org/app/"]
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": ["https://hpo.jax.org/app/"],
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:hpo-annotations"]
+                }
+            ]
+        ),
+        (   # Query 5 - Same query as 3 above except adding a second "supporting_data_source"
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source"
+                },
+                {
+                    "resource_id": "infores:upheno",
+                    "resource_role": "supporting_data_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": "infores:upheno",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:hpo-annotations", "infores:upheno"]
+                }
+            ]
+        )
+    ]
+)
+def test_source_construct_sources_tree(sources: List[Dict], output: List[Dict]):
+    # dummy Question - don't care about input question JSON for this test...
+    question: Question = Question(question_json={})
+    # ... 'cuz comparing sources tree directly
+    formatted_sources = question._construct_sources_tree(sources)
+    assert not DeepDiff(output, formatted_sources, ignore_order=True, report_repetition=True)
 
 
 def test_format_attribute():
@@ -102,6 +268,7 @@ def test_format_attribute():
     # test if value_type is preserved if in response from neo4j
     assert transformed == t2_expected_trapi
 
+
 def test_format_edge_qualifiers():
     # note that this test does not run through the reasoner code that does the attribute mapping.
     # so the values in the expected results must account for that
@@ -165,6 +332,7 @@ def test_format_edge_qualifiers():
     # test if value_type is added to default "biolink:Attribute"
     assert transformed == expected_trapi
 
+
 class MOCK_GRAPH_ADAPTER():
     called = False
     toolkit = Toolkit()
@@ -197,6 +365,7 @@ def test_attribute_constraint_basic(message):
     result = Question.apply_attribute_constraints(message)
     assert result == expected
 
+
 def test_attribute_constraint_filter_node(message):
     # this node doesnt exist, and is the main node, so everything should vanish
     node_constraints = [
@@ -216,6 +385,7 @@ def test_attribute_constraint_filter_node(message):
     assert len(result['knowledge_graph']['nodes']) == 1  # two disease in the graph remain
     assert len(result['knowledge_graph']['edges']) == 0  # no edges
     assert len(result['results']) == 0  # no bindings
+
 
 def test_attribute_constraint_filter_edge(message):
     edge_constraints = [

@@ -1,3 +1,4 @@
+from typing import List, Dict
 import copy
 import orjson
 import time
@@ -62,41 +63,83 @@ class Question:
         return get_query(query_graph, **kwargs)
 
 
-    def _construct_sources_tree(self, sources):
-        # if primary source and aggregator source are specified in the graph, upstream_resource_ids of all aggregator_ks
-        # be that source
+    def _construct_sources_tree(self, sources: List[Dict]) -> List[Dict]:
+        """
+        Method to fill out the full annotation for edge "sources"
+        entries including "upstream_resource_ids" tree.
+        :param sources: List[Dict], edge 'sources' property entries
+        :return: enhanced "sources" including top-level "Monarch TRAPI" source entry.
+        """
+        if not sources:
+            # empty sources.. pretty strange, but then just send back
+            # an instance of the top-level "Monarch TRAPI" source entry
+            return [
+                {
+                    "resource_id": self.provenance,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  None
+                }
+            ]
 
-        # if aggregator ks are coming from db, plater would add itself as aggregator and use other aggregator ids
+        # if primary source and aggregator source are specified in the graph,
+        # upstream_resource_ids of all aggregator_ks be that source
+
+        # if aggregator ks are coming from db, mta would add itself as aggregator and use other aggregator ids
         # as upstream resources, if no aggregators are found and only primary ks is provided that would be added
-        # as upstream for the plater entry
+        # as upstream for the mta entry
         formatted_sources = []
         # filter out source entries that actually have values
-        temp = {}
+        resource_ids_with_resource_role = {}
+        source_record_urls_to_resource_id = {}
         for source in sources:
+
             if not source['resource_id']:
                 continue
-            temp[source['resource_role']] = temp.get(source['resource_role'], set())
+
+            resource_ids_with_resource_role[source['resource_role']] = \
+                resource_ids_with_resource_role.get(source['resource_role'], set())
+
+            source_record_urls_to_resource_id[source['resource_id']] = \
+                source['source_record_urls'] if 'source_record_urls' in source else None
+
             if isinstance(source["resource_id"], str):
-                temp[source["resource_role"]].add(source["resource_id"])
+                resource_ids_with_resource_role[source["resource_role"]].add(source["resource_id"])
             elif isinstance(source["resource_id"], list):
                 for resource_id in source["resource_id"]:
-                    temp[source["resource_role"]].add(resource_id)
+                    resource_ids_with_resource_role[source["resource_role"]].add(resource_id)
 
-        for resource_role in temp:
+        for resource_role in resource_ids_with_resource_role:
+
             upstreams = None
-            if resource_role == "biolink:aggregator_knowledge_source":
-                upstreams = temp.get("biolink:primary_knowledge_source", None)
+
+            if resource_role == "aggregator_knowledge_source":
+                upstreams = resource_ids_with_resource_role.get("primary_knowledge_source", None)
+            elif resource_role == "primary_knowledge_source":
+                upstreams = resource_ids_with_resource_role.get("supporting_data_source", None)
 
             formatted_sources += [
-                {"resource_id": resource_id, "resource_role": resource_role.lstrip('biolink:'), "upstream_resource_ids": upstreams}
-                for resource_id in temp[resource_role]
+                {
+                    "resource_id": resource_id,
+                    "resource_role": resource_role,
+                    "source_record_urls": source_record_urls_to_resource_id[resource_id],
+                    "upstream_resource_ids": list(upstreams) if upstreams else None
+                }
+                for resource_id in resource_ids_with_resource_role[resource_role]
             ]
-        upstreams_for_plater_entry = temp.get("biolink:aggregator_knowledge_source") or temp.get("biolink:primary_knowledge_source")
+
+        upstreams_for_mta_entry = \
+            resource_ids_with_resource_role.get("aggregator_knowledge_source") or \
+            resource_ids_with_resource_role.get("primary_knowledge_source") or \
+            resource_ids_with_resource_role.get("supporting_data_source")
+
         formatted_sources.append({
-            "resource_id":self.provenance,
+            "resource_id": self.provenance,
             "resource_role": "aggregator_knowledge_source",
-            "upstream_resource_ids": upstreams_for_plater_entry
+            "source_record_urls": None,
+            "upstream_resource_ids": list(upstreams_for_mta_entry) if upstreams_for_mta_entry else None
         })
+
         return formatted_sources
 
 
