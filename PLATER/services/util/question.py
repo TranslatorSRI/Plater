@@ -205,7 +205,7 @@ class Question:
 
         return kg_items
 
-    def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
+    def transform_attributes(self, trapi_message):
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), node=True)
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
         for r in trapi_message.get("results", []):
@@ -250,7 +250,7 @@ class Question:
                 }
             )
         results_dict = graph_interface.convert_to_dict(results)
-        self._question_json.update(self.transform_attributes(results_dict[0], graph_interface))
+        self._question_json.update(self.transform_attributes(results_dict[0]))
         self._question_json = Question.apply_attribute_constraints(self._question_json)
         return self._question_json
 

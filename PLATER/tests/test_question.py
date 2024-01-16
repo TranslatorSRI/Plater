@@ -235,7 +235,7 @@ def test_format_attribute():
     }
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default 'biolink:Attribute'
@@ -262,7 +262,7 @@ def test_format_attribute():
 
     q = Question(question_json={})
 
-    transformed = q.transform_attributes(t2_trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(t2_trapi_kg_response)
 
     # test default attribute to be EDAM:data_0006
     # test if value_type is preserved if in response from neo4j
@@ -283,17 +283,17 @@ def test_format_edge_qualifiers():
                 {
                    "attribute_type_id":"NA",
                    "original_attribute_name":"qualified_predicate",
-                   "value":"biolink:causes"
+                   "value": "biolink:causes"
                 },
                 {
                    "attribute_type_id":"NA",
                    "original_attribute_name":"object_aspect_qualifier",
-                   "value":"activity"
+                   "value": "activity"
                 },
                 {
                    "attribute_type_id":"NA",
                    "original_attribute_name":"object_direction_qualifier",
-                   "value":"decreased"
+                   "value": "decreased"
                 }],
           }
        }
@@ -326,7 +326,7 @@ def test_format_edge_qualifiers():
 
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default "biolink:Attribute"
