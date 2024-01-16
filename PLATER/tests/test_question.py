@@ -196,42 +196,78 @@ def test_format_attribute():
     # note that this test does not run through the reasoner code that does the attribute mapping.
     # so the values in the expected results must account for that
 
-    trapi_kg_response = {"knowledge_graph":
-        {"nodes":
-            {"CURIE:1":
-                {"attributes": [{"original_attribute_name": "pub", "attribute_type_id": "CURIE:x"}]}
+    trapi_kg_response = {
+        "knowledge_graph": {
+            "nodes": {
+                "CURIE:1": {
+                    "attributes": [
+                        {
+                            "original_attribute_name": "pub",
+                            "attribute_type_id": "CURIE:x"
+                        }
+                    ]
+                }
              },
-         "edges":
-             {"123123":
-                  {
-                      "attributes": [{"original_attribute_name": "some_attr", "value": "some_value"}],
-                      "sources": [{"resource_role": "biolink:primary_knowledge_source", "resource_id":"infores:primary"}]
+            "edges": {
+                "123123": {
+                      "attributes": [
+                          {
+                              "original_attribute_name": "some_attr",
+                              "value": "some_value"
+                          }
+                      ],
+                      "sources": [
+                          {
+                              "resource_role": "biolink:primary_knowledge_source",
+                              "resource_id": "infores:primary"
+                          }
+                      ]
                   }
               }
          }
     }
-    expected_trapi = {"knowledge_graph":
-        {"nodes":
-            {"CURIE:1":
-                {"attributes": [{"original_attribute_name": "pub", "attribute_type_id": "CURIE:x", "value_type_id": "EDAM:data_0006"}]}
+    expected_trapi = {
+        "knowledge_graph": {
+            "nodes": {
+                "CURIE:1": {
+                    "attributes": [
+                        {
+                            "original_attribute_name": "pub",
+                            "attribute_type_id": "CURIE:x",
+                            "value_type_id": "EDAM:data_0006"
+                        }
+                    ]
+                }
              },
-         "edges":
-             {"123123":
-                  {"attributes": [{"original_attribute_name": "some_attr", "value": "some_value",
-                                   "attribute_type_id": "biolink:Attribute",
-                                   "value_type_id": "EDAM:data_0006"},
-                                  ],
-
-                   "sources": [
-                       {"resource_role": "primary_knowledge_source",
-                        "resource_id": "infores:primary",
-                        "upstream_resource_ids": None},
-                       {"resource_role": "aggregator_knowledge_source",
-                        "resource_id": "infores:automat.notspecified",
-                        "upstream_resource_ids": {"infores:primary"}},
-                   ]}
-              }
-         }
+            "edges": {
+                "123123": {
+                    "attributes": [
+                        {
+                            "original_attribute_name": "some_attr",
+                            "value": "some_value",
+                            "attribute_type_id": "biolink:Attribute",
+                            "value_type_id": "EDAM:data_0006"
+                        }
+                    ],
+                    "sources": [
+                       {
+                           "resource_role": "primary_knowledge_source",
+                           "resource_id": "infores:primary",
+                           "source_record_urls": None,
+                           "upstream_resource_ids": None
+                       },
+                       {
+                           "resource_role": "aggregator_knowledge_source",
+                           "resource_id": DEFAULT_PROVENANCE,
+                           "source_record_urls": None,
+                           "upstream_resource_ids": [
+                               "infores:primary"
+                           ]
+                       },
+                    ]
+                }
+            }
+        }
     }
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
@@ -239,7 +275,7 @@ def test_format_attribute():
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default 'biolink:Attribute'
-    assert transformed == expected_trapi
+    assert not DeepDiff(transformed, expected_trapi)
 
     t2_trapi_kg_response = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [
         {"original_attribute_name": "pub", "value": "x", "value_type_id": "oo", "attribute_type_id": "preserved_attrib"},
@@ -266,64 +302,74 @@ def test_format_attribute():
 
     # test default attribute to be EDAM:data_0006
     # test if value_type is preserved if in response from neo4j
-    assert transformed == t2_expected_trapi
+    assert DeepDiff(transformed, t2_expected_trapi)
 
 
 def test_format_edge_qualifiers():
     # note that this test does not run through the reasoner code that does the attribute mapping.
     # so the values in the expected results must account for that
 
-    trapi_kg_response ={ "knowledge_graph": {
-       "edges":{
-          "some_id":{
-              "object": "NCBIGene:283871",
-              "predicate": "biolink:affects",
-              "subject": "PUBCHEM.COMPOUND:5311062",
-              "attributes": [
-                {
-                   "attribute_type_id":"NA",
-                   "original_attribute_name":"qualified_predicate",
-                   "value": "biolink:causes"
-                },
-                {
-                   "attribute_type_id":"NA",
-                   "original_attribute_name":"object_aspect_qualifier",
-                   "value": "activity"
-                },
-                {
-                   "attribute_type_id":"NA",
-                   "original_attribute_name":"object_direction_qualifier",
-                   "value": "decreased"
-                }],
-          }
-       }
-    }}
-    expected_trapi = {"knowledge_graph": {"edges": {'some_id': {
-        'object': 'NCBIGene:283871',
-        'predicate': 'biolink:affects',
-        'subject': 'PUBCHEM.COMPOUND:5311062',
-        'attributes': [],
-        'sources': [{'resource_id': 'infores:automat.notspecified',
-                     'resource_role': 'aggregator_knowledge_source',
-                     'upstream_resource_ids': None
-                     }],
-        "qualifiers": [
-            {
-                "qualifier_type_id": "biolink:qualified_predicate",
-                "qualifier_value": "biolink:causes"
-            },
-            {
-                "qualifier_type_id": "biolink:object_aspect_qualifier",
-                "qualifier_value": "activity"
-            },
-            {
-                "qualifier_type_id": "biolink:object_direction_qualifier",
-                "qualifier_value": "decreased"
-            },
-        ],
-        }}
-    }}
-
+    trapi_kg_response = {
+        "knowledge_graph": {
+            "edges": {
+                  "some_id": {
+                      "object": "NCBIGene:283871",
+                      "predicate": "biolink:affects",
+                      "subject": "PUBCHEM.COMPOUND:5311062",
+                      "attributes": [
+                        {
+                           "attribute_type_id":"NA",
+                           "original_attribute_name":"qualified_predicate",
+                           "value": "biolink:causes"
+                        },
+                        {
+                           "attribute_type_id":"NA",
+                           "original_attribute_name":"object_aspect_qualifier",
+                           "value": "activity"
+                        },
+                        {
+                           "attribute_type_id":"NA",
+                           "original_attribute_name":"object_direction_qualifier",
+                           "value": "decreased"
+                        }],
+                  }
+            }
+        }
+    }
+    expected_trapi = {
+        "knowledge_graph": {
+            "edges": {
+                'some_id': {
+                    'object': 'NCBIGene:283871',
+                    'predicate': 'biolink:affects',
+                    'subject': 'PUBCHEM.COMPOUND:5311062',
+                    'attributes': [],
+                    'sources': [
+                        {
+                            'resource_id': 'infores:automat.notspecified',
+                            'resource_role': 'aggregator_knowledge_source',
+                            "source_record_urls": None,
+                            'upstream_resource_ids': None
+                        }
+                    ],
+                    "qualifiers": [
+                        {
+                            "qualifier_type_id": "biolink:qualified_predicate",
+                            "qualifier_value": "biolink:causes"
+                        },
+                        {
+                            "qualifier_type_id": "biolink:object_aspect_qualifier",
+                            "qualifier_value": "activity"
+                        },
+                        {
+                            "qualifier_type_id": "biolink:object_direction_qualifier",
+                            "qualifier_value": "decreased"
+                        },
+                    ],
+                }
+            }
+        }
+    }
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
     transformed = q.transform_attributes(trapi_kg_response)

@@ -94,8 +94,18 @@ class Question:
         source_record_urls_to_resource_id = {}
         for source in sources:
 
-            if not source['resource_id']:
+            if not (
+                    'resource_id' in source and
+                    source['resource_id'] and
+                    'resource_role' in source and
+                    source['resource_role']
+            ):
+                # silently pruning TRAPI non-compliant source records
+                logger.warning(f"Invalid edge 'source' entry: '{str(source)}'? Skipped!")
                 continue
+
+            # 'resource_role' values are now ResourceRoleEnum without a biolink: CURIE prefix
+            source['resource_role'] = source['resource_role'].lstrip("biolink:")
 
             resource_ids_with_resource_role[source['resource_role']] = \
                 resource_ids_with_resource_role.get(source['resource_role'], set())
@@ -121,7 +131,7 @@ class Question:
             formatted_sources += [
                 {
                     "resource_id": resource_id,
-                    "resource_role": resource_role,
+                    "resource_role": resource_role.lstrip("biolink:"),
                     "source_record_urls": source_record_urls_to_resource_id[resource_id],
                     "upstream_resource_ids": list(upstreams) if upstreams else None
                 }
