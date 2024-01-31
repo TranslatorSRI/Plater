@@ -91,12 +91,13 @@ if __name__ == '__main__':
     automat_urls = ['https://automat.renci.org/',
                     'https://automat.ci.transltr.io/',
                     'https://automat.test.transltr.io/',
-                    'https://automat.prod.transltr.io/',
+                    #v'https://automat.prod.transltr.io/',
                     'https://robokop-automat.apps.renci.org/']  # TODO get these from graph deployment spec
     graph_deployment_specs = ['./new_graphs.txt']  # TODO get these from cli input
 
     everything_is_good = True
     for automat_url in automat_urls:
+        print(f'Validating deployments on {automat_url}')
         for graph_deployment_spec_path in graph_deployment_specs:
             with open(graph_deployment_spec_path) as graph_deployment_spec_file:
                 plater_validation_results = {}
@@ -105,13 +106,14 @@ if __name__ == '__main__':
                     plater_id = split_line[0]
                     graph_version = split_line[1]
                     validation_results = validate_plater(f'{automat_url}{plater_id}/', graph_version)
-                    validation_errors = validation_results['validation_errors']
+                    validation_errors = "\n".join(validation_results['validation_errors'])
                     if validation_errors:
                         everything_is_good = False
-                        print(f'Validation errors occurred for {plater_id} on {automat_url}: \n{validation_errors}')
-                    else:
-                        print(f'{plater_id} ({graph_version}) on {automat_url} looks ok.')
+                        error_message = f'Validation errors occurred for {plater_id} on {automat_url}: {validation_errors}'
+                        print(error_message)
+                    # else:
+                    #    print(f'{plater_id} ({graph_version}) on {automat_url} looks ok.')
                     plater_validation_results[plater_id] = validation_results
-                #print(plater_validation_results)
+                # TODO - do something with plater_validation_results other than print errors?
     if everything_is_good:
         print(f'Yay. Everything looks good.')
