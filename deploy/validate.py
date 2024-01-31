@@ -85,14 +85,14 @@ def validate_plater(url, expected_version):
 
 if __name__ == '__main__':
 
-    # NOTE - The automat urls and graph_deployment_spec(s) are hardcoded here,
-    # but we need to read from one deployment spec at a time and test against the endpoint specified within.
-    # The current set up is wrong because graph versions are not necessarily the same across deployments.
+    # NOTE - The automat urls and graph_deployment_spec(s) are hardcoded here, but we should be able to read from
+    # any deployment spec and test against the endpoint(s) specified within. This current set up is also wrong because
+    # graph versions/deployments are not necessarily the same across the environments.
     automat_urls = ['https://automat.renci.org/',
                     'https://automat.ci.transltr.io/',
                     'https://automat.test.transltr.io/',
-                    #v'https://automat.prod.transltr.io/',
-                    'https://robokop-automat.apps.renci.org/']  # TODO get these from graph deployment spec
+                    # 'https://automat.prod.transltr.io/',
+                    'https://robokop-automat.apps.renci.org/']  # TODO get these from a graph deployment spec
     graph_deployment_specs = ['./new_graphs.txt']  # TODO get these from cli input
 
     everything_is_good = True
