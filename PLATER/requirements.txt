@@ -3,7 +3,7 @@ pyaml==20.4.0
 pytest==7.4.3
 pytest-asyncio==0.21.1
 uvicorn==0.24.0
-reasoner-transpiler==2.0.5
+reasoner-transpiler==2.0.6
 reasoner-pydantic==4.1.6
 httpx==0.25.1
 pytest-httpx==0.26.0
@@ -13,4 +13,3 @@ orjson==3.9.10
 opentelemetry-sdk==1.21.0
 opentelemetry-exporter-jaeger==1.21.0
 opentelemetry-instrumentation-fastapi==0.42b0
-
