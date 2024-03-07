@@ -91,7 +91,7 @@ if __name__ == '__main__':
     automat_urls = ['https://automat.renci.org/',
                     'https://automat.ci.transltr.io/',
                     'https://automat.test.transltr.io/',
-                    # 'https://automat.prod.transltr.io/',
+                    'https://automat.transltr.io/',
                     'https://robokop-automat.apps.renci.org/']  # TODO get these from a graph deployment spec
     graph_deployment_specs = ['./new_graphs.txt']  # TODO get these from cli input
 

@@ -1,5 +1,5 @@
 binding-db	711f33bcebbef313
-cam-kp	8c9d1818574bcf4a
+cam-kp	e553a5174c60a698
 ctd	3d3553d73a030b29
 drugcentral	25acfc0e82d4f8c5
 genome-alliance	52b222baedc80328
