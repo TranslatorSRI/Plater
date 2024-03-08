@@ -21,7 +21,7 @@ Another tool that comes in handy with Plater is [Automat](https://github.com/REN
 Nodes are expected to have the following core structure:
       
 1. id : as neo4j node property with label `id`
-2. category : Array of biolink types as neo4j node labels
+2. category : Array of biolink types as neo4j node labels, it is required for every node to have at least the node label "biolink:NamedThing".
 3. Additional attributes can be added and will be exposed. (more details on "Matching a TRAPI query" section)
 
 ##### Edges 
@@ -43,9 +43,9 @@ It's recommended that when encoding nodes labels in neo4j that we use the biolin
       "biolink:Entity",
       "biolink:PhysicalEssenceOrOccurrent"]` . 
 
-By doing such encoding, during lookup the incoming query is can be more laxed (ask for `biolink:NamedThing`) or more specific (ask for `biolink:SmallMolecule ` etc...), and PLATER would be able to use the encoded label information to find matching node(s). 
+By doing such encoding, during lookup the incoming query is can be more laxed (ask for `biolink:NamedThing`) or more specific (ask for `biolink:SmallMolecule ` etc...), and PLATER would be able to use the encoded label information to find matching node(s).
 
-Similarly for edges, edge labels in neo4j are used to perform edge lookup. Predicate hierarchy in biolink would be consulted to find subclasses of the query predicate type(s) and those would be used in an `OR` combinatorial fashion to find results. 
+Similarly, for edges, edge labels in neo4j are used to perform edge lookup. Predicate hierarchy in biolink would be consulted to find subclasses of the query predicate type(s) and those would be used in an `OR` combinatorial fashion to find results. 
  
  
 
@@ -147,9 +147,10 @@ To run the web server directly:
     NEO4J_USERNAME=neo4j
     NEO4J_PASSWORD=<change_me>    
     NEO4J_HTTP_PORT=7474
+    NEO4J_QUERY_TIMEOUT=600
     PLATER_TITLE='Plater'
-    PLATER_VERSION='1.2.0-7'
-    BL_VERSION='1.6.1'
+    PLATER_VERSION='1.5.1'
+    BL_VERSION='4.1.6'
 
    ```
    
