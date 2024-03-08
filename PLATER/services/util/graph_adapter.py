@@ -6,14 +6,13 @@ from opentelemetry import trace
 from collections import defaultdict
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
-from bmt import Toolkit
+from PLATER.services.util.bl_helper import get_biolink_model_toolkit
 from PLATER.services.util.attribute_mapping import get_attribute_bl_info
 
 logger = LoggingUtil.init_logging(__name__,
                                   config.get('logging_level'),
                                   config.get('logging_format')
                                   )
-
 
 class Neo4jHTTPDriver:
     def __init__(self, host: str, port: int,  auth: tuple, scheme: str = 'http'):
@@ -170,7 +169,7 @@ class GraphInterface:
             self.inverted_predicates = defaultdict(lambda: defaultdict(set))
             # self.summary = None
             self.query_timeout = query_timeout
-            self.toolkit = Toolkit()
+            self.toolkit = get_biolink_model_toolkit()
             self.bl_version = bl_version
 
         def find_biolink_leaves(self, biolink_concepts: list):

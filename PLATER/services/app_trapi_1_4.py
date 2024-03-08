@@ -1,4 +1,5 @@
 """FastAPI app."""
+import starlette.responses
 from fastapi import Body, Depends, FastAPI, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
@@ -6,7 +7,7 @@ from typing import Dict
 from pydantic import ValidationError
 import orjson
 
-from reasoner_transpiler.exceptions import InvalidPredicateError
+from reasoner_transpiler.exceptions import InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError
 from PLATER.models.shared import ReasonerRequest, MetaKnowledgeGraph, SRITestData
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
@@ -94,7 +95,11 @@ async def reasoner_api(
             response_message = await question.answer(graph_interface)
             request_json.update({'message': response_message, 'workflow': workflow})
         except InvalidPredicateError as e:
-            return CustomORJSONResponse(status_code=400, content={"description": str(e)})
+            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
+        except InvalidQualifierError as e:
+            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
+        except InvalidQualifierValueError as e:
+            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
         response_message = await overlay.connect_k_nodes(request_json['message'])

@@ -1,8 +1,9 @@
 import json
 import os
-from bmt import Toolkit
+from PLATER.services.util.bl_helper import get_biolink_model_toolkit
 
-bmt_toolkit = Toolkit()
+bmt_toolkit = get_biolink_model_toolkit()
+
 # load the attrib and value mapping file
 map_data = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "..", "..", "attr_val_map.json")))
 
