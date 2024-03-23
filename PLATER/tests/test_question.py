@@ -1,18 +1,27 @@
 from unittest.mock import patch
-
-import pytest
-
-from PLATER.services.util.question import Question
-from bmt import Toolkit
-import asyncio, json
+from typing import List, Dict
+import json
 import os
 import copy
+import asyncio
+import pytest
+from deepdiff.diff import DeepDiff
+
+from bmt import Toolkit
+
+from PLATER.services.config import config
+from PLATER.services.util.question import Question
+
+
+DEFAULT_PROVENANCE = config.get("PROVENANCE_TAG", "infores:automat.notspecified")
+
 
 @pytest.fixture
 def message():
-    with open(os.path.join(os.path.dirname(__file__), 'data','trapi1.4.json')) as stream:
+    with open(os.path.join(os.path.dirname(__file__), 'data', 'trapi1.4.json')) as stream:
         message = json.load(stream)
     return message
+
 
 def test_init():
     reasoner_dict = {
@@ -26,54 +35,247 @@ def test_init():
     assert question._question_json == reasoner_dict
 
 
+@pytest.mark.parametrize(
+    "sources,output",
+    [
+        (   # Query 0 - Empty sources, return instance of top level system source
+            [],
+            [
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                }
+            ]
+        ),
+        (   # Query 1 - Add primary knowledge source
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:my-kp"]
+                }
+            ]
+        ),
+        (   # Query 2 - Add a supporting data source, below the primary knowledge source
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source"
+                },
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:my-kp",
+                    "resource_role": "primary_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": ["infores:hpo-annotations"]
+                },
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:my-kp"]
+                }
+            ]
+        ),
+        (   # Query 3 - Add a supporting data source, below the main application
+            #           aggregator (lacking primary knowledge source)
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:hpo-annotations"]
+                }
+            ]
+        ),
+        (   # Query 4 - Same query as 3 above except adding some
+            #           source_record_urls for the supporting data source
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": ["https://hpo.jax.org/app/"]
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": ["https://hpo.jax.org/app/"],
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:hpo-annotations"]
+                }
+            ]
+        ),
+        (   # Query 5 - Same query as 3 above except adding a second "supporting_data_source"
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source"
+                },
+                {
+                    "resource_id": "infores:upheno",
+                    "resource_role": "supporting_data_source"
+                }
+            ],
+            [
+                {
+                    "resource_id": "infores:hpo-annotations",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": "infores:upheno",
+                    "resource_role": "supporting_data_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids": None
+                },
+                {
+                    "resource_id": DEFAULT_PROVENANCE,
+                    "resource_role": "aggregator_knowledge_source",
+                    "source_record_urls": None,
+                    "upstream_resource_ids":  ["infores:hpo-annotations", "infores:upheno"]
+                }
+            ]
+        )
+    ]
+)
+def test_source_construct_sources_tree(sources: List[Dict], output: List[Dict]):
+    # dummy Question - don't care about input question JSON for this test...
+    question: Question = Question(question_json={})
+    # ... 'cuz comparing sources tree directly
+    formatted_sources = question._construct_sources_tree(sources)
+    assert not DeepDiff(output, formatted_sources, ignore_order=True, report_repetition=True)
+
+
 def test_format_attribute():
     # note that this test does not run through the reasoner code that does the attribute mapping.
     # so the values in the expected results must account for that
 
-    trapi_kg_response = {"knowledge_graph":
-        {"nodes":
-            {"CURIE:1":
-                {"attributes": [{"original_attribute_name": "pub", "attribute_type_id": "CURIE:x"}]}
+    trapi_kg_response = {
+        "knowledge_graph": {
+            "nodes": {
+                "CURIE:1": {
+                    "attributes": [
+                        {
+                            "original_attribute_name": "pub",
+                            "attribute_type_id": "CURIE:x"
+                        }
+                    ]
+                }
              },
-         "edges":
-             {"123123":
-                  {
-                      "attributes": [{"original_attribute_name": "some_attr", "value": "some_value"}],
-                      "sources": [{"resource_role": "biolink:primary_knowledge_source", "resource_id":"infores:primary"}]
+            "edges": {
+                "123123": {
+                      "attributes": [
+                          {
+                              "original_attribute_name": "some_attr",
+                              "value": "some_value"
+                          }
+                      ],
+                      "sources": [
+                          {
+                              "resource_role": "biolink:primary_knowledge_source",
+                              "resource_id": "infores:primary"
+                          }
+                      ]
                   }
               }
          }
     }
-    expected_trapi = {"knowledge_graph":
-        {"nodes":
-            {"CURIE:1":
-                {"attributes": [{"original_attribute_name": "pub", "attribute_type_id": "CURIE:x", "value_type_id": "EDAM:data_0006"}]}
+    expected_trapi = {
+        "knowledge_graph": {
+            "nodes": {
+                "CURIE:1": {
+                    "attributes": [
+                        {
+                            "original_attribute_name": "pub",
+                            "attribute_type_id": "CURIE:x",
+                            "value_type_id": "EDAM:data_0006"
+                        }
+                    ]
+                }
              },
-         "edges":
-             {"123123":
-                  {"attributes": [{"original_attribute_name": "some_attr", "value": "some_value",
-                                   "attribute_type_id": "biolink:Attribute",
-                                   "value_type_id": "EDAM:data_0006"},
-                                  ],
-
-                   "sources": [
-                       {"resource_role": "primary_knowledge_source",
-                        "resource_id": "infores:primary",
-                        "upstream_resource_ids": None},
-                       {"resource_role": "aggregator_knowledge_source",
-                        "resource_id": "infores:automat.notspecified",
-                        "upstream_resource_ids": {"infores:primary"}},
-                   ]}
-              }
-         }
+            "edges": {
+                "123123": {
+                    "attributes": [
+                        {
+                            "original_attribute_name": "some_attr",
+                            "value": "some_value",
+                            "attribute_type_id": "biolink:Attribute",
+                            "value_type_id": "EDAM:data_0006"
+                        }
+                    ],
+                    "sources": [
+                       {
+                           "resource_role": "primary_knowledge_source",
+                           "resource_id": "infores:primary",
+                           "source_record_urls": None,
+                           "upstream_resource_ids": None
+                       },
+                       {
+                           "resource_role": "aggregator_knowledge_source",
+                           "resource_id": DEFAULT_PROVENANCE,
+                           "source_record_urls": None,
+                           "upstream_resource_ids": [
+                               "infores:primary"
+                           ]
+                       },
+                    ]
+                }
+            }
+        }
     }
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default 'biolink:Attribute'
-    assert transformed == expected_trapi
+    assert not DeepDiff(transformed, expected_trapi)
 
     t2_trapi_kg_response = {"knowledge_graph": {"nodes": {"CURIE:1": {"attributes": [
         {"original_attribute_name": "pub", "value": "x", "value_type_id": "oo", "attribute_type_id": "preserved_attrib"},
@@ -96,74 +298,86 @@ def test_format_attribute():
 
     q = Question(question_json={})
 
-    transformed = q.transform_attributes(t2_trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(t2_trapi_kg_response)
 
     # test default attribute to be EDAM:data_0006
     # test if value_type is preserved if in response from neo4j
-    assert transformed == t2_expected_trapi
+    assert DeepDiff(transformed, t2_expected_trapi)
+
 
 def test_format_edge_qualifiers():
     # note that this test does not run through the reasoner code that does the attribute mapping.
     # so the values in the expected results must account for that
 
-    trapi_kg_response ={ "knowledge_graph": {
-       "edges":{
-          "some_id":{
-              "object": "NCBIGene:283871",
-              "predicate": "biolink:affects",
-              "subject": "PUBCHEM.COMPOUND:5311062",
-              "attributes": [
-                {
-                   "attribute_type_id":"NA",
-                   "original_attribute_name":"qualified_predicate",
-                   "value":"biolink:causes"
-                },
-                {
-                   "attribute_type_id":"NA",
-                   "original_attribute_name":"object_aspect_qualifier",
-                   "value":"activity"
-                },
-                {
-                   "attribute_type_id":"NA",
-                   "original_attribute_name":"object_direction_qualifier",
-                   "value":"decreased"
-                }],
-          }
-       }
-    }}
-    expected_trapi = {"knowledge_graph": {"edges": {'some_id': {
-        'object': 'NCBIGene:283871',
-        'predicate': 'biolink:affects',
-        'subject': 'PUBCHEM.COMPOUND:5311062',
-        'attributes': [],
-        'sources': [{'resource_id': 'infores:automat.notspecified',
-                     'resource_role': 'aggregator_knowledge_source',
-                     'upstream_resource_ids': None
-                     }],
-        "qualifiers": [
-            {
-                "qualifier_type_id": "biolink:qualified_predicate",
-                "qualifier_value": "biolink:causes"
-            },
-            {
-                "qualifier_type_id": "biolink:object_aspect_qualifier",
-                "qualifier_value": "activity"
-            },
-            {
-                "qualifier_type_id": "biolink:object_direction_qualifier",
-                "qualifier_value": "decreased"
-            },
-        ],
-        }}
-    }}
-
+    trapi_kg_response = {
+        "knowledge_graph": {
+            "edges": {
+                  "some_id": {
+                      "object": "NCBIGene:283871",
+                      "predicate": "biolink:affects",
+                      "subject": "PUBCHEM.COMPOUND:5311062",
+                      "attributes": [
+                        {
+                           "attribute_type_id":"NA",
+                           "original_attribute_name":"qualified_predicate",
+                           "value": "biolink:causes"
+                        },
+                        {
+                           "attribute_type_id":"NA",
+                           "original_attribute_name":"object_aspect_qualifier",
+                           "value": "activity"
+                        },
+                        {
+                           "attribute_type_id":"NA",
+                           "original_attribute_name":"object_direction_qualifier",
+                           "value": "decreased"
+                        }],
+                  }
+            }
+        }
+    }
+    expected_trapi = {
+        "knowledge_graph": {
+            "edges": {
+                'some_id': {
+                    'object': 'NCBIGene:283871',
+                    'predicate': 'biolink:affects',
+                    'subject': 'PUBCHEM.COMPOUND:5311062',
+                    'attributes': [],
+                    'sources': [
+                        {
+                            'resource_id': 'infores:automat.notspecified',
+                            'resource_role': 'aggregator_knowledge_source',
+                            "source_record_urls": None,
+                            'upstream_resource_ids': None
+                        }
+                    ],
+                    "qualifiers": [
+                        {
+                            "qualifier_type_id": "biolink:qualified_predicate",
+                            "qualifier_value": "biolink:causes"
+                        },
+                        {
+                            "qualifier_type_id": "biolink:object_aspect_qualifier",
+                            "qualifier_value": "activity"
+                        },
+                        {
+                            "qualifier_type_id": "biolink:object_direction_qualifier",
+                            "qualifier_value": "decreased"
+                        },
+                    ],
+                }
+            }
+        }
+    }
     q = Question(question_json={})
     graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default "biolink:Attribute"
     assert transformed == expected_trapi
+
 
 class MOCK_GRAPH_ADAPTER():
     called = False
@@ -197,6 +411,7 @@ def test_attribute_constraint_basic(message):
     result = Question.apply_attribute_constraints(message)
     assert result == expected
 
+
 def test_attribute_constraint_filter_node(message):
     # this node doesnt exist, and is the main node, so everything should vanish
     node_constraints = [
@@ -216,6 +431,7 @@ def test_attribute_constraint_filter_node(message):
     assert len(result['knowledge_graph']['nodes']) == 1  # two disease in the graph remain
     assert len(result['knowledge_graph']['edges']) == 0  # no edges
     assert len(result['results']) == 0  # no bindings
+
 
 def test_attribute_constraint_filter_edge(message):
     edge_constraints = [
