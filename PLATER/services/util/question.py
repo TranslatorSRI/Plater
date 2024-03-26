@@ -170,7 +170,7 @@ class Question:
         for r in trapi_message.get("results", []):
             for node_binding_list in r["node_bindings"].values():
                 for node_binding in node_binding_list:
-                    if node_binding['query_id'] is None:
+                    if ('query_id' in node_binding) and (node_binding['query_id'] == node_binding['id']):
                         del node_binding['query_id']
             # add resource id
             for analyses in r["analyses"]:
