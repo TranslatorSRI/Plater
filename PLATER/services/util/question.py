@@ -87,7 +87,7 @@ class Question:
         for source in sources:
             # this looks weird but the idea is that you could have a few parallel lists like:
             # aggregator_knowledge_source, aggregator_knowledge_source_2, aggregator_knowledge_source_3
-            if source['resource_role'].startswith("aggregator_knowledge_source"):
+            if source['resource_role'].startswith("aggregator_knowledge_source") and source['resource_id']:
                 aggregator_list_sources.append(source)
         # walk through the aggregator lists and construct the chains of provenance
         terminal_aggregators = set()
