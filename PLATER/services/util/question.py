@@ -178,10 +178,17 @@ class Question:
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), node=True)
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
         for r in trapi_message.get("results", []):
+            # add an attributes list to every node binding, remove query_id when it's redundant with the actual id
             for node_binding_list in r["node_bindings"].values():
                 for node_binding in node_binding_list:
+                    node_binding["attributes"] = []
                     if ('query_id' in node_binding) and (node_binding['query_id'] == node_binding['id']):
                         del node_binding['query_id']
+            # add an attributes list to every edge binding
+            for analysis in r['analyses']:
+                for edge_binding_list in analysis['edge_bindings'].values():
+                    for edge_binding in edge_binding_list:
+                        edge_binding["attributes"] = []
             # add resource id
             for analyses in r["analyses"]:
                 analyses["resource_id"] = self.provenance
