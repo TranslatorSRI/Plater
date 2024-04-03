@@ -46,8 +46,9 @@ class Question:
     def __init__(self, question_json):
         self._question_json = copy.deepcopy(question_json)
 
-        # self.toolkit = toolkit
         self.provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
+        self.results_limit = config.get('RESULTS_LIMIT', None)
+        self.subclass_depth = config.get('SUBCLASS_DEPTH', None)
 
     def compile_cypher(self, **kwargs):
         query_graph = copy.deepcopy(self._question_json[Question.QUERY_GRAPH_KEY])
@@ -189,7 +190,11 @@ class Question:
             otel_span = None
 
         # compile a cypher query and return a string
-        cypher_query = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal", "primary_ks_required": True})
+        cypher_query = self.compile_cypher(**{"use_hints": True,
+                                              "relationship_id": "internal",
+                                              "limit": self.results_limit,
+                                              "subclass_depth": self.subclass_depth})
+        print(cypher_query)
         # convert the incoming TRAPI query into a string for logging and tracing
         trapi_query = str(orjson.dumps(self._question_json), "utf-8")
         # create a probably-unique id to be associated with this query in the logs
