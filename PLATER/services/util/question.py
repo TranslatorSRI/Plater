@@ -66,6 +66,15 @@ class Question:
     # TRAPI dictionaries, and assigns the proper upstream ids to each resource. It does not currently attempt to avoid
     # duplicate aggregator results, which probably shouldn't ever occur.
     def _construct_sources_tree(self, sources):
+        # TODO - The transpiler currently returns some null resource ids, partially due to the cypher call
+        #  implementation and partially due to currently supporting knowledge source attributes with and
+        #  without biolink prefixes. In the future it would be more efficient to remove the following two checks
+        # remove null or empty string resources
+        sources = [source for source in sources if source['resource_id']]
+        # remove biolink prefix if it exists
+        for source in sources:
+            source['resource_role'] = source['resource_role'].removeprefix('biolink:')
+
         # first find the primary knowledge source, there should always be one
         primary_knowledge_source = None
         formatted_sources = None
@@ -88,7 +97,7 @@ class Question:
         for source in sources:
             # this looks weird but the idea is that you could have a few parallel lists like:
             # aggregator_knowledge_source, aggregator_knowledge_source_2, aggregator_knowledge_source_3
-            if source['resource_role'].startswith("aggregator_knowledge_source") and source['resource_id']:
+            if source['resource_role'].startswith("aggregator_knowledge_source"):
                 aggregator_list_sources.append(source)
         # walk through the aggregator lists and construct the chains of provenance
         terminal_aggregators = set()
