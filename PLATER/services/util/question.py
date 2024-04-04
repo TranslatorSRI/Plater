@@ -210,7 +210,6 @@ class Question:
                                               "relationship_id": "internal",
                                               "limit": self.results_limit,
                                               "subclass_depth": self.subclass_depth})
-        print(cypher_query)
         # convert the incoming TRAPI query into a string for logging and tracing
         trapi_query = str(orjson.dumps(self._question_json), "utf-8")
         # create a probably-unique id to be associated with this query in the logs
