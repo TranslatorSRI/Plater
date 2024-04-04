@@ -172,7 +172,7 @@ if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("fals
     @APP_TRAPI_1_4.middleware("http")
     async def profile_request(request: Request, call_next):
         profiling = request.query_params.get("profile", "false")
-        if profiling != "false":
+        if profiling and profiling != "false":
             profiler = Profiler(interval=.1, async_mode="enabled")
             profiler.start()
             await call_next(request)
