@@ -1,10 +1,11 @@
 """FastAPI app."""
-import starlette.responses
-from fastapi import Body, Depends, FastAPI, Response
+from fastapi import Body, Depends, FastAPI, Response, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from typing import Dict
 from pydantic import ValidationError
+
+
 import orjson
 
 from reasoner_transpiler.exceptions import InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError
@@ -13,7 +14,7 @@ from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.question import Question
 from PLATER.services.util.overlay import Overlay
-from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema, get_example
+from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 
@@ -82,13 +83,17 @@ async def reasoner_api(
             ...,
             example=TRAPI_QUERY_EXAMPLE,
         ),
+        profile: bool = False,
+        validate: bool = False,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> CustomORJSONResponse:
+
     """Handle TRAPI request."""
     request_json = request.dict(by_alias=True)
     # default workflow
     workflow = request_json.get('workflow') or [{"id": "lookup"}]
     workflows = {wkfl['id']: wkfl for wkfl in workflow}
+
     if 'lookup' in workflows:
         question = Question(request_json["message"])
         try:
@@ -108,6 +113,15 @@ async def reasoner_api(
         overlay = Overlay(graph_interface=graph_interface)
         response_message = await overlay.annotate_node(request_json['message'])
         request_json.update({'message': response_message, 'workflow': workflow})
+
+    if validate:
+        try:
+            ReasonerRequest.parse_obj(request_json)
+        except ValidationError as e:
+            json_response = CustomORJSONResponse(content={"description": f"Validation Errors Occurred: {e.errors()}"},
+                                                 media_type="application/json",
+                                                 status_code=500)
+            return json_response
 
     # we are intentionally returning a CustomORJSONResponse and not a pydantic model for performance reasons
     json_response = CustomORJSONResponse(content=request_json, media_type="application/json")
@@ -136,21 +150,6 @@ APP_TRAPI_1_4.add_api_route(
     tags=["trapi"]
 )
 
-set_up_profiling = False
-if set_up_profiling:
-    from fastapi import Request
-    from fastapi.responses import HTMLResponse
-    from pyinstrument import Profiler
-    from pyinstrument.renderers import SpeedscopeRenderer
-    @APP_TRAPI_1_4.middleware("http")
-    async def profile_request(request: Request, call_next):
-        profiler = Profiler(interval=.5, async_mode="enabled")
-        profiler.start()
-        await call_next(request)
-        profiler.stop()
-        return HTMLResponse(profiler.output(renderer=SpeedscopeRenderer()))
-
-
 APP_TRAPI_1_4.add_api_route(
     "/query",
     reasoner_api,
@@ -163,3 +162,21 @@ APP_TRAPI_1_4.add_api_route(
 )
 
 APP_TRAPI_1_4.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_4, trapi_version="1.4.0", prefix='/1.4')
+
+# env var PROFILE_EVERYTHING=true could be used to turn on profiling / speedscope results for all http endpoints
+if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("false", "False")):
+    from pyinstrument import Profiler
+    from pyinstrument.renderers import SpeedscopeRenderer
+    from fastapi.responses import HTMLResponse
+
+    @APP_TRAPI_1_4.middleware("http")
+    async def profile_request(request: Request, call_next):
+        profiling = request.query_params.get("profile", "false")
+        if profiling != "false":
+            profiler = Profiler(interval=.1, async_mode="enabled")
+            profiler.start()
+            await call_next(request)
+            profiler.stop()
+            return HTMLResponse(profiler.output(renderer=SpeedscopeRenderer()))
+        else:
+            return await call_next(request)
