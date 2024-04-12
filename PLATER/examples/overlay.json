@@ -4,17 +4,17 @@
       "n1": {
         "id": "NCBIGene:6352",
         "category": "biolink:Gene",
-        "is_set": false
+        "set_interpretation": "BATCH"
       },
       "n2": {
         "id": null,
         "category": "biolink:GeneFamily",
-        "is_set": false
+        "set_interpretation": "BATCH"
       },
       "n3": {
         "id": null,
         "category": "biolink:GeneFamily",
-        "is_set": false
+        "set_interpretation": "BATCH"
       }
     },
     "edges": {

@@ -6,7 +6,7 @@
         "categories": [
           "biolink:Disease"
         ],
-        "is_set": false,
+        "set_interpretation": "BATCH",
         "constraints": []
       },
       "n1": {
@@ -16,7 +16,7 @@
         "categories": [
           "biolink:SmallMolecule"
         ],
-        "is_set": false,
+        "set_interpretation": "BATCH",
         "constraints": []
       }
     },
