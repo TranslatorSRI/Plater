@@ -6,7 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.app_common import APP_COMMON
-from PLATER.services.app_trapi_1_4 import APP_TRAPI_1_4
+from PLATER.services.app_trapi import APP_TRAPI_1_4
 from PLATER.services.util.api_utils import construct_open_api_schema
 
 TITLE = config.get('PLATER_TITLE', 'Plater API')
