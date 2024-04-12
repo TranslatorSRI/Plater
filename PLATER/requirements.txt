@@ -13,4 +13,4 @@ orjson==3.9.10
 opentelemetry-sdk==1.21.0
 opentelemetry-exporter-jaeger==1.21.0
 opentelemetry-instrumentation-fastapi==0.42b0
-pyinstrument==3.0.0b3
+pyinstrument==4.6.2
