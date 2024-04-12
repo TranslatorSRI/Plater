@@ -42,14 +42,14 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
-if os.environ.get("OTEL_ENABLED", False):
+if os.environ.get("OTEL_ENABLED", "False") not in ("false", "False"):
     from opentelemetry import trace
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-    OTEL_USE_CONSOLE_EXPORTER = os.environ.get("OTEL_USE_CONSOLE_EXPORTER", False)
+    OTEL_USE_CONSOLE_EXPORTER = os.environ.get("OTEL_USE_CONSOLE_EXPORTER", "False") not in ("false", "False")
     if OTEL_USE_CONSOLE_EXPORTER:
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
     else:
