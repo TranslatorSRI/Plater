@@ -4,13 +4,15 @@ import httpx
 from PLATER.services.config import config
 from bmt import Toolkit
 
-BIOLINK_MODEL_VERSION = config.get("BL_VERSION", "4.1.6")
+BIOLINK_MODEL_VERSION = config.get("BL_VERSION", None) or "4.1.6"
 BIOLINK_MODEL_SCHEMA_URL = f"https://raw.githubusercontent.com/biolink/biolink-model/v{BIOLINK_MODEL_VERSION}/biolink-model.yaml"
 PREDICATE_MAP_URL = f"https://raw.githubusercontent.com/biolink/biolink-model/v{BIOLINK_MODEL_VERSION}/predicate_mapping.yaml"
 
+BIOLINK_MODEL_TOOLKIT = Toolkit(schema=BIOLINK_MODEL_SCHEMA_URL, predicate_map=PREDICATE_MAP_URL)
+
 
 def get_biolink_model_toolkit():
-    return Toolkit(schema=BIOLINK_MODEL_SCHEMA_URL, predicate_map=PREDICATE_MAP_URL)
+    return BIOLINK_MODEL_TOOLKIT
 
 
 # TODO - the following should be replaced with biolink model toolkit functions, no need to call bl-lookup

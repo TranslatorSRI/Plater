@@ -1,7 +1,6 @@
 import copy
 import orjson
 import time
-import reasoner_transpiler as reasoner
 
 from secrets import token_hex
 from opentelemetry import trace
@@ -11,20 +10,16 @@ from reasoner_pydantic.qgraph import AttributeConstraint
 from reasoner_pydantic.shared import Attribute
 from PLATER.services.util.constraints import check_attributes
 from PLATER.services.config import config
-from PLATER.services.util.attribute_mapping import map_data, skip_list, get_attribute_bl_info
+from PLATER.services.util.attribute_mapping import skip_list, get_attribute_info
+from PLATER.services.util.bl_helper import BIOLINK_MODEL_TOOLKIT as bmt
 from PLATER.services.util.logutil import LoggingUtil
-
-# set the transpiler attribute mappings
-reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
-
-# set the value type mappings
-VALUE_TYPES = map_data['value_type_map']
 
 logger = LoggingUtil.init_logging(
     __name__,
     config.get('logging_level'),
     config.get('logging_format'),
 )
+
 
 class Question:
     # SPEC VARS
@@ -46,7 +41,7 @@ class Question:
     def __init__(self, question_json):
         self._question_json = copy.deepcopy(question_json)
 
-        self.provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
+        self.plater_provenance = config.get('PROVENANCE_TAG', 'infores:plater.notspecified')
         self.results_limit = config.get('RESULTS_LIMIT', None)
         self.subclass_depth = config.get('SUBCLASS_DEPTH', None)
 
@@ -54,12 +49,11 @@ class Question:
         query_graph = copy.deepcopy(self._question_json[Question.QUERY_GRAPH_KEY])
         edges = query_graph.get('edges')
         for e in edges:
-            # removes "biolink:" from constraint names. since these are not encoded in the graph.
-            # TODO revert this when we switch to having biolink: in the graphs
+            # removes "biolink:" from qualifier constraint names. since these are not encoded in the graph.
             if edges[e]['qualifier_constraints']:
                 for qualifier in edges[e]['qualifier_constraints']:
                     for item in qualifier['qualifier_set']:
-                        item['qualifier_type_id'] = item['qualifier_type_id'].replace('biolink:', '')
+                        item['qualifier_type_id'] = item['qualifier_type_id'].removeprefix('biolink:')
         return get_query(query_graph, **kwargs)
 
     # This function takes 'sources' results from the transpiler, converts lists of aggregator sources into the proper
@@ -68,7 +62,8 @@ class Question:
     def _construct_sources_tree(self, sources):
         # TODO - The transpiler currently returns some null resource ids, partially due to the cypher call
         #  implementation and partially due to currently supporting knowledge source attributes with and
-        #  without biolink prefixes. In the future it would be more efficient to remove the following two checks
+        #  without biolink prefixes. In the future it would be more efficient to remove the following two checks.
+        #
         # remove null or empty string resources
         sources = [source for source in sources if source['resource_id']]
         # remove biolink prefix if it exists
@@ -113,10 +108,10 @@ class Question:
                 last_aggregator = aggregator_knowledge_source
             # store the last aggregator in the list, because this will be an upstream source for the plater one
             terminal_aggregators.add(last_aggregator)
-        # add the automat infores as an aggregator,
+        # add the plater infores as an aggregator,
         # it will have as upstream either the primary ks or all of the furthest downstream aggregators if they exist
         formatted_sources.append({
-            "resource_id": self.provenance,
+            "resource_id": self.plater_provenance,
             "resource_role": "aggregator_knowledge_source",
             "upstream_resource_ids": list(terminal_aggregators) if terminal_aggregators else [primary_knowledge_source]
         })
@@ -130,47 +125,42 @@ class Question:
             # save the transpiler attribs
             attributes = props.get('attributes', [])
 
-            # separate the qualifiers from attributes for edges and format them
+            # for edges handle qualifiers and provenance/sources
             if not node:
-                qualifier_results = [attrib for attrib in attributes
-                                     if 'qualifie' in attrib['original_attribute_name']]
-                if qualifier_results:
-                    formatted_qualifiers = []
-                    for qualifier in qualifier_results:
-                        formatted_qualifiers.append({
-                            "qualifier_type_id": f"biolink:{qualifier['original_attribute_name']}"
+                # separate the qualifiers from other attributes
+                qualifiers = [attribute for attribute in attributes
+                              if bmt.is_qualifier(attribute['original_attribute_name'])]
+                if qualifiers:
+                    # format the qualifiers with type_id and value and add 'biolink:' prefixes if needed
+                    props['qualifiers'] = [
+                        {"qualifier_type_id": f"biolink:{qualifier['original_attribute_name']}"
                             if not qualifier['original_attribute_name'].startswith("biolink:")
                             else qualifier['original_attribute_name'],
-                            "qualifier_value": qualifier['value']
-                        })
-                    props['qualifiers'] = formatted_qualifiers
+                         "qualifier_value": qualifier['value']}
+                        for qualifier in qualifiers
+                    ]
 
-            # create a new list that doesnt have the core properties or qualifiers
-            new_attribs = [attrib for attrib in attributes
-                           if attrib['original_attribute_name'] not in props and
-                           attrib['original_attribute_name'] not in skip_list and
-                           'qualifie' not in attrib['original_attribute_name']
-                           ]
+                # construct the sources TRAPI from the sources results from the transpiler
+                kg_items[identifier]["sources"] = self._construct_sources_tree(kg_items[identifier].get("sources", []))
+            else:
+                qualifiers = []
 
-            # for the non-core properties
-            for attr in new_attribs:
+            # create a list of attributes that doesn't include the core properties, skipped attributes, or qualifiers
+            other_attributes = [attribute for attribute in attributes
+                                if attribute['original_attribute_name'] not in props
+                                and attribute['original_attribute_name'] not in qualifiers
+                                and attribute['original_attribute_name'] not in skip_list]
+            for attr in other_attributes:
                 # make sure the original_attribute_name has something other than none
                 attr['original_attribute_name'] = attr['original_attribute_name'] or ''
 
-                # map the attribute type to the list above, otherwise generic default
-                attr["value_type_id"] = VALUE_TYPES.get(attr["original_attribute_name"], "EDAM:data_0006")
+                # map the attribute data using the biolink model and optionally custom attribute mapping
+                attribute_data = get_attribute_info(attr["original_attribute_name"])
+                if attribute_data:
+                    attr.update(attribute_data)
 
-                # uses generic data as attribute type id if not defined
-                if not ("attribute_type_id" in attr and attr["attribute_type_id"] != 'NA'):
-                    attribute_data = get_attribute_bl_info(attr["original_attribute_name"])
-                    if attribute_data:
-                        attr.update(attribute_data)
-
-            # update edge provenance with automat infores, filter empty ones, expand list type resource ids
-            if not node:
-                kg_items[identifier]["sources"] = self._construct_sources_tree(kg_items[identifier].get("sources", []))
-            # assign these attribs back to the original attrib list without the core properties
-            props['attributes'] = new_attribs
+            # assign the filtered and formatted attributes back to the original attrib list
+            props['attributes'] = other_attributes
 
         return kg_items
 
@@ -191,7 +181,7 @@ class Question:
                         edge_binding["attributes"] = []
             # add resource id
             for analyses in r["analyses"]:
-                analyses["resource_id"] = self.provenance
+                analyses["resource_id"] = self.plater_provenance
         return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):
