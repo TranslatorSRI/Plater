@@ -58,7 +58,7 @@ def test_format_attribute():
                    "sources": [
                        {"resource_id": "infores:primary",
                         "resource_role": "primary_knowledge_source",},
-                       {"resource_id": "infores:automat.notspecified",
+                       {"resource_id": "infores:plater.notspecified",
                         "resource_role": "aggregator_knowledge_source",
                         "upstream_resource_ids": ["infores:primary"]},
                    ]}
@@ -141,7 +141,7 @@ def test_format_edge_qualifiers():
            {"resource_role": "primary_knowledge_source",
             "resource_id": "infores:primary"},
            {"resource_role": "aggregator_knowledge_source",
-            "resource_id": "infores:automat.notspecified",
+            "resource_id": "infores:plater.notspecified",
             "upstream_resource_ids": ["infores:primary"]},
         ],
         "qualifiers": [
