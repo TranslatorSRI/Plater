@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 import orjson
 
-from reasoner_transpiler.exceptions import InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError
+from reasoner_transpiler.exceptions import InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError
 from PLATER.models.shared import ReasonerRequest, MetaKnowledgeGraph, SRITestData
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
@@ -105,6 +105,9 @@ async def reasoner_api(
             return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
         except InvalidQualifierValueError as e:
             return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
+        except UnsupportedError as e:
+            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
+
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
         response_message = await overlay.connect_k_nodes(request_json['message'])
