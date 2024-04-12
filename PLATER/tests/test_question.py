@@ -83,11 +83,11 @@ def test_format_attribute():
 
     t2_expected_trapi = {'knowledge_graph': {'nodes': {'CURIE:1': {'attributes': [
         {'original_attribute_name': 'pub', 'value': 'x', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'preserved_attrib'},
-        {'original_attribute_name': 'publications', 'value': 'x', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:publications'},
+        {'original_attribute_name': 'publications', 'value': 'x', 'value_type_id': 'linkml:Uriorcurie', 'attribute_type_id': 'biolink:publications'},
         {'original_attribute_name': 'endogenous', 'value': 'false', 'value_type_id': 'xsd:boolean', 'attribute_type_id': 'aragorn:endogenous'},
         {'original_attribute_name': 'p-value', 'value': '1.234', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:Attribute'},
         {'original_attribute_name': 'chi-squared-statistic', 'value': '2.345', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:Attribute'},
-        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"], 'value_type_id': 'metatype:uriorcurie'}
+        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"], 'value_type_id': 'linkml:Uriorcurie'}
     ]
     }}}}
 
