@@ -6,12 +6,12 @@ from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.app_common import APP_COMMON
-from PLATER.services.app_trapi import APP_TRAPI_1_4
+from PLATER.services.app_trapi import APP_TRAPI
 from PLATER.services.util.api_utils import construct_open_api_schema
 
 TITLE = config.get('PLATER_TITLE', 'Plater API')
 
-VERSION = os.environ.get('PLATER_VERSION', '1.4.0-2')
+VERSION = os.environ.get('PLATER_VERSION', '1.6.0')
 
 logger = LoggingUtil.init_logging(
     __name__,
@@ -21,13 +21,13 @@ logger = LoggingUtil.init_logging(
 
 APP = FastAPI()
 
-# Mount 1.4 app at /1.4
-APP.mount('/1.4', APP_TRAPI_1_4, 'Trapi 1.4')
+# Mount TRAPI app at /
+APP.mount('/', APP_TRAPI, 'TRAPI')
 # Mount default app at /
 APP.mount('/', APP_COMMON, '')
 # Add all routes of each app for open api generation at /openapi.json
 # This will create an aggregate openapi spec.
-APP.include_router(APP_TRAPI_1_4.router, prefix='/1.4')
+APP.include_router(APP_TRAPI.router)
 APP.include_router(APP_COMMON.router)
 # Construct app /openapi.json # Note this is not to be registered on smart api . Instead /1.1/openapi.json
 # or /1.2/openapi.json should be used.

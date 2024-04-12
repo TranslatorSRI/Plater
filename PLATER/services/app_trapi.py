@@ -24,8 +24,8 @@ logger = LoggingUtil.init_logging(
     config.get('logging_format'),
 )
 
-# Mount open api at /1.4/openapi.json
-APP_TRAPI_1_4 = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/1.4')
+# Mount open api at /openapi.json
+APP_TRAPI = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/')
 
 
 def get_meta_kg_response(graph_metadata_reader: GraphMetadata):
@@ -131,7 +131,7 @@ async def reasoner_api(
     return json_response
 
 
-APP_TRAPI_1_4.add_api_route(
+APP_TRAPI.add_api_route(
     "/meta_knowledge_graph",
     get_meta_knowledge_graph,
     methods=["GET"],
@@ -142,7 +142,7 @@ APP_TRAPI_1_4.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_4.add_api_route(
+APP_TRAPI.add_api_route(
     "/sri_testing_data",
     get_sri_testing_data,
     methods=["GET"],
@@ -153,7 +153,7 @@ APP_TRAPI_1_4.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_4.add_api_route(
+APP_TRAPI.add_api_route(
     "/query",
     reasoner_api,
     methods=["POST"],
@@ -164,7 +164,7 @@ APP_TRAPI_1_4.add_api_route(
     tags=["trapi"]
 )
 
-APP_TRAPI_1_4.openapi_schema = construct_open_api_schema(app=APP_TRAPI_1_4, trapi_version="1.4.0", prefix='/1.4')
+APP_TRAPI.openapi_schema = construct_open_api_schema(app=APP_TRAPI, trapi_version="1.5.0")
 
 # env var PROFILE_EVERYTHING=true could be used to turn on profiling / speedscope results for all http endpoints
 if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("false", "False")):
@@ -172,7 +172,7 @@ if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("fals
     from pyinstrument.renderers import SpeedscopeRenderer
     from fastapi.responses import HTMLResponse
 
-    @APP_TRAPI_1_4.middleware("http")
+    @APP_TRAPI.middleware("http")
     async def profile_request(request: Request, call_next):
         profiling = request.query_params.get("profile", "false")
         if profiling and profiling != "false":
