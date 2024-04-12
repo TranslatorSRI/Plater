@@ -4,8 +4,8 @@
       "endogenous": "aragorn:endogenous"
   },
   "value_type_map": {
-      "equivalent_identifiers": "metatype:uriorcurie",
+      "equivalent_identifiers": "linkml:Uriorcurie",
       "endogenous": "xsd:boolean",
-      "biolink:publication": "biolink:Uriorcurie"
+      "publications": "linkml:Uriorcurie"
   }
 }
