@@ -142,20 +142,18 @@ class Question:
 
                 # construct the sources TRAPI from the sources results from the transpiler
                 kg_items[identifier]["sources"] = self._construct_sources_tree(kg_items[identifier].get("sources", []))
-            else:
-                qualifiers = []
 
             # create a list of attributes that doesn't include the core properties, skipped attributes, or qualifiers
             other_attributes = [attribute for attribute in attributes
                                 if attribute['original_attribute_name'] not in props
-                                and attribute['original_attribute_name'] not in qualifiers
+                                and not bmt.is_qualifier(attribute['original_attribute_name'])
                                 and attribute['original_attribute_name'] not in skip_list]
             for attr in other_attributes:
                 # make sure the original_attribute_name has something other than none
                 attr['original_attribute_name'] = attr['original_attribute_name'] or ''
 
                 # map the attribute data using the biolink model and optionally custom attribute mapping
-                attribute_data = get_attribute_info(attr["original_attribute_name"])
+                attribute_data = get_attribute_info(attr["original_attribute_name"], attr.get("attribute_type_id", None))
                 if attribute_data:
                     attr.update(attribute_data)
 

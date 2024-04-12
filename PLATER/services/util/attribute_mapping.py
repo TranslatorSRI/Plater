@@ -16,10 +16,10 @@ VALUE_TYPES = map_data['value_type_map']
 
 
 @cache
-def get_attribute_info(attribute_name):
+def get_attribute_info(attribute_name, attribute_type_id):
     # set defaults
     new_attr_meta_data = {
-        "attribute_type_id": "biolink:Attribute",
+        "attribute_type_id": "biolink:Attribute" if (not attribute_type_id) or (attribute_type_id == 'NA') else attribute_type_id,
         "value_type_id": "EDAM:data_0006",
     }
 
