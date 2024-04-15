@@ -5,7 +5,6 @@ from fastapi.responses import ORJSONResponse
 from typing import Dict
 from pydantic import ValidationError
 
-
 import orjson
 
 from reasoner_transpiler.exceptions import InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError
@@ -17,6 +16,7 @@ from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.api_utils import get_graph_interface, construct_open_api_schema
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
+from PLATER.services.app_common import APP_COMMON
 
 logger = LoggingUtil.init_logging(
     __name__,
@@ -25,7 +25,7 @@ logger = LoggingUtil.init_logging(
 )
 
 # Mount open api at /openapi.json
-APP_TRAPI = FastAPI(openapi_url="/openapi.json", docs_url="/docs", root_path='/')
+APP_TRAPI = APP_COMMON
 
 
 def get_meta_kg_response(graph_metadata_reader: GraphMetadata):
@@ -163,8 +163,6 @@ APP_TRAPI.add_api_route(
     description="",
     tags=["trapi"]
 )
-
-APP_TRAPI.openapi_schema = construct_open_api_schema(app=APP_TRAPI, trapi_version="1.5.0")
 
 # env var PROFILE_EVERYTHING=true could be used to turn on profiling / speedscope results for all http endpoints
 if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("false", "False")):

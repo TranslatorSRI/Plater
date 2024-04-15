@@ -1,17 +1,15 @@
 """FastAPI app."""
-import logging, warnings, os, json
+import os
 
-from fastapi import  FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
-from PLATER.services.app_common import APP_COMMON
-from PLATER.services.app_trapi import APP_TRAPI
+from PLATER.services.app_trapi import APP_COMMON  # yes, this is right, read the comment below
 from PLATER.services.util.api_utils import construct_open_api_schema
 
 TITLE = config.get('PLATER_TITLE', 'Plater API')
 
-VERSION = os.environ.get('PLATER_VERSION', '1.6.0')
+VERSION = os.environ.get('PLATER_VERSION', 'v1.6.1')
 
 logger = LoggingUtil.init_logging(
     __name__,
@@ -19,19 +17,13 @@ logger = LoggingUtil.init_logging(
     config.get('logging_format'),
 )
 
-APP = FastAPI()
+# This is pretty gross but in order to preserve the history of the codebase, until we verify combining the routes is ok,
+# we are using the same FastAPI() object which is created in app_common.py and then added to in app_trapi.py.
+# Previously, we created a new FastAPI here and mounted both of the others to it, but that's not needed now.
+APP = APP_COMMON
 
-# Mount TRAPI app at /
-APP.mount('/', APP_TRAPI, 'TRAPI')
-# Mount default app at /
-APP.mount('/', APP_COMMON, '')
-# Add all routes of each app for open api generation at /openapi.json
-# This will create an aggregate openapi spec.
-APP.include_router(APP_TRAPI.router)
-APP.include_router(APP_COMMON.router)
-# Construct app /openapi.json # Note this is not to be registered on smart api . Instead /1.1/openapi.json
-# or /1.2/openapi.json should be used.
-APP.openapi_schema = construct_open_api_schema(app=APP, trapi_version='N/A')
+# Construct app /openapi.json
+APP.openapi_schema = construct_open_api_schema(app=APP, trapi_version='1.5')
 
 # CORS
 APP.add_middleware(

@@ -13,11 +13,12 @@ from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.api_utils import get_graph_interface, \
-    get_bl_helper, construct_open_api_schema, get_example
+    get_bl_helper, get_example
 
+APP_COMMON = FastAPI(openapi_url='/openapi.json', docs_url='/docs')
 
-APP_COMMON = FastAPI(openapi_url='/common/openapi.json', docs_url='/common/docs')
 GRAPH_METADATA = GraphMetadata().get_metadata()
+
 
 async def cypher(
         request: CypherRequest = Body(
@@ -215,6 +216,3 @@ APP_COMMON.add_api_route(
     include_in_schema=False,
     methods=["GET"]
 )
-
-
-APP_COMMON.openapi_schema = construct_open_api_schema(app=APP_COMMON, trapi_version="N/A")
