@@ -1,11 +1,12 @@
 import yaml
-
-from fastapi.openapi.utils import get_openapi
 import json
 import os
+import orjson
+
+from fastapi import Response
+from fastapi.openapi.utils import get_openapi
+
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.metadata import GraphMetadata
-from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.config import config
 
 
@@ -23,14 +24,8 @@ def get_graph_interface():
     )
 
 
-def get_bl_helper():
-    """Get Biolink helper."""
-    return BLHelper(config.get('BL_HOST', 'https://bl-lookup-sri.renci.org'))
-
-
-def construct_open_api_schema(app, trapi_version, prefix=""):
-    plater_title = config.get('PLATER_TITLE', 'Plater API')
-    plater_version = os.environ.get('PLATER_VERSION', '1.6.0')
+def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plater API'):
+    plater_version = os.environ.get('PLATER_VERSION', 'v1.6.1')
     server_url = os.environ.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema
@@ -95,6 +90,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
     return open_api_schema
 
 
+# note: for the trapi /query endpoint an example is retrieved from the sri test data and now and not through this
 def get_example(operation: str):
     """Get example for operation."""
     with open(os.path.join(
@@ -105,3 +101,15 @@ def get_example(operation: str):
         f"{operation}.json",
     )) as stream:
         return json.load(stream)
+
+
+def orjson_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError
+
+
+class CustomORJSONResponse(Response):
+    def render(self, content: dict) -> bytes:
+        return orjson.dumps(content,
+                            default=orjson_default)

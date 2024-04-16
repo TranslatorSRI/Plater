@@ -40,3 +40,8 @@ class BLHelper:
         response = await asyncio.gather(*tasks, return_exceptions=False)
         parents = list(reduce(lambda acc, value: acc + value, filter(lambda x: x, response), []))
         return list(filter(lambda x: x not in parents, concept_list))
+
+
+def get_bl_helper():
+    """Get Biolink helper."""
+    return BLHelper(config.get('BL_HOST', 'https://bl-lookup-sri.renci.org'))

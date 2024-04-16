@@ -3,27 +3,13 @@ import os
 
 from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
-from PLATER.services.util.logutil import LoggingUtil
-from PLATER.services.app_trapi import APP_COMMON  # yes, this is right, read the comment below
+from PLATER.services.app_trapi import APP
 from PLATER.services.util.api_utils import construct_open_api_schema
 
-TITLE = config.get('PLATER_TITLE', 'Plater API')
-
-VERSION = os.environ.get('PLATER_VERSION', 'v1.6.1')
-
-logger = LoggingUtil.init_logging(
-    __name__,
-    config.get('logging_level'),
-    config.get('logging_format'),
-)
-
-# This is pretty gross but in order to preserve the history of the codebase, until we verify combining the routes is ok,
-# we are using the same FastAPI() object which is created in app_common.py and then added to in app_trapi.py.
-# Previously, we created a new FastAPI here and mounted both of the others to it, but that's not needed now.
-APP = APP_COMMON
+PLATER_TITLE = config.get('PLATER_TITLE', 'Plater API')
 
 # Construct app /openapi.json
-APP.openapi_schema = construct_open_api_schema(app=APP, trapi_version='1.5')
+APP.openapi_schema = construct_open_api_schema(app=APP, trapi_version='1.5', plater_title=PLATER_TITLE)
 
 # CORS
 APP.add_middleware(
@@ -48,8 +34,7 @@ if os.environ.get("OTEL_ENABLED", "False") not in ("false", "False"):
         # from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 
-    plater_service_name = os.environ.get('PLATER_TITLE', 'PLATER')
-    assert plater_service_name and isinstance(plater_service_name, str)
+    plater_service_name = PLATER_TITLE
     resource = Resource(attributes={
         SERVICE_NAME: os.environ.get("OTEL_SERVICE_NAME", plater_service_name),
     })
