@@ -78,7 +78,8 @@ APP.add_api_route(
     response_model=None,
     responses={200: {"model": MetaKnowledgeGraph}},
     summary="Meta knowledge graph representation of this TRAPI web service.",
-    description="Returns meta knowledge graph representation of this TRAPI web service.",
+    description="Returns a meta knowledge graph representation of this TRAPI web service. The meta knowledge graph is "
+                "composed of the union of most specific categories and predicates for each node and edge.",
     tags=["trapi"]
 )
 
@@ -104,7 +105,9 @@ async def reasoner_api(
             ...,
             example=TRAPI_QUERY_EXAMPLE,
         ),
-        profile: bool = False,  # looks like it's not used, but it's here so that it's documented in the open api spec
+        # it looks like the parameter profile is not used, but it is
+        # it's here so that it's documented in the open api spec, and it's used by pyinstrument in profile_request
+        profile: bool = False,
         validate: bool = False,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> CustomORJSONResponse:
@@ -120,15 +123,8 @@ async def reasoner_api(
         try:
             response_message = await question.answer(graph_interface)
             request_json.update({'message': response_message, 'workflow': workflow})
-        except InvalidPredicateError as e:
+        except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError) as e:
             return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
-        except InvalidQualifierError as e:
-            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
-        except InvalidQualifierValueError as e:
-            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
-        except UnsupportedError as e:
-            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
-
     elif 'overlay_connect_knodes' in workflows:
         overlay = Overlay(graph_interface=graph_interface)
         response_message = await overlay.connect_k_nodes(request_json['message'])
@@ -159,8 +155,8 @@ APP.add_api_route(
     methods=["POST"],
     response_model=None,
     responses={400: {"model": Dict}, 200: {"model": ReasonerRequest}},
-    summary="Query reasoner via one of several inputs.",
-    description="",
+    summary="Accepts TRAPI Queries.",
+    description="Accepts a TRAPI Query and returns a TRAPI Response. (https://github.com/NCATSTranslator/ReasonerAPI/)",
     tags=["trapi"]
 )
 
@@ -190,38 +186,12 @@ APP.add_api_route(
     cypher,
     methods=["POST"],
     response_model=CypherResponse,
-    summary="Run cypher query",
+    summary="Run a Neo4j cypher query.",
     description=(
-        "Runs cypher query against the Neo4j instance, and returns an "
+        "Runs a cypher query against the Neo4j instance, and returns an "
         "equivalent response expected from a Neo4j HTTP endpoint "
         "(https://neo4j.com/docs/rest-docs/current/)."
     ),
-)
-
-
-async def overlay(
-        request: ReasonerRequest = Body(
-            ...,
-            example={"message": get_example("overlay")},
-        ),
-        graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> Message:
-    """Handle TRAPI request."""
-    overlay_class = Overlay(graph_interface)
-    return await overlay_class.overlay_support_edges(request.dict()["message"])
-
-
-APP.add_api_route(
-    "/overlay",
-    overlay,
-    methods=["POST"],
-    response_model=Message,
-    description=(
-        "Given a ReasonerAPI graph, add support edges for any nodes linked in "
-        "result bindings."
-    ),
-    summary="Overlay results with available connections between each node.",
-    tags=["translator"]
 )
 
 
