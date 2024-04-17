@@ -229,8 +229,6 @@ APP.add_api_route(
     response_model=List,
     summary=(
         "Get one hop results from source type to target type. "
-        "Note: Please GET /predicates to determine what target goes "
-        "with a source"
     ),
     description=(
         "Returns one hop paths from `source_node_type`  with `curie` "
