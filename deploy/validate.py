@@ -1,4 +1,6 @@
 import requests
+import os
+import yaml
 
 def validate_plater(url, expected_version):
     results = {
@@ -62,10 +64,10 @@ def validate_plater(url, expected_version):
             results['validation_errors'].append(f'Retrieving open api spec failed: {str(e)}')
             return results
     openapi_spec = openapi_response.json()
-    example_trapi_query = openapi_spec['paths']['/1.4/query']['post']['requestBody']['content']['application/json']['example']
+    example_trapi_query = openapi_spec['paths']['/query']['post']['requestBody']['content']['application/json']['example']
 
     # send the example trapi query and make sure it works
-    trapi_query_response = requests.post(f'{url}1.4/query', json=example_trapi_query)
+    trapi_query_response = requests.post(f'{url}query', json=example_trapi_query)
     if trapi_query_response.status_code != 200:
         try:
             cypher_response.raise_for_status()
@@ -85,35 +87,25 @@ def validate_plater(url, expected_version):
 
 if __name__ == '__main__':
 
-    # NOTE - The automat urls and graph_deployment_spec(s) are hardcoded here, but we should be able to read from
-    # any deployment spec and test against the endpoint(s) specified within. This current set up is also wrong because
-    # graph versions/deployments are not necessarily the same across the environments.
-    automat_urls = ['https://automat.renci.org/',
-                    'https://automat.ci.transltr.io/',
-                    'https://automat.test.transltr.io/',
-                    'https://automat.transltr.io/',
-                    'https://robokop-automat.apps.renci.org/']  # TODO get these from a graph deployment spec
-    graph_deployment_specs = ['./new_graphs.txt']  # TODO get these from cli input
-
     everything_is_good = True
-    for automat_url in automat_urls:
-        print(f'Validating deployments on {automat_url}')
-        for graph_deployment_spec_path in graph_deployment_specs:
-            with open(graph_deployment_spec_path) as graph_deployment_spec_file:
-                plater_validation_results = {}
-                for line in graph_deployment_spec_file:
-                    split_line = line.split()
-                    plater_id = split_line[0]
-                    graph_version = split_line[1]
-                    validation_results = validate_plater(f'{automat_url}{plater_id}/', graph_version)
-                    validation_errors = "\n".join(validation_results['validation_errors'])
-                    if validation_errors:
-                        everything_is_good = False
-                        error_message = f'Validation errors occurred for {plater_id} on {automat_url}: {validation_errors}'
-                        print(error_message)
-                    # else:
-                    #    print(f'{plater_id} ({graph_version}) on {automat_url} looks ok.')
-                    plater_validation_results[plater_id] = validation_results
-                # TODO - do something with plater_validation_results other than print errors?
+    graph_deployment_spec_path = os.path.join(os.path.dirname(__file__), 'deployment_spec.yaml')
+    with open(graph_deployment_spec_path) as graph_deployment_spec_file:
+        deployment_spec = yaml.safe_load(graph_deployment_spec_file)
+        plater_validation_results = {}
+        for deployment in deployment_spec['deployments']:
+            automat_url = deployment['automat_url']
+            for plater_id, graph_version in deployment['platers'].items():
+                validation_results = validate_plater(f'{automat_url}{plater_id}/', graph_version)
+                validation_errors = "\n".join(validation_results['validation_errors'])
+                if validation_errors:
+                    everything_is_good = False
+                    error_message = f'Validation errors occurred for {plater_id} on {automat_url}: {validation_errors}'
+                    print(error_message)
+                # else:
+                #    print(f'{plater_id} ({graph_version}) on {automat_url} looks ok.')
+                plater_validation_results[plater_id] = validation_results
     if everything_is_good:
         print(f'Yay. Everything looks good.')
+
+    # TODO - do something with plater_validation_results other than print errors?
+
