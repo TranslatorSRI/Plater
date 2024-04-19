@@ -17,7 +17,7 @@ from PLATER.services.util.api_utils import (
 )
 from PLATER.services.util.bl_helper import BLHelper, get_bl_helper
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.metadata import GraphMetadata
+from PLATER.services.util.metadata import get_graph_metadata, GraphMetadata
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.question import Question
 from PLATER.services.config import config
@@ -32,41 +32,23 @@ logger = LoggingUtil.init_logging(
     config.get('logging_format'),
 )
 
-
-# read in and validate the meta kg json only once on startup,
-# create an already-encoded object that is ready to be returned quickly
-def get_meta_kg_response(graph_metadata_reader: GraphMetadata):
-    meta_kg_json = graph_metadata_reader.get_meta_kg()
-    try:
-        MetaKnowledgeGraph.parse_obj(meta_kg_json)
-        logger.info('Successfully validated meta kg')
-        return jsonable_encoder(meta_kg_json)
-    except ValidationError as e:
-        logger.error(f'Error validating meta kg: {e}')
-        return None
-
-
-# process and store static objects ready to be returned by their respective endpoints
-graph_metadata_reader = GraphMetadata()
-GRAPH_METADATA = graph_metadata_reader.get_metadata()
-META_KG_RESPONSE = get_meta_kg_response(graph_metadata_reader)
-SRI_TEST_DATA = graph_metadata_reader.get_sri_testing_data()
-FULL_SIMPLE_SPEC = graph_metadata_reader.get_full_simple_spec()
-
 # get an example query for the /query endpoint, to be included in the open api spec
-TRAPI_QUERY_EXAMPLE = graph_metadata_reader.get_example_qgraph()
+# it would be nice to use Depends() for the graph metadata here, as it's used elsewhere,
+# but because TRAPI_QUERY_EXAMPLE is included a function parameter, it's not possible
+TRAPI_QUERY_EXAMPLE = get_graph_metadata().get_example_qgraph()
 
 
-async def get_meta_knowledge_graph() -> ORJSONResponse:
+async def get_meta_knowledge_graph(metadata_retriever: GraphMetadata = Depends(get_graph_metadata)) -> ORJSONResponse:
     """Handle /meta_knowledge_graph."""
-    if META_KG_RESPONSE:
+    meta_kg_response = metadata_retriever.get_meta_kg_response()
+    if meta_kg_response:
         # we are intentionally returning a ORJSONResponse directly,
-        # we already validated with pydantic above and the content won't change
+        # we already validated with the pydantic model and the content won't change
         return ORJSONResponse(status_code=200,
-                              content=META_KG_RESPONSE,
+                              content=meta_kg_response,
                               media_type="application/json")
     else:
-        # if META_KG_RESPONSE is None it means the meta kg did not validate
+        # if meta_kg_response is None it means the meta kg did not validate
         return ORJSONResponse(status_code=500,
                               media_type="application/json",
                               content={"description": "MetaKnowledgeGraph failed validation - "
@@ -85,9 +67,9 @@ APP.add_api_route(
 )
 
 
-async def get_sri_testing_data():
+async def get_sri_testing_data(metadata_retriever: GraphMetadata = Depends(get_graph_metadata)):
     """Handle /sri_testing_data."""
-    return SRI_TEST_DATA
+    return metadata_retriever.get_sri_testing_data()
 
 APP.add_api_route(
     "/sri_testing_data",
@@ -196,9 +178,9 @@ APP.add_api_route(
 )
 
 
-async def metadata() -> Any:
+async def metadata(metadata_retriever: GraphMetadata = Depends(get_graph_metadata)) -> Any:
     """Handle /metadata."""
-    return GRAPH_METADATA
+    return metadata_retriever.get_metadata()
 
 APP.add_api_route(
     "/metadata",
@@ -264,6 +246,7 @@ async def simple_spec(
         target: str = None,
         graph_interface: GraphInterface = Depends(get_graph_interface),
         bl_helper: BLHelper = Depends(get_bl_helper),
+        metadata_retriever: GraphMetadata = Depends(get_graph_metadata)
 ) -> SimpleSpecResponse:
     """Handle simple spec."""
     source_id = source
@@ -295,7 +278,7 @@ async def simple_spec(
                 'edge_type': x[1],
             }), minischema))
     else:
-        return FULL_SIMPLE_SPEC
+        return metadata_retriever.get_full_simple_spec()
 
 APP.add_api_route(
     "/simple_spec",

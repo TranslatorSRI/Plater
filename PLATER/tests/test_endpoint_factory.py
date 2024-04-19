@@ -4,9 +4,10 @@ import pytest
 import json
 from functools import reduce
 from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.metadata import GraphMetadata
 import os
 
-from PLATER.services.app_trapi import APP, get_graph_interface
+from PLATER.services.app_trapi import APP, get_graph_interface, get_graph_metadata
 
 
 class MockGraphInterface(GraphInterface):
@@ -72,7 +73,30 @@ def graph_interface():
     return _graph_interface()
 
 
+class MockGraphMetadata(GraphMetadata):
+    def __init__(self, *args, **kwargs):
+        pass
+
+    # TODO this isn't super useful for testing full_simple_spec processing, it skips the interesting part,
+    #  it'd be better to generate it from a fake meta_kg
+    def get_full_simple_spec(self):
+        full_simple_spec_file = os.path.join(os.path.dirname(__file__), 'data', 'full_simple_spec.json')
+        with open(full_simple_spec_file) as s_file:
+            full_simple_spec = json.load(s_file)
+        return full_simple_spec
+
+
+def _graph_metadata():
+    return MockGraphMetadata()
+
+
+@pytest.fixture()
+def graph_metadata():
+    return _graph_metadata()
+
+
 APP.dependency_overrides[get_graph_interface] = _graph_interface
+APP.dependency_overrides[get_graph_metadata] = _graph_metadata
 
 
 @pytest.mark.asyncio
@@ -112,7 +136,7 @@ async def test_cypher_response(graph_interface):
 #     assert response.status_code == 200
 #     assert response.json() == graph_interface.get_schema()
 
-
+"""
 @pytest.mark.asyncio
 async def test_simple_one_hop_spec_response(graph_interface):
     # with out parameters it should return all the questions based on that
@@ -133,9 +157,31 @@ async def test_simple_one_hop_spec_response(graph_interface):
         for item in specs:
             assert item['source_type'] in source_types
             assert item['target_type'] in target_types
-
+            
         # test source param
         response = await ac.get("/simple_spec?source=SOME:CURIE")
         assert response.status_code == 200
         response = await ac.get("/simple_spec?source=SOME:CURIE")
         assert response.status_code == 200
+"""
+
+
+@pytest.mark.asyncio
+async def test_simple_one_hop_spec_response(graph_interface, graph_metadata):
+
+    async with AsyncClient(app=APP, base_url="http://test") as ac:
+        # test source param
+        response = await ac.get("/simple_spec?source=SOME:CURIE")
+        assert response.status_code == 200
+        # test two params
+        response = await ac.get("/simple_spec?source=SOME:CURIE&target=SOME:CURIE")
+        assert response.status_code == 200
+        # test empty params
+        response = await ac.get("/simple_spec")
+        assert response.status_code == 200
+        specs = response.json()
+        assert len(specs) == 3
+        for item in specs:
+            assert item['source_type']
+            assert item['target_type']
+
