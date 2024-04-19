@@ -25,7 +25,7 @@ def get_graph_interface():
 
 
 def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plater API'):
-    plater_version = os.environ.get('PLATER_VERSION', 'v1.6.1')
+    plater_version = os.environ.get('PLATER_VERSION', 'v1.6.3')
     server_url = os.environ.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema
