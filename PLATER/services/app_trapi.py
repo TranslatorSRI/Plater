@@ -51,6 +51,7 @@ graph_metadata_reader = GraphMetadata()
 GRAPH_METADATA = graph_metadata_reader.get_metadata()
 META_KG_RESPONSE = get_meta_kg_response(graph_metadata_reader)
 SRI_TEST_DATA = graph_metadata_reader.get_sri_testing_data()
+FULL_SIMPLE_SPEC = graph_metadata_reader.get_full_simple_spec()
 
 # get an example query for the /query endpoint, to be included in the open api spec
 TRAPI_QUERY_EXAMPLE = graph_metadata_reader.get_example_qgraph()
@@ -294,17 +295,7 @@ async def simple_spec(
                 'edge_type': x[1],
             }), minischema))
     else:
-        schema = graph_interface.get_schema()
-        reformatted_schema = []
-        for source_type in schema:
-            for target_type in schema[source_type]:
-                for edge in schema[source_type][target_type]:
-                    reformatted_schema.append(SimpleSpecElement(**{
-                        'source_type': source_type,
-                        'target_type': target_type,
-                        'edge_type': edge
-                    }))
-        return reformatted_schema
+        return FULL_SIMPLE_SPEC
 
 APP.add_api_route(
     "/simple_spec",

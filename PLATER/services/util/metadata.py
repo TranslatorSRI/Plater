@@ -9,6 +9,7 @@ class GraphMetadata:
         self.metadata = None
         self.meta_kg = None
         self.sri_testing_data = None
+        self.full_simple_spec = None
 
     def get_metadata(self):
         if self.metadata is None:
@@ -61,6 +62,22 @@ class GraphMetadata:
         # but this ensures validation with the model until it's removed
         if 'version' not in self.sri_testing_data:
             self.sri_testing_data['version'] = config.get('BL_VERSION')
+
+    def get_full_simple_spec(self):
+        if self.meta_kg is None:
+            self.retrieve_meta_kg()
+        if self.full_simple_spec is None:
+            self.generate_full_simple_spec()
+        return self.full_simple_spec
+
+    def generate_full_simple_spec(self):
+        self.full_simple_spec = []
+        for edge in self.meta_kg.get('edges', []):
+            self.full_simple_spec.append({
+                "source_type": edge["subject"],
+                "target_type": edge["object"],
+                "edge_type": edge["predicate"]
+            })
 
     def get_example_qgraph(self):
         sri_test_data = self.get_sri_testing_data()
