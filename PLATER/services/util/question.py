@@ -42,8 +42,8 @@ class Question:
         self._question_json = copy.deepcopy(question_json)
 
         self.plater_provenance = config.get('PROVENANCE_TAG', 'infores:plater.notspecified')
-        self.results_limit = config.get('RESULTS_LIMIT', None)
-        self.subclass_depth = config.get('SUBCLASS_DEPTH', None)
+        self.results_limit = self.get_positive_int_from_config('RESULTS_LIMIT', None)
+        self.subclass_depth = self.get_positive_int_from_config('SUBCLASS_DEPTH', 1)
 
     def compile_cypher(self, **kwargs):
         query_graph = copy.deepcopy(self._question_json[Question.QUERY_GRAPH_KEY])
@@ -382,4 +382,18 @@ class Question:
                     question_graph[Question.EDGES_LIST_KEY][f"e{index}"] = edge_dict
             question_templates.append({Question.QUERY_GRAPH_KEY: question_graph})
         return question_templates
+
+    @staticmethod
+    def get_positive_int_from_config(config_var_name: str, default=None):
+        config_var = config.get(config_var_name, None)
+        if config_var is not None and config_var != "":
+            try:
+                config_int = int(config_var)
+                if config_int >= 0:
+                    return config_int
+                else:
+                    logger.warning(f'Negative value provided for {config_var_name}: {config_var}, using default {default}')
+            except ValueError:
+                logger.warning(f'Invalid value provided for {config_var_name}: {config_var}, using default {default}')
+        return default
 
