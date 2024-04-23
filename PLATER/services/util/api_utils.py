@@ -53,7 +53,7 @@ def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plate
     if x_translator_extension:
         # if x_translator_team is defined amends schema with x_translator extension
         open_api_schema["info"]["x-translator"] = x_translator_extension
-        open_api_schema["info"]["x-translator"]["biolink-version"] = config.get("BL_VERSION", "2.1.0")
+        open_api_schema["info"]["x-translator"]["biolink-version"] = config.get("BL_VERSION", "4.1.6")
         open_api_schema["info"]["x-translator"]["infores"] = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
     if contact_config:
@@ -70,13 +70,13 @@ def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plate
 
     if servers_conf:
         for cnf in servers_conf:
-            if prefix and 'url' in cnf:
+            if 'url' in cnf:
                 cnf['url'] = cnf['url'] + prefix
                 cnf['x-maturity'] = os.environ.get("MATURITY_VALUE", "maturity")
                 cnf['x-location'] = os.environ.get("LOCATION_VALUE", "location")
                 cnf['x-trapi'] = trapi_version
                 cnf['x-translator'] = {}
-                cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "2.1.0")
+                cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "4.1.6")
                 cnf['x-translator']['test-data-location'] = server_url.strip('/') + "/sri_testing_data"
         open_api_schema["servers"] = servers_conf
 
