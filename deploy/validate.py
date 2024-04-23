@@ -2,6 +2,7 @@ import requests
 import os
 import yaml
 
+
 def validate_plater(url, expected_version):
     results = {
         'valid': False,
@@ -29,7 +30,9 @@ def validate_plater(url, expected_version):
         results['validation_errors'].append(error_message)
         return results
     expected_number_of_nodes = metadata['final_node_count']
+    expected_number_of_edges = metadata['final_edge_count']
     results['expected_number_of_nodes'] = expected_number_of_nodes
+    results['expected_number_of_edges'] = expected_number_of_edges
 
     # query the graph with cypher to check if the neo4j instance is up and has the right number of nodes
     cypher_query_payload = {"query": f"MATCH (n) RETURN count(n)"}
@@ -52,6 +55,30 @@ def validate_plater(url, expected_version):
     if number_of_nodes != expected_number_of_nodes:
         error_message = f'Metadata said there should be {expected_number_of_nodes} nodes, ' \
                         f'but cypher query returned: {number_of_nodes}.'
+        results['validation_errors'].append(error_message)
+        return results
+
+    # query the graph with cypher to check if the neo4j instance has the right number of edges
+    cypher_query_payload = {"query": f"MATCH (n)-[r]->(m) RETURN count(r)"}
+    cypher_response = requests.post(f'{url}cypher', json=cypher_query_payload)
+    if cypher_response.status_code != 200:
+        try:
+            cypher_response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            results['validation_errors'].append(f'Running cypher query failed: {str(e)}')
+            return results
+    try:
+        number_of_edges = cypher_response.json()['results'][0]['data'][0]['row'][0]
+        results['actual_number_of_edges'] = number_of_edges
+    except KeyError:
+        results['validation_errors'].append(f'Cypher query returned an invalid result.')
+        return results
+    except IndexError:
+        results['validation_errors'].append(f'Cypher query returned bad results.')
+        return results
+    if number_of_edges != expected_number_of_edges:
+        error_message = f'Metadata said there should be {expected_number_of_edges} nodes, ' \
+                        f'but cypher query returned: {number_of_edges}.'
         results['validation_errors'].append(error_message)
         return results
 
