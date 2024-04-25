@@ -77,7 +77,7 @@ def validate_plater(url, expected_version):
         results['validation_errors'].append(f'Cypher query returned bad results.')
         return results
     if number_of_edges != expected_number_of_edges:
-        error_message = f'Metadata said there should be {expected_number_of_edges} nodes, ' \
+        error_message = f'Metadata said there should be {expected_number_of_edges} edges, ' \
                         f'but cypher query returned: {number_of_edges}.'
         results['validation_errors'].append(error_message)
         return results
