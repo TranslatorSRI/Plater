@@ -43,7 +43,7 @@ deployments:
       human-goa: f4137b0fccd76fc1
       icees-kg: "4-11-2024"
       intact: 590258263f89111d
-      monarch-kg: "2024-03-18"
+      monarch-kg: "2024-04-18"
       panther: 399a2024b78947d3
       pharos: 45dab165ca92e24d
       reactome: c637a1b81cdf62da
