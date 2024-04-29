@@ -172,14 +172,12 @@ class Question:
                     node_binding["attributes"] = []
                     if ('query_id' in node_binding) and (node_binding['query_id'] == node_binding['id']):
                         del node_binding['query_id']
-            # add an attributes list to every edge binding
+            # add resource_id to analyses and an empty attributes list to every edge binding
             for analysis in r['analyses']:
+                analysis["resource_id"] = self.plater_provenance
                 for edge_binding_list in analysis['edge_bindings'].values():
                     for edge_binding in edge_binding_list:
                         edge_binding["attributes"] = []
-            # add resource id
-            for analyses in r["analyses"]:
-                analyses["resource_id"] = self.plater_provenance
         return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):
