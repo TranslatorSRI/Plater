@@ -3,7 +3,7 @@ import os
 import yaml
 
 
-def validate_plater(url, expected_version):
+def validate_plater(url, expected_version, expected_plater_version, expected_trapi_version):
     results = {
         'valid': False,
         'expected_graph_version': expected_version,
@@ -90,7 +90,18 @@ def validate_plater(url, expected_version):
         except requests.exceptions.HTTPError as e:
             results['validation_errors'].append(f'Retrieving open api spec failed: {str(e)}')
             return results
+
     openapi_spec = openapi_response.json()
+    openapi_plater_version = openapi_spec['info']['version']
+    if openapi_plater_version != expected_plater_version:
+        results['validation_errors'].append(f'Expected plater version {expected_plater_version} but openapi says {openapi_plater_version}')
+        return results
+
+    openapi_trapi_version = openapi_spec['info']['x-trapi']['version']
+    if openapi_trapi_version != expected_trapi_version:
+        results['validation_errors'].append(f'Expected TRAPI version {expected_trapi_version} but openapi says {openapi_trapi_version}')
+        return results
+
     example_trapi_query = openapi_spec['paths']['/query']['post']['requestBody']['content']['application/json']['example']
 
     # send the example trapi query and make sure it works
@@ -121,8 +132,10 @@ if __name__ == '__main__':
         plater_validation_results = {}
         for deployment in deployment_spec['deployments']:
             automat_url = deployment['automat_url']
+            trapi_version = deployment['trapi_version']
+            plater_version = deployment['plater_version']
             for plater_id, graph_version in deployment['platers'].items():
-                validation_results = validate_plater(f'{automat_url}{plater_id}/', graph_version)
+                validation_results = validate_plater(f'{automat_url}{plater_id}/', graph_version, plater_version, trapi_version)
                 validation_errors = "\n".join(validation_results['validation_errors'])
                 if validation_errors:
                     everything_is_good = False
