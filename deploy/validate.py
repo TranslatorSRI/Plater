@@ -1,9 +1,27 @@
 import requests
 import os
 import yaml
+import click
+
+def get_metadata(url):
+    # get the metadata and check the version, get the number of nodes that should be in the graph
+    metadata_response = requests.get(f'{url}metadata')
+    if metadata_response.status_code != 200:
+        metadata_response.raise_for_status()
+    metadata = metadata_response.json()
+    return metadata
 
 
-def validate_plater(url, expected_version, expected_plater_version, expected_trapi_version):
+def make_cypher_call(url, cypher):
+    # query the graph with cypher
+    cypher_query_payload = {"query": cypher}
+    cypher_response = requests.post(f'{url}cypher', json=cypher_query_payload)
+    if cypher_response.status_code != 200:
+        cypher_response.raise_for_status()
+    return cypher_response.json()
+
+
+def validate_plater(url, expected_version, expected_plater_version, expected_trapi_version, run_warmup=False):
     results = {
         'valid': False,
         'expected_graph_version': expected_version,
@@ -13,15 +31,14 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
         'validation_errors': []
     }
 
-    # get the metadata and check the version, get the number of nodes that should be in the graph
-    metadata_response = requests.get(f'{url}metadata')
-    if metadata_response.status_code != 200:
-        try:
-            metadata_response.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            results['validation_errors'].append(f'Retrieving metadata failed: {str(e)}')
-            return results
-    metadata = metadata_response.json()
+    # retrieve the metadata
+    try:
+        metadata = get_metadata(f'{url}')
+    except requests.exceptions.HTTPError as e:
+        results['validation_errors'].append(f'Retrieving metadata failed: {str(e)}')
+        return results
+
+    # get the graph_version and check that it's what was expected
     metadata_graph_version = metadata['graph_version'] \
         if 'graph_version' in metadata else "Graph version missing from metadata."
     results['actual_graph_version'] = metadata_graph_version
@@ -29,6 +46,8 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
         error_message = f'Expected graph version {expected_version} but metadata has: {metadata_graph_version}.'
         results['validation_errors'].append(error_message)
         return results
+
+    # get number of nodes and edges that should be in the graph from the metadata
     expected_number_of_nodes = metadata['final_node_count']
     expected_number_of_edges = metadata['final_edge_count']
     results['expected_number_of_nodes'] = expected_number_of_nodes
@@ -82,6 +101,9 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
         results['validation_errors'].append(error_message)
         return results
 
+    if run_warmup:
+        make_cypher_call(url, 'CALL apoc.warmup.run(True, True, True)')
+
     # get the open api spec and the example trapi query from it
     openapi_response = requests.get(f'{url}openapi.json')
     if openapi_response.status_code != 200:
@@ -123,19 +145,28 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
     return results
 
 
-if __name__ == '__main__':
-
+def run_validation(deployments_to_validate=None):
+    deployments_to_validate = deployments_to_validate if deployments_to_validate else []
     everything_is_good = True
     graph_deployment_spec_path = os.path.join(os.path.dirname(__file__), 'deployment_spec.yaml')
     with open(graph_deployment_spec_path) as graph_deployment_spec_file:
         deployment_spec = yaml.safe_load(graph_deployment_spec_file)
         plater_validation_results = {}
         for deployment in deployment_spec['deployments']:
+            if deployment['deployment_environment'] not in deployments_to_validate:
+                print(f"Skipping deployment environment {deployment['deployment_environment']} ({deployment['automat_url']})")
+                continue
+            else:
+                print(f"Validating deployment environment {deployment['deployment_environment']} ({deployment['automat_url']})")
             automat_url = deployment['automat_url']
             trapi_version = deployment['trapi_version']
             plater_version = deployment['plater_version']
             for plater_id, graph_version in deployment['platers'].items():
-                validation_results = validate_plater(f'{automat_url}{plater_id}/', graph_version, plater_version, trapi_version)
+                validation_results = validate_plater(f'{automat_url}{plater_id}/',
+                                                     graph_version,
+                                                     plater_version,
+                                                     trapi_version,
+                                                     run_warmup=False)
                 validation_errors = "\n".join(validation_results['validation_errors'])
                 if validation_errors:
                     everything_is_good = False
@@ -146,6 +177,37 @@ if __name__ == '__main__':
                 plater_validation_results[plater_id] = validation_results
     if everything_is_good:
         print(f'Yay. Everything looks good.')
-
     # TODO - do something with plater_validation_results other than print errors?
 
+
+if __name__ == '__main__':
+    # to run for only certain environments
+    # run_validation(['dev', 'robokop'])
+
+    # or all of them
+    run_validation()
+
+
+
+
+"""
+    robo_metadata = get_metadata(f'https://automat.renci.org/robokopkg/')
+
+    edge_counts = {}
+    for source in robo_metadata['sources']:
+        source_id = source['source_id']
+        edge_counts[source_id] = source['normalized_edges.jsonl']['edges']
+        if 'supp_norm_edges.jsonl' in source:
+            edge_counts[source_id] += source['supp_norm_edges.jsonl']['edges']
+    for source in robo_metadata['subgraphs'][0]['graph_metadata']['sources']:
+        source_id = source['source_id']
+        edge_counts[source_id] = source['normalized_edges.jsonl']['edges']
+        if 'supp_norm_edges.jsonl' in source:
+            edge_counts[source_id] += source['supp_norm_edges.jsonl']['edges']
+    source_counts = [(source, counts) for source, counts in edge_counts.items()]
+    source_counts.sort(key=lambda tup: tup[1], reverse=True)
+    for source_count in source_counts:
+        print(source_count)
+
+    exit()
+"""
