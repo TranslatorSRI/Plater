@@ -1,11 +1,12 @@
 import yaml
-
-from fastapi.openapi.utils import get_openapi
 import json
 import os
+import orjson
+
+from fastapi import Response
+from fastapi.openapi.utils import get_openapi
+
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.metadata import GraphMetadata
-from PLATER.services.util.bl_helper import BLHelper
 from PLATER.services.config import config
 
 
@@ -23,14 +24,8 @@ def get_graph_interface():
     )
 
 
-def get_bl_helper():
-    """Get Biolink helper."""
-    return BLHelper(config.get('BL_HOST', 'https://bl-lookup-sri.renci.org'))
-
-
-def construct_open_api_schema(app, trapi_version, prefix=""):
-    plater_title = config.get('PLATER_TITLE', 'Plater API')
-    plater_version = os.environ.get('PLATER_VERSION', '1.4.0-2')
+def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plater API'):
+    plater_version = os.environ.get('PLATER_VERSION', 'v1.6.5')
     server_url = os.environ.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema
@@ -58,7 +53,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
     if x_translator_extension:
         # if x_translator_team is defined amends schema with x_translator extension
         open_api_schema["info"]["x-translator"] = x_translator_extension
-        open_api_schema["info"]["x-translator"]["biolink-version"] = config.get("BL_VERSION", "2.1.0")
+        open_api_schema["info"]["x-translator"]["biolink-version"] = config.get("BL_VERSION", "4.1.6")
         open_api_schema["info"]["x-translator"]["infores"] = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
 
     if contact_config:
@@ -75,13 +70,13 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
 
     if servers_conf:
         for cnf in servers_conf:
-            if prefix and 'url' in cnf:
+            if 'url' in cnf:
                 cnf['url'] = cnf['url'] + prefix
                 cnf['x-maturity'] = os.environ.get("MATURITY_VALUE", "maturity")
                 cnf['x-location'] = os.environ.get("LOCATION_VALUE", "location")
                 cnf['x-trapi'] = trapi_version
                 cnf['x-translator'] = {}
-                cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "2.1.0")
+                cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "4.1.6")
                 cnf['x-translator']['test-data-location'] = server_url.strip('/') + "/sri_testing_data"
         open_api_schema["servers"] = servers_conf
 
@@ -95,6 +90,7 @@ def construct_open_api_schema(app, trapi_version, prefix=""):
     return open_api_schema
 
 
+# note: for the trapi /query endpoint an example is retrieved from the sri test data and now and not through this
 def get_example(operation: str):
     """Get example for operation."""
     with open(os.path.join(
@@ -105,3 +101,15 @@ def get_example(operation: str):
         f"{operation}.json",
     )) as stream:
         return json.load(stream)
+
+
+def orjson_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError
+
+
+class CustomORJSONResponse(Response):
+    def render(self, content: dict) -> bytes:
+        return orjson.dumps(content,
+                            default=orjson_default)

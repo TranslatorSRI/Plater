@@ -1,37 +1,15 @@
 """FastAPI app."""
-import logging, warnings, os, json
+import os
 
-from fastapi import  FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
-from PLATER.services.util.logutil import LoggingUtil
-from PLATER.services.app_common import APP_COMMON
-from PLATER.services.app_trapi_1_4 import APP_TRAPI_1_4
+from PLATER.services.app_trapi import APP
 from PLATER.services.util.api_utils import construct_open_api_schema
 
-TITLE = config.get('PLATER_TITLE', 'Plater API')
+PLATER_TITLE = config.get('PLATER_TITLE', 'Plater API')
 
-VERSION = os.environ.get('PLATER_VERSION', '1.4.0-2')
-
-logger = LoggingUtil.init_logging(
-    __name__,
-    config.get('logging_level'),
-    config.get('logging_format'),
-)
-
-APP = FastAPI()
-
-# Mount 1.4 app at /1.4
-APP.mount('/1.4', APP_TRAPI_1_4, 'Trapi 1.4')
-# Mount default app at /
-APP.mount('/', APP_COMMON, '')
-# Add all routes of each app for open api generation at /openapi.json
-# This will create an aggregate openapi spec.
-APP.include_router(APP_TRAPI_1_4.router, prefix='/1.4')
-APP.include_router(APP_COMMON.router)
-# Construct app /openapi.json # Note this is not to be registered on smart api . Instead /1.1/openapi.json
-# or /1.2/openapi.json should be used.
-APP.openapi_schema = construct_open_api_schema(app=APP, trapi_version='N/A')
+# Construct app /openapi.json
+APP.openapi_schema = construct_open_api_schema(app=APP, trapi_version='1.5', plater_title=PLATER_TITLE)
 
 # CORS
 APP.add_middleware(
@@ -42,22 +20,21 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
-if os.environ.get("OTEL_ENABLED", False):
+if os.environ.get("OTEL_ENABLED", "False") not in ("false", "False"):
     from opentelemetry import trace
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-    OTEL_USE_CONSOLE_EXPORTER = os.environ.get("OTEL_USE_CONSOLE_EXPORTER", False)
+    OTEL_USE_CONSOLE_EXPORTER = os.environ.get("OTEL_USE_CONSOLE_EXPORTER", "False") not in ("false", "False")
     if OTEL_USE_CONSOLE_EXPORTER:
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
     else:
         # from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 
-    plater_service_name = os.environ.get('PLATER_TITLE', 'PLATER')
-    assert plater_service_name and isinstance(plater_service_name, str)
+    plater_service_name = PLATER_TITLE
     resource = Resource(attributes={
         SERVICE_NAME: os.environ.get("OTEL_SERVICE_NAME", plater_service_name),
     })

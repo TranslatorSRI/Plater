@@ -1,7 +1,6 @@
 import copy
 import orjson
 import time
-import reasoner_transpiler as reasoner
 
 from secrets import token_hex
 from opentelemetry import trace
@@ -11,20 +10,16 @@ from reasoner_pydantic.qgraph import AttributeConstraint
 from reasoner_pydantic.shared import Attribute
 from PLATER.services.util.constraints import check_attributes
 from PLATER.services.config import config
-from PLATER.services.util.attribute_mapping import map_data, skip_list, get_attribute_bl_info
+from PLATER.services.util.attribute_mapping import skip_list, get_attribute_info
+from PLATER.services.util.bl_helper import BIOLINK_MODEL_TOOLKIT as bmt
 from PLATER.services.util.logutil import LoggingUtil
-
-# set the transpiler attribute mappings
-reasoner.cypher.ATTRIBUTE_TYPES = map_data['attribute_type_map']
-
-# set the value type mappings
-VALUE_TYPES = map_data['value_type_map']
 
 logger = LoggingUtil.init_logging(
     __name__,
     config.get('logging_level'),
     config.get('logging_format'),
 )
+
 
 class Question:
     # SPEC VARS
@@ -46,59 +41,81 @@ class Question:
     def __init__(self, question_json):
         self._question_json = copy.deepcopy(question_json)
 
-        # self.toolkit = toolkit
-        self.provenance = config.get('PROVENANCE_TAG', 'infores:automat.notspecified')
+        self.plater_provenance = config.get('PROVENANCE_TAG', 'infores:plater.notspecified')
+        self.results_limit = self.get_positive_int_from_config('RESULTS_LIMIT', None)
+        self.subclass_depth = self.get_positive_int_from_config('SUBCLASS_DEPTH', 1)
 
     def compile_cypher(self, **kwargs):
         query_graph = copy.deepcopy(self._question_json[Question.QUERY_GRAPH_KEY])
         edges = query_graph.get('edges')
         for e in edges:
-            # removes "biolink:" from constraint names. since these are not encoded in the graph.
-            # TODO revert this when we switch to having biolink: in the graphs
+            # removes "biolink:" from qualifier constraint names. since these are not encoded in the graph.
             if edges[e]['qualifier_constraints']:
                 for qualifier in edges[e]['qualifier_constraints']:
                     for item in qualifier['qualifier_set']:
-                        item['qualifier_type_id'] = item['qualifier_type_id'].replace('biolink:', '')
+                        item['qualifier_type_id'] = item['qualifier_type_id'].removeprefix('biolink:')
         return get_query(query_graph, **kwargs)
 
-
+    # This function takes 'sources' results from the transpiler, converts lists of aggregator sources into the proper
+    # TRAPI dictionaries, and assigns the proper upstream ids to each resource. It does not currently attempt to avoid
+    # duplicate aggregator results, which probably shouldn't ever occur.
     def _construct_sources_tree(self, sources):
-        # if primary source and aggregator source are specified in the graph, upstream_resource_ids of all aggregator_ks
-        # be that source
-
-        # if aggregator ks are coming from db, plater would add itself as aggregator and use other aggregator ids
-        # as upstream resources, if no aggregators are found and only primary ks is provided that would be added
-        # as upstream for the plater entry
-        formatted_sources = []
-        # filter out source entries that actually have values
-        temp = {}
+        # TODO - The transpiler currently returns some null resource ids, partially due to the cypher call
+        #  implementation and partially due to currently supporting knowledge source attributes with and
+        #  without biolink prefixes. In the future it would be more efficient to remove the following two checks.
+        #
+        # remove null or empty string resources
+        sources = [source for source in sources if source['resource_id']]
+        # remove biolink prefix if it exists
         for source in sources:
-            if not source['resource_id']:
-                continue
-            temp[source['resource_role']] = temp.get(source['resource_role'], set())
-            if isinstance(source["resource_id"], str):
-                temp[source["resource_role"]].add(source["resource_id"])
-            elif isinstance(source["resource_id"], list):
-                for resource_id in source["resource_id"]:
-                    temp[source["resource_role"]].add(resource_id)
+            source['resource_role'] = source['resource_role'].removeprefix('biolink:')
 
-        for resource_role in temp:
-            upstreams = None
-            if resource_role == "biolink:aggregator_knowledge_source":
-                upstreams = temp.get("biolink:primary_knowledge_source", None)
+        # first find the primary knowledge source, there should always be one
+        primary_knowledge_source = None
+        formatted_sources = None
+        for source in sources:
+            if source['resource_role'] == "primary_knowledge_source":
+                primary_knowledge_source = source['resource_id']
+                # add it to the formatted TRAPI output
+                formatted_sources = [{
+                    "resource_id": primary_knowledge_source,
+                    "resource_role": "primary_knowledge_source"
+                }]
+        if not primary_knowledge_source:
+            # we could hard fail here, every edge should have a primary ks, but I haven't fixed all the tests yet
+            #     raise KeyError(f'primary_knowledge_source missing from sources section of cypher results! '
+            #                    f'sources: {sources}')
+            return []
 
-            formatted_sources += [
-                {"resource_id": resource_id, "resource_role": resource_role.lstrip('biolink:'), "upstream_resource_ids": upstreams}
-                for resource_id in temp[resource_role]
-            ]
-        upstreams_for_plater_entry = temp.get("biolink:aggregator_knowledge_source") or temp.get("biolink:primary_knowledge_source")
+        # then find any aggregator lists
+        aggregator_list_sources = []
+        for source in sources:
+            # this looks weird but the idea is that you could have a few parallel lists like:
+            # aggregator_knowledge_source, aggregator_knowledge_source_2, aggregator_knowledge_source_3
+            if source['resource_role'].startswith("aggregator_knowledge_source"):
+                aggregator_list_sources.append(source)
+        # walk through the aggregator lists and construct the chains of provenance
+        terminal_aggregators = set()
+        for source in aggregator_list_sources:
+            # each aggregator list should be in order, so we can deduce the upstream chains
+            last_aggregator = None
+            for aggregator_knowledge_source in source['resource_id']:
+                formatted_sources.append({
+                    "resource_id": aggregator_knowledge_source,
+                    "resource_role": "aggregator_knowledge_source",
+                    "upstream_resource_ids": [last_aggregator] if last_aggregator else [primary_knowledge_source]
+                })
+                last_aggregator = aggregator_knowledge_source
+            # store the last aggregator in the list, because this will be an upstream source for the plater one
+            terminal_aggregators.add(last_aggregator)
+        # add the plater infores as an aggregator,
+        # it will have as upstream either the primary ks or all of the furthest downstream aggregators if they exist
         formatted_sources.append({
-            "resource_id":self.provenance,
+            "resource_id": self.plater_provenance,
             "resource_role": "aggregator_knowledge_source",
-            "upstream_resource_ids": upstreams_for_plater_entry
+            "upstream_resource_ids": list(terminal_aggregators) if terminal_aggregators else [primary_knowledge_source]
         })
-        return formatted_sources
-
+        return list(formatted_sources)
 
     def format_attribute_trapi(self, kg_items, node=False):
         for identifier in kg_items:
@@ -108,62 +125,59 @@ class Question:
             # save the transpiler attribs
             attributes = props.get('attributes', [])
 
-            # separate the qualifiers from attributes for edges and format them
+            # for edges handle qualifiers and provenance/sources
             if not node:
-                qualifier_results = [attrib for attrib in attributes
-                                     if 'qualifie' in attrib['original_attribute_name']]
-                if qualifier_results:
-                    formatted_qualifiers = []
-                    for qualifier in qualifier_results:
-                        formatted_qualifiers.append({
-                            "qualifier_type_id": f"biolink:{qualifier['original_attribute_name']}"
+                # separate the qualifiers from other attributes
+                qualifiers = [attribute for attribute in attributes
+                              if bmt.is_qualifier(attribute['original_attribute_name'])]
+                if qualifiers:
+                    # format the qualifiers with type_id and value and add 'biolink:' prefixes if needed
+                    props['qualifiers'] = [
+                        {"qualifier_type_id": f"biolink:{qualifier['original_attribute_name']}"
                             if not qualifier['original_attribute_name'].startswith("biolink:")
                             else qualifier['original_attribute_name'],
-                            "qualifier_value": qualifier['value']
-                        })
-                    props['qualifiers'] = formatted_qualifiers
+                         "qualifier_value": qualifier['value']}
+                        for qualifier in qualifiers
+                    ]
 
-            # create a new list that doesnt have the core properties or qualifiers
-            new_attribs = [attrib for attrib in attributes
-                           if attrib['original_attribute_name'] not in props and
-                           attrib['original_attribute_name'] not in skip_list and
-                           'qualifie' not in attrib['original_attribute_name']
-                           ]
+                # construct the sources TRAPI from the sources results from the transpiler
+                kg_items[identifier]["sources"] = self._construct_sources_tree(kg_items[identifier].get("sources", []))
 
-            # for the non-core properties
-            for attr in new_attribs:
+            # create a list of attributes that doesn't include the core properties, skipped attributes, or qualifiers
+            other_attributes = [attribute for attribute in attributes
+                                if attribute['original_attribute_name'] not in props
+                                and not bmt.is_qualifier(attribute['original_attribute_name'])
+                                and attribute['original_attribute_name'] not in skip_list]
+            for attr in other_attributes:
                 # make sure the original_attribute_name has something other than none
                 attr['original_attribute_name'] = attr['original_attribute_name'] or ''
 
-                # map the attribute type to the list above, otherwise generic default
-                attr["value_type_id"] = VALUE_TYPES.get(attr["original_attribute_name"], "EDAM:data_0006")
+                # map the attribute data using the biolink model and optionally custom attribute mapping
+                attribute_data = get_attribute_info(attr["original_attribute_name"], attr.get("attribute_type_id", None))
+                if attribute_data:
+                    attr.update(attribute_data)
 
-                # uses generic data as attribute type id if not defined
-                if not ("attribute_type_id" in attr and attr["attribute_type_id"] != 'NA'):
-                    attribute_data = get_attribute_bl_info(attr["original_attribute_name"])
-                    if attribute_data:
-                        attr.update(attribute_data)
-
-            # update edge provenance with automat infores, filter empty ones, expand list type resource ids
-            if not node:
-                kg_items[identifier]["sources"] = self._construct_sources_tree(kg_items[identifier].get("sources", []))
-            # assign these attribs back to the original attrib list without the core properties
-            props['attributes'] = new_attribs
+            # assign the filtered and formatted attributes back to the original attrib list
+            props['attributes'] = other_attributes
 
         return kg_items
 
-    def transform_attributes(self, trapi_message, graph_interface: GraphInterface):
+    def transform_attributes(self, trapi_message):
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('nodes', {}), node=True)
         self.format_attribute_trapi(trapi_message.get('knowledge_graph', {}).get('edges', {}))
         for r in trapi_message.get("results", []):
+            # add an attributes list to every node binding, remove query_id when it's redundant with the actual id
             for node_binding_list in r["node_bindings"].values():
                 for node_binding in node_binding_list:
-                    query_id = node_binding.pop('query_id', None)
-                    if query_id != node_binding['id'] and query_id is not None:
-                        node_binding['query_id'] = query_id
-            # add resource id
-            for analyses in r["analyses"]:
-                analyses["resource_id"] = self.provenance
+                    node_binding["attributes"] = []
+                    if ('query_id' in node_binding) and (node_binding['query_id'] == node_binding['id']):
+                        del node_binding['query_id']
+            # add resource_id to analyses and an empty attributes list to every edge binding
+            for analysis in r['analyses']:
+                analysis["resource_id"] = self.plater_provenance
+                for edge_binding_list in analysis['edge_bindings'].values():
+                    for edge_binding in edge_binding_list:
+                        edge_binding["attributes"] = []
         return trapi_message
 
     async def answer(self, graph_interface: GraphInterface):
@@ -178,7 +192,10 @@ class Question:
             otel_span = None
 
         # compile a cypher query and return a string
-        cypher_query = self.compile_cypher(**{"use_hints": True, "relationship_id": "internal", "primary_ks_required": True})
+        cypher_query = self.compile_cypher(**{"use_hints": True,
+                                              "relationship_id": "internal",
+                                              "limit": self.results_limit,
+                                              "subclass_depth": self.subclass_depth})
         # convert the incoming TRAPI query into a string for logging and tracing
         trapi_query = str(orjson.dumps(self._question_json), "utf-8")
         # create a probably-unique id to be associated with this query in the logs
@@ -197,7 +214,7 @@ class Question:
                 }
             )
         results_dict = graph_interface.convert_to_dict(results)
-        self._question_json.update(self.transform_attributes(results_dict[0], graph_interface))
+        self._question_json.update(self.transform_attributes(results_dict[0]))
         self._question_json = Question.apply_attribute_constraints(self._question_json)
         return self._question_json
 
@@ -363,4 +380,18 @@ class Question:
                     question_graph[Question.EDGES_LIST_KEY][f"e{index}"] = edge_dict
             question_templates.append({Question.QUERY_GRAPH_KEY: question_graph})
         return question_templates
+
+    @staticmethod
+    def get_positive_int_from_config(config_var_name: str, default=None):
+        config_var = config.get(config_var_name, None)
+        if config_var is not None and config_var != "":
+            try:
+                config_int = int(config_var)
+                if config_int >= 0:
+                    return config_int
+                else:
+                    logger.warning(f'Negative value provided for {config_var_name}: {config_var}, using default {default}')
+            except ValueError:
+                logger.warning(f'Invalid value provided for {config_var_name}: {config_var}, using default {default}')
+        return default
 

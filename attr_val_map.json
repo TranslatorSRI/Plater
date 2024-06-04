@@ -1,15 +1,11 @@
 {
   "attribute_type_map": {
-      "`biolink:primary_knowledge_source`": "biolink:primary_knowledge_source",
-      "`biolink:aggregator_knowledge_source`": "biolink:aggregator_knowledge_source",
       "equivalent_identifiers": "biolink:same_as",
       "endogenous": "aragorn:endogenous"
   },
   "value_type_map": {
-      "equivalent_identifiers": "metatype:uriorcurie",
-      "biolink:primary_knowledge_source": "biolink:InformationResource",
-      "biolink:aggregator_knowledge_source": "biolink:InformationResource",
+      "equivalent_identifiers": "linkml:Uriorcurie",
       "endogenous": "xsd:boolean",
-      "biolink:publication": "biolink:Uriorcurie"
+      "publications": "linkml:Uriorcurie"
   }
 }

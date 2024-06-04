@@ -1,5 +1,6 @@
 import json
 import os
+from functools import cache
 from PLATER.services.util.bl_helper import get_biolink_model_toolkit
 
 bmt_toolkit = get_biolink_model_toolkit()
@@ -14,30 +15,16 @@ skip_list = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__
 VALUE_TYPES = map_data['value_type_map']
 
 
-def get_attribute_bl_info(attribute_name):
+@cache
+def get_attribute_info(attribute_name, attribute_type_id):
     # set defaults
     new_attr_meta_data = {
-        "attribute_type_id": "biolink:Attribute",
+        "attribute_type_id": "biolink:Attribute" if (not attribute_type_id) or (attribute_type_id == 'NA') else attribute_type_id,
         "value_type_id": "EDAM:data_0006",
     }
-    # if attribute is meant to b6e skipped return none
-    if attribute_name in skip_list or attribute_name in ["name", "id"]:
-        return None
 
-    # map the attribute type to the list above, otherwise generic default
-    new_attr_meta_data["value_type_id"] = VALUE_TYPES.get(attribute_name, new_attr_meta_data["value_type_id"])
-    attr_found = None
-    if attribute_name in map_data["attribute_type_map"] or f'`{attribute_name}`' in map_data["attribute_type_map"]:
-        attr_found = True
-        new_attr_meta_data["attribute_type_id"] = map_data["attribute_type_map"].get(attribute_name) \
-                                                  or map_data["attribute_type_map"].get(f"`{attribute_name}`")
-    if attribute_name in map_data["value_type_map"]:
-        new_attr_meta_data["value_type_id"] = map_data["value_type_map"][attribute_name]
-    if attr_found:
-        return new_attr_meta_data
-
-    # lookup the biolink info, for qualifiers suffix with _qualifier and do lookup.
-    bl_info = bmt_toolkit.get_element(attribute_name) or bmt_toolkit.get_element(attribute_name + "_qualifier")
+    # lookup the biolink info
+    bl_info = bmt_toolkit.get_element(attribute_name)
 
     # did we get something
     if bl_info is not None:
@@ -56,6 +43,13 @@ def get_attribute_bl_info(attribute_name):
                         new_attr_meta_data["value_type_id"] = new_type['uri']
         elif 'class_uri' in bl_info:
             new_attr_meta_data['attribute_type_id'] = bl_info['class_uri']
+
+    # possibly overwrite using the custom attribute mapping
+    if attribute_name in map_data["attribute_type_map"] or f'`{attribute_name}`' in map_data["attribute_type_map"]:
+        new_attr_meta_data["attribute_type_id"] = map_data["attribute_type_map"].get(attribute_name) \
+                                                  or map_data["attribute_type_map"].get(f"`{attribute_name}`")
+    if attribute_name in VALUE_TYPES:
+        new_attr_meta_data["value_type_id"] = VALUE_TYPES[attribute_name]
     return new_attr_meta_data
 
 

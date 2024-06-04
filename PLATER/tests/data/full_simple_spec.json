@@ -1,0 +1,17 @@
+[
+  {
+    "source_type": "biolink:ChemicalSubstance",
+    "target_type": "biolink:Gene",
+    "edge_type": "biolink:directly_interacts_with"
+  },
+  {
+    "source_type": "biolink:ChemicalSubstance",
+    "target_type": "biolink:Disease",
+    "edge_type": "biolink:treats"
+  },
+  {
+    "source_type": "biolink:Gene",
+    "target_type": "biolink:Disease",
+    "edge_type": "biolink:has_basis_in"
+  }
+]

@@ -39,7 +39,7 @@ def test_format_attribute():
              {"123123":
                   {
                       "attributes": [{"original_attribute_name": "some_attr", "value": "some_value"}],
-                      "sources": [{"resource_role": "biolink:primary_knowledge_source", "resource_id":"infores:primary"}]
+                      "sources": [{"resource_role": "primary_knowledge_source", "resource_id": "infores:primary"}]
                   }
               }
          }
@@ -55,21 +55,18 @@ def test_format_attribute():
                                    "attribute_type_id": "biolink:Attribute",
                                    "value_type_id": "EDAM:data_0006"},
                                   ],
-
                    "sources": [
-                       {"resource_role": "primary_knowledge_source",
-                        "resource_id": "infores:primary",
-                        "upstream_resource_ids": None},
-                       {"resource_role": "aggregator_knowledge_source",
-                        "resource_id": "infores:automat.notspecified",
-                        "upstream_resource_ids": {"infores:primary"}},
+                       {"resource_id": "infores:primary",
+                        "resource_role": "primary_knowledge_source",},
+                       {"resource_id": "infores:plater.notspecified",
+                        "resource_role": "aggregator_knowledge_source",
+                        "upstream_resource_ids": ["infores:primary"]},
                    ]}
               }
          }
     }
     q = Question(question_json={})
-    graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default 'biolink:Attribute'
@@ -86,17 +83,17 @@ def test_format_attribute():
 
     t2_expected_trapi = {'knowledge_graph': {'nodes': {'CURIE:1': {'attributes': [
         {'original_attribute_name': 'pub', 'value': 'x', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'preserved_attrib'},
-        {'original_attribute_name': 'publications', 'value': 'x', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:publications'},
+        {'original_attribute_name': 'publications', 'value': 'x', 'value_type_id': 'linkml:Uriorcurie', 'attribute_type_id': 'biolink:publications'},
         {'original_attribute_name': 'endogenous', 'value': 'false', 'value_type_id': 'xsd:boolean', 'attribute_type_id': 'aragorn:endogenous'},
         {'original_attribute_name': 'p-value', 'value': '1.234', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:Attribute'},
         {'original_attribute_name': 'chi-squared-statistic', 'value': '2.345', 'value_type_id': 'EDAM:data_0006', 'attribute_type_id': 'biolink:Attribute'},
-        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"], 'value_type_id': 'metatype:uriorcurie'}
+        {"original_attribute_name": "equivalent_identifiers", "attribute_type_id": "biolink:same_as", "value": ["some_identifier"], 'value_type_id': 'linkml:Uriorcurie'}
     ]
     }}}}
 
     q = Question(question_json={})
 
-    transformed = q.transform_attributes(t2_trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(t2_trapi_kg_response)
 
     # test default attribute to be EDAM:data_0006
     # test if value_type is preserved if in response from neo4j
@@ -112,6 +109,10 @@ def test_format_edge_qualifiers():
               "object": "NCBIGene:283871",
               "predicate": "biolink:affects",
               "subject": "PUBCHEM.COMPOUND:5311062",
+              "sources": [
+                       {"resource_role": "primary_knowledge_source",
+                        "resource_id": "infores:primary"}
+                ],
               "attributes": [
                 {
                    "attribute_type_id":"NA",
@@ -136,10 +137,13 @@ def test_format_edge_qualifiers():
         'predicate': 'biolink:affects',
         'subject': 'PUBCHEM.COMPOUND:5311062',
         'attributes': [],
-        'sources': [{'resource_id': 'infores:automat.notspecified',
-                     'resource_role': 'aggregator_knowledge_source',
-                     'upstream_resource_ids': None
-                     }],
+        'sources': [
+           {"resource_role": "primary_knowledge_source",
+            "resource_id": "infores:primary"},
+           {"resource_role": "aggregator_knowledge_source",
+            "resource_id": "infores:plater.notspecified",
+            "upstream_resource_ids": ["infores:primary"]},
+        ],
         "qualifiers": [
             {
                 "qualifier_type_id": "biolink:qualified_predicate",
@@ -158,8 +162,7 @@ def test_format_edge_qualifiers():
     }}
 
     q = Question(question_json={})
-    graph_interface = MOCK_GRAPH_ADAPTER()
-    transformed = q.transform_attributes(trapi_kg_response, graph_interface=MOCK_GRAPH_ADAPTER)
+    transformed = q.transform_attributes(trapi_kg_response)
 
     # test attribute_id if provided from neo4j response is preserved
     # test if value_type is added to default "biolink:Attribute"

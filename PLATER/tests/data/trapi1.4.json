@@ -6,7 +6,7 @@
         "categories": [
           "biolink:Disease"
         ],
-        "is_set": false,
+        "set_interpretation": "BATCH",
         "constraints": []
       },
       "n1": {
@@ -16,7 +16,7 @@
         "categories": [
           "biolink:SmallMolecule"
         ],
-        "is_set": false,
+        "set_interpretation": "BATCH",
         "constraints": []
       }
     },
@@ -206,15 +206,15 @@
         "predicate": "biolink:causes",
         "sources": [
           {
-            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_role": "aggregator_knowledge_source",
             "resource_id": "infores:hetio"
           },
           {
-            "resource_role": "biolink:primary_knowledge_source",
+            "resource_role": "primary_knowledge_source",
             "resource_id": "infores:sider"
           },
           {
-            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_role": "aggregator_knowledge_source",
             "resource_id": "infores:automat-robokop"
           }
         ],
@@ -233,13 +233,13 @@
         "predicate": "biolink:causes",
         "sources": [
           {
-            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_role": "aggregator_knowledge_source",
             "resource_id": "infores:hetio"
           },{
-            "resource_role": "biolink:primary_knowledge_source",
+            "resource_role": "primary_knowledge_source",
             "resource_id": "infores:original_source_1"
           },{
-            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_role": "aggregator_knowledge_source",
             "resource_id": "infores:automat-robokop"
           }
         ],
@@ -262,10 +262,10 @@
         "predicate": "biolink:contributes_to",
         "sources": [
           {
-            "resource_role": "biolink:primary_knowledge_source",
+            "resource_role": "primary_knowledge_source",
             "resource_id": "ctd"
           },{
-            "resource_role": "biolink:aggregator_knowledge_source",
+            "resource_role": "aggregator_knowledge_source",
             "resource_id": "infores:automat-robokop"
           }
         ],
