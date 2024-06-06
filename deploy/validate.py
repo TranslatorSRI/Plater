@@ -1,7 +1,6 @@
 import requests
 import os
 import yaml
-import click
 
 def get_metadata(url):
     # get the metadata and check the version, get the number of nodes that should be in the graph
@@ -186,28 +185,3 @@ if __name__ == '__main__':
 
     # or all of them
     run_validation()
-
-
-
-
-"""
-    robo_metadata = get_metadata(f'https://automat.renci.org/robokopkg/')
-
-    edge_counts = {}
-    for source in robo_metadata['sources']:
-        source_id = source['source_id']
-        edge_counts[source_id] = source['normalized_edges.jsonl']['edges']
-        if 'supp_norm_edges.jsonl' in source:
-            edge_counts[source_id] += source['supp_norm_edges.jsonl']['edges']
-    for source in robo_metadata['subgraphs'][0]['graph_metadata']['sources']:
-        source_id = source['source_id']
-        edge_counts[source_id] = source['normalized_edges.jsonl']['edges']
-        if 'supp_norm_edges.jsonl' in source:
-            edge_counts[source_id] += source['supp_norm_edges.jsonl']['edges']
-    source_counts = [(source, counts) for source, counts in edge_counts.items()]
-    source_counts.sort(key=lambda tup: tup[1], reverse=True)
-    for source_count in source_counts:
-        print(source_count)
-
-    exit()
-"""
