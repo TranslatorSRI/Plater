@@ -145,14 +145,14 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
 
 
 def run_validation(deployments_to_validate=None):
-    deployments_to_validate = deployments_to_validate if deployments_to_validate else []
+    deployments_to_validate = deployments_to_validate if deployments_to_validate else None
     everything_is_good = True
     graph_deployment_spec_path = os.path.join(os.path.dirname(__file__), 'deployment_spec.yaml')
     with open(graph_deployment_spec_path) as graph_deployment_spec_file:
         deployment_spec = yaml.safe_load(graph_deployment_spec_file)
         plater_validation_results = {}
         for deployment in deployment_spec['deployments']:
-            if deployment['deployment_environment'] not in deployments_to_validate:
+            if deployments_to_validate and deployment['deployment_environment'] not in deployments_to_validate:
                 print(f"Skipping deployment environment {deployment['deployment_environment']} ({deployment['automat_url']})")
                 continue
             else:
