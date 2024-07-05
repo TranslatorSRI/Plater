@@ -1,0 +1,139 @@
+
+deployments:
+
+  - deployment_environment: dev
+    automat_url: https://automat.renci.org/
+    plater_version: v1.6.5
+    trapi_version: 1.5.0
+    platers:
+      binding-db: 57e22a8a314b0df8
+      cam-kp: dfdb15b2ecef5629
+      ctd: 8b5f74462c4179ca
+      drugcentral: 33887d252c2a0de4
+      genome-alliance: 85a6ce01fb7d2cbe
+      gtex: 982fac378b629570
+      gtopdb: b0048e5f6f14c0f7
+      gwas-catalog: 1fe140b41b7349e8
+      hetio: 35c7d6be215e8cc9
+      hgnc: 012197dd15067551
+      hmdb: 9bf6cb5142d79b7f
+      human-goa: 73059966f266f5a8
+      icees-kg: "4-11-2024"
+      intact: 2a79dda9d5bc2312
+      monarch-kg: "2024-04-18"
+      panther: 04726ca2b1148f20
+      pharos: 727a90a7317f97a8
+      reactome: 59c5f5859ca31e58
+      robokopkg: c5ec1f282158182f
+      string-db: 8921aec4382a896c
+      ubergraph: 470b86cde433f1fb
+      viral-proteome: 365c51354d2ed0cc
+  - deployment_environment: ci
+    automat_url: https://automat.ci.transltr.io/
+    plater_version: v1.6.5
+    trapi_version: 1.5.0
+    platers:
+      binding-db: 57e22a8a314b0df8
+      cam-kp: dfdb15b2ecef5629
+      ctd: 8b5f74462c4179ca
+      drugcentral: 33887d252c2a0de4
+      genome-alliance: 85a6ce01fb7d2cbe
+      gtex: 982fac378b629570
+      gtopdb: b0048e5f6f14c0f7
+      gwas-catalog: 1fe140b41b7349e8
+      hetio: 35c7d6be215e8cc9
+      hgnc: 012197dd15067551
+      hmdb: 9bf6cb5142d79b7f
+      human-goa: 73059966f266f5a8
+      icees-kg: "4-11-2024"
+      intact: 2a79dda9d5bc2312
+      monarch-kg: "2024-04-18"
+      panther: 04726ca2b1148f20
+      pharos: 727a90a7317f97a8
+      reactome: 59c5f5859ca31e58
+      robokopkg: c5ec1f282158182f
+      string-db: 8921aec4382a896c
+      ubergraph: 470b86cde433f1fb
+      viral-proteome: 365c51354d2ed0cc
+  - deployment_environment: test
+    automat_url: https://automat.test.transltr.io/
+    plater_version: v1.6.5
+    trapi_version: 1.5.0
+    platers:
+      binding-db: 57e22a8a314b0df8
+      cam-kp: dfdb15b2ecef5629
+      ctd: 8b5f74462c4179ca
+      drugcentral: 33887d252c2a0de4
+      genome-alliance: 85a6ce01fb7d2cbe
+      gtex: 982fac378b629570
+      gtopdb: b0048e5f6f14c0f7
+      gwas-catalog: 1fe140b41b7349e8
+      hetio: 35c7d6be215e8cc9
+      hgnc: 012197dd15067551
+      hmdb: 9bf6cb5142d79b7f
+      human-goa: 73059966f266f5a8
+      icees-kg: "4-11-2024"
+      intact: 2a79dda9d5bc2312
+      monarch-kg: "2024-04-18"
+      panther: 04726ca2b1148f20
+      pharos: 727a90a7317f97a8
+      reactome: 59c5f5859ca31e58
+      robokopkg: c5ec1f282158182f
+      string-db: 8921aec4382a896c
+      ubergraph: 470b86cde433f1fb
+      viral-proteome: 365c51354d2ed0cc
+  - deployment_environment: prod
+    automat_url: https://automat.transltr.io/
+    plater_version: v1.6.5
+    trapi_version: 1.5.0
+    platers:
+      binding-db: 57e22a8a314b0df8
+      cam-kp: dfdb15b2ecef5629
+      ctd: 8b5f74462c4179ca
+      drugcentral: 33887d252c2a0de4
+      genome-alliance: 85a6ce01fb7d2cbe
+      gtex: 982fac378b629570
+      gtopdb: b0048e5f6f14c0f7
+      gwas-catalog: 1fe140b41b7349e8
+      hetio: 35c7d6be215e8cc9
+      hgnc: 012197dd15067551
+      hmdb: 9bf6cb5142d79b7f
+      human-goa: 73059966f266f5a8
+      icees-kg: "4-11-2024"
+      intact: 2a79dda9d5bc2312
+      monarch-kg: "2024-04-18"
+      panther: 04726ca2b1148f20
+      pharos: 727a90a7317f97a8
+      reactome: 59c5f5859ca31e58
+      robokopkg: c5ec1f282158182f
+      string-db: 8921aec4382a896c
+      ubergraph: 470b86cde433f1fb
+      viral-proteome: 365c51354d2ed0cc
+  - deployment_environment: robokop
+    automat_url: https://robokop-automat.apps.renci.org/
+    plater_version: v1.6.5
+    trapi_version: 1.5.0
+    platers:
+      binding-db: 57e22a8a314b0df8
+      cam-kp: dfdb15b2ecef5629
+      ctd: 8b5f74462c4179ca
+      drugcentral: 33887d252c2a0de4
+      genome-alliance: 85a6ce01fb7d2cbe
+      gtex: 982fac378b629570
+      gtopdb: b0048e5f6f14c0f7
+      gwas-catalog: 1fe140b41b7349e8
+      hetio: 35c7d6be215e8cc9
+      hgnc: 012197dd15067551
+      hmdb: 9bf6cb5142d79b7f
+      human-goa: 73059966f266f5a8
+      icees-kg: "4-11-2024"
+      intact: 2a79dda9d5bc2312
+      monarch-kg: "2024-04-18"
+      panther: 04726ca2b1148f20
+      pharos: 727a90a7317f97a8
+      reactome: 59c5f5859ca31e58
+      robokopkg: c5ec1f282158182f
+      string-db: 8921aec4382a896c
+      ubergraph: 470b86cde433f1fb
+      viral-proteome: 365c51354d2ed0cc
+      textminingkp: 19817a8eab6dbd1c
