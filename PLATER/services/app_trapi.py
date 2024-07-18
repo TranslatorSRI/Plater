@@ -154,21 +154,18 @@ async def cypher(
             example={"query": "MATCH (n) RETURN count(n)"},
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> CypherResponse:
-    """Handle cypher."""
-    request = request.dict()
-    results = await graph_interface.run_cypher(
-        request["query"],
-        return_errors=True,
-    )
-    return results
+) -> ORJSONResponse:
+    response = ORJSONResponse(content={"description": "Support for cypher calls is temporarily unavailable."},
+                              media_type="application/json",
+                              status_code=503)
+    return response
 
 
 APP.add_api_route(
     "/cypher",
     cypher,
     methods=["POST"],
-    response_model=CypherResponse,
+    response_model=None,
     summary="Run a Neo4j cypher query.",
     description=(
         "Runs a cypher query against the Neo4j instance, and returns an "
