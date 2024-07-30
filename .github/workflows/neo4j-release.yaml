@@ -1,0 +1,40 @@
+name: 'Release a new version of the neo4j image to Github Packages'
+
+on:
+    push:
+        tags:
+          - neo4j*
+
+env:
+    REGISTRY: ghcr.io
+
+jobs:
+    push_to_registry:
+        name: Push Docker image to GitHub Packages
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out the repo
+              uses: actions/checkout@v4
+            - name: Get the version
+              id: get_version
+              run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+            - name: Extract metadata (tags, labels) for Docker
+              id: meta_neo4j_image
+              uses: docker/metadata-action@v5
+              with:
+                images:
+                    ghcr.io/${{ github.repository }}-neo4j
+            - name: Login to ghcr
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build and push base image
+              uses: docker/build-push-action@v5
+              with:
+                  context: ./PLATER/neo4j-docker
+                  push: true
+                  tags: ${{ steps.meta_neo4j_image.outputs.tags }}
+                  labels: ${{ steps.meta_neo4j_image.outputs.labels }}
+                  build-args: VERSION=${{ meta_neo4j_image.get_version.outputs.VERSION }}
