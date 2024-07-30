@@ -7,6 +7,7 @@ import os
 import yaml
 import traceback
 import re
+from PLATER.services.util.logutil import LoggingUtil
 
 
 class Config(dict):
@@ -79,5 +80,22 @@ class Config(dict):
             else:
                 return value
 
+def get_positive_int_from_config(config_var_name: str, default=None):
+    config_var = config.get(config_var_name, None)
+    if config_var is not None and config_var != "":
+        try:
+            config_int = int(config_var)
+            if config_int >= 0:
+                return config_int
+            else:
+                logger.warning(f'Negative value provided for {config_var_name}: {config_var}, using default {default}')
+        except ValueError:
+            logger.warning(f'Invalid value provided for {config_var_name}: {config_var}, using default {default}')
+    return default
 
 config = Config('plater.conf')
+logger = LoggingUtil.init_logging(
+    __name__,
+    config.get('logging_level'),
+    config.get('logging_format'),
+)
