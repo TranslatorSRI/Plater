@@ -20,14 +20,14 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
-if os.environ.get("OTEL_ENABLED", "False") not in ("false", "False"):
+if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
     from opentelemetry import trace
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-    OTEL_USE_CONSOLE_EXPORTER = os.environ.get("OTEL_USE_CONSOLE_EXPORTER", "False") not in ("false", "False")
+    OTEL_USE_CONSOLE_EXPORTER = config.get("OTEL_USE_CONSOLE_EXPORTER", "False") not in ("false", "False")
     if OTEL_USE_CONSOLE_EXPORTER:
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
     else:
@@ -35,13 +35,13 @@ if os.environ.get("OTEL_ENABLED", "False") not in ("false", "False"):
 
     plater_service_name = PLATER_TITLE
     resource = Resource(attributes={
-        SERVICE_NAME: os.environ.get("OTEL_SERVICE_NAME", plater_service_name),
+        SERVICE_NAME: config.get("OTEL_SERVICE_NAME", plater_service_name),
     })
     provider = TracerProvider(resource=resource)
     if OTEL_USE_CONSOLE_EXPORTER:
         processor = BatchSpanProcessor(ConsoleSpanExporter())
     else:
-        otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost").rstrip('/')
+        otlp_endpoint = config.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost").rstrip('/')
         otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}/v1/traces')
         processor = BatchSpanProcessor(otlp_exporter)
 
