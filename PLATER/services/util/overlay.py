@@ -1,5 +1,7 @@
 from PLATER.services.util.graph_adapter import GraphInterface
-from PLATER.services.util.question import Question, cypher_expression, RESERVED_NODE_PROPS
+from PLATER.services.util.question import Question
+from reasoner_transpiler.cypher import RESERVED_NODE_PROPS, transform_attributes
+import reasoner_transpiler.cypher_expression as cypher_expression
 import os
 import json
 
@@ -78,25 +80,15 @@ class Overlay:
         :return:
         """
         result = {}
+        core_attributes = ['subject', 'object', 'predicate', 'id']
         for r in result_set:
-            edge = r['edge']
-            core_attributes = ['subject', 'object', 'predicate', 'id']
-            attributes = []
             new_edge = {attr: r['edge'][attr] for attr in core_attributes}
-            for attribute in edge:
-                if attribute not in core_attributes:
-                    attributes.append({
-                        'original_attribute_name': attribute,
-                        'value': edge[attribute]
-                    })
-            new_edge['attributes'] = attributes
-
-            edge = Question({}).format_attribute_trapi({'edge': new_edge})['edge']
-            source_id = edge['subject']
-            target_id = edge['object']
+            new_edge.update(transform_attributes(r['edge']))
+            source_id = new_edge['subject']
+            target_id = new_edge['object']
             m = result.get(source_id, {})
             n = m.get(target_id, list())
-            n.append(edge)
+            n.append(new_edge)
             m[target_id] = n
             result[source_id] = m
         return result
@@ -104,14 +96,17 @@ class Overlay:
     async def annotate_node(self, message):
         node_ids = list(message['knowledge_graph'].get('nodes').keys())
         node_ids = cypher_expression.dumps(node_ids)
-        # skip name , id , categories from being returned in attributes array
-        core_properties = cypher_expression.dumps(RESERVED_NODE_PROPS + ['name'])
+        # skip RESERVED_NODE_PROPS from being returned in attributes array
+        core_properties = cypher_expression.dumps(RESERVED_NODE_PROPS)
         # mapping for attributes
         attribute_types = cypher_expression.dumps(ATTRIBUTE_TYPES)
-        response = self.graph_interface.convert_to_dict(
-            await self.graph_interface.get_nodes(node_ids, core_properties, attribute_types)
-        )[0]['result']
-        response = Question({}).format_attribute_trapi(response, self.graph_interface)
+        response = await self.graph_interface.get_nodes(node_ids,
+                                                        core_properties,
+                                                        attribute_types,
+                                                        convert_to_dict=True)[0]
+        response = {
+            node_id: transform_attributes(node) for node_id, node in response.items()
+        }
         # overides based on original attribute names
         for n_id in message['knowledge_graph']['nodes']:
             current_node = message['knowledge_graph']['nodes'][n_id]
