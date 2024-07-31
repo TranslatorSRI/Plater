@@ -3,7 +3,7 @@ FROM neo4j:5.22.0
 ARG APOC_VERSION=5.22.0
 ENV APOC_URI https://github.com/neo4j/apoc/releases/download/${APOC_VERSION}/apoc-${APOC_VERSION}-core.jar
 
-ARG GDS_VERSION=2.7.0
+ARG GDS_VERSION=2.8.0
 ENV GDS_URL https://graphdatascience.ninja/neo4j-graph-data-science-${GDS_VERSION}.zip
 
 RUN apt-get update
