@@ -29,7 +29,7 @@ if VALUE_TYPES:
     set_custom_attribute_value_types(VALUE_TYPES)
 # an optional list of attributes to skip/ignore when processing cypher results and formatting them into TRAPI
 if SKIP_LIST:
-    set_custom_attribute_value_types(SKIP_LIST)
+    set_custom_attribute_skip_list(SKIP_LIST)
 
 
 class Question:
