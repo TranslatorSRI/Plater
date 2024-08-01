@@ -317,6 +317,7 @@ if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("fals
             profiler.start()
             await call_next(request)
             profiler.stop()
-            return ORJSONResponse(profiler.output(renderer=SpeedscopeRenderer()))
+            speedscope_results = profiler.output(renderer=SpeedscopeRenderer())
+            return Response(content=speedscope_results, media_type='application/json')
         else:
             return await call_next(request)
