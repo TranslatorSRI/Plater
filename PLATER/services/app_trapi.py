@@ -1,6 +1,5 @@
 """FastAPI app."""
 from fastapi import Body, Depends, FastAPI, Response, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse, RedirectResponse
 from typing import Any, Dict, List
 from pydantic import ValidationError
@@ -309,7 +308,6 @@ APP.add_api_route(
 if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("false", "False")):
     from pyinstrument import Profiler
     from pyinstrument.renderers import SpeedscopeRenderer
-    from fastapi.responses import HTMLResponse
 
     @APP.middleware("http")
     async def profile_request(request: Request, call_next):
@@ -319,6 +317,6 @@ if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("fals
             profiler.start()
             await call_next(request)
             profiler.stop()
-            return HTMLResponse(profiler.output(renderer=SpeedscopeRenderer()))
+            return ORJSONResponse(profiler.output(renderer=SpeedscopeRenderer()))
         else:
             return await call_next(request)
