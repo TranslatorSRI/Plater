@@ -41,7 +41,9 @@ if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
     if OTEL_USE_CONSOLE_EXPORTER:
         processor = BatchSpanProcessor(ConsoleSpanExporter())
     else:
-        otlp_endpoint = config.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost").rstrip('/')
+        otlp_host = config.get("JAEGER_HOST", "http://localhost/").rstrip('/')
+        otlp_port = config.get("JAEGER_PORT", "4317")
+        otlp_endpoint = f'{otlp_host}:{otlp_port}'
         otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}/v1/traces')
         processor = BatchSpanProcessor(otlp_exporter)
 
