@@ -5,6 +5,7 @@ import time
 import neo4j
 import asyncio
 
+import neo4j.exceptions
 from neo4j import unit_of_work
 from opentelemetry import trace
 from collections import defaultdict
@@ -146,7 +147,7 @@ class Neo4jBoltDriver:
         except Exception as e:
             if counter > max_retries:
                 logger.error(f'Waited too long for Neo4j initialization... giving up..')
-                raise RuntimeError('Connection to Neo4j could not be established.')
+                raise neo4j.exceptions.ServiceUnavailable('Connection to Neo4j could not be established.')
             logger.info(f'Pinging Neo4j failed, trying again... {repr(e)}')
             time.sleep(10)
             return self.ping(counter + 1)
@@ -498,9 +499,14 @@ class GraphInterface:
             :return: value of the node in neo4j.
             :rtype: list
             """
+            if not node_type.startswith('biolink'):
+                return []
             query = f"MATCH (c:`{node_type}`{{id: '{curie}'}}) return c"
             response = await self.driver.run(query, convert_to_dict=True)
-            return [response[0]['c']]
+            if response and 'c' in response[0]:
+                return [response[0]['c']]
+            else:
+                return []
 
         async def get_single_hops(self, source_type: str, target_type: str, curie: str) -> list:
             """
