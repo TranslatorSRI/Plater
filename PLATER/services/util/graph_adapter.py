@@ -3,6 +3,7 @@ import traceback
 import httpx
 import time
 import neo4j
+import asyncio
 
 from neo4j import unit_of_work
 from opentelemetry import trace
@@ -28,7 +29,7 @@ class Neo4jBoltDriver:
                  database_name: str = 'neo4j'):
         self.database_name = database_name
         self.graph_db_uri = f'bolt://{host}:{port}'
-        self.neo4j_driver = neo4j.AsyncGraphDatabase.driver(self.graph_db_uri, auth=auth)
+        self.neo4j_driver = asyncio.run(self.get_async_driver(auth))
         self.sync_neo4j_driver = neo4j.GraphDatabase.driver(self.graph_db_uri, auth=auth)
         self._supports_apoc = None
         logger.debug('PINGING NEO4J')
@@ -36,6 +37,9 @@ class Neo4jBoltDriver:
         logger.debug('CHECKING IF NEO4J SUPPORTS APOC')
         self.check_apoc_support()
         logger.debug(f'SUPPORTS APOC : {self._supports_apoc}')
+
+    async def get_async_driver(self, auth):
+        return neo4j.AsyncGraphDatabase.driver(self.graph_db_uri, auth=auth)
 
     @staticmethod
     @unit_of_work(timeout=NEO4J_QUERY_TIMEOUT)
