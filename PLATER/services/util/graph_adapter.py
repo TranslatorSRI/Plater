@@ -99,18 +99,19 @@ class Neo4jBoltDriver:
                                                               convert_to_dict=convert_to_dict,
                                                               convert_to_trapi=convert_to_trapi,
                                                               qgraph=qgraph)
-            except neo4j.exceptions.ClientError as e:
+            except neo4j.exceptions.Neo4jError as e:
                 if return_errors:
+                    logger.error(e)
                     return {"results": [],
                             "errors": [{"code": e.code,
                                         "message": e.message}]}
                 raise e
             except (neo4j.exceptions.DriverError, neo4j.exceptions.ServiceUnavailable) as e:
                 if return_errors:
+                    logger.error(e)
                     return {"results": [],
                             "errors": [{"code": "",
                                         "message": f'A driver error occurred: {e}'}]}
-                raise e
             return run_async_result
 
     def run_sync(self,
@@ -124,14 +125,16 @@ class Neo4jBoltDriver:
                                                        query,
                                                        query_parameters=query_parameters,
                                                        convert_to_dict=convert_to_dict)
-            except neo4j.exceptions.ClientError as e:
+            except neo4j.exceptions.Neo4jError as e:
                 if return_errors:
+                    logger.error(e)
                     return {"results": [],
                             "errors": [{"code": e.code,
                                         "message": e.message}]}
                 raise e
             except (neo4j.exceptions.DriverError, neo4j.exceptions.ServiceUnavailable) as e:
                 if return_errors:
+                    logger.error(e)
                     return {"results": [],
                             "errors": [{"code": "",
                                         "message": f'A driver error occurred: {e}'}]}
