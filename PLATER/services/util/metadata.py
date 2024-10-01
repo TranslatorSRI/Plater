@@ -26,6 +26,8 @@ class GraphMetadata:
             self.metadata = None
             self._retrieve_metadata()
             self.meta_kg = None
+            self.meta_kg_response = None
+            self.predicates_in_graph = set()
             self._retrieve_meta_kg()
             self.sri_testing_data = None
             self._retrieve_sri_test_data()
@@ -57,11 +59,13 @@ class GraphMetadata:
                     MetaKnowledgeGraph.parse_obj(self.meta_kg)
                     logger.info('Successfully validated meta kg')
 
+                    for edge in self.meta_kg['edges']:
+                        self.predicates_in_graph.add(edge['predicate'])
+
                     # create an already-encoded object that is ready to be returned quickly
                     self.meta_kg_response = jsonable_encoder(self.meta_kg)
                 except ValidationError as e:
                     logger.error(f'Error validating meta kg: {e}')
-                    self.meta_kg_response = None
 
         def get_sri_testing_data(self):
             return self.sri_testing_data

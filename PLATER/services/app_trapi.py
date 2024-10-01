@@ -14,6 +14,7 @@ from PLATER.models.shared import MetaKnowledgeGraph, SRITestData
 from PLATER.services.util.api_utils import (
     get_graph_interface, get_example, CustomORJSONResponse
 )
+from PLATER.services.util.attribute_mapping import ATTRIBUTE_SKIP_LIST, ATTRIBUTE_TYPES
 from PLATER.services.util.bl_helper import BLHelper, get_bl_helper
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import get_graph_metadata, GraphMetadata
@@ -22,6 +23,8 @@ from PLATER.services.util.question import Question
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 
+from reasoner_transpiler.attributes import set_custom_attribute_types, set_custom_attribute_skip_list
+from reasoner_transpiler.matching import set_predicates_in_graph
 
 APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs')
 
@@ -30,6 +33,19 @@ logger = LoggingUtil.init_logging(
     config.get('logging_level'),
     config.get('logging_format'),
 )
+
+# these are optional custom mappings that are applied in reasoner-transpiler
+# if set they override default attribute type mappings, or attributes on attributes in TRAPI results
+if ATTRIBUTE_TYPES:
+    set_custom_attribute_types(ATTRIBUTE_TYPES)
+# an optional list of attributes to skip/ignore when processing cypher results and formatting them into TRAPI
+if ATTRIBUTE_SKIP_LIST:
+    set_custom_attribute_skip_list(ATTRIBUTE_SKIP_LIST)
+# the set of all predicates in the meta_knowledge_graph,
+# to be used for filtering predicates from queries/predicate descendant expansion,
+# possibly responding that a query cannot possibly have results
+# if no meta kg is provided then all predicates are permitted
+set_predicates_in_graph(get_graph_metadata().predicates_in_graph)
 
 # get an example query for the /query endpoint, to be included in the open api spec
 # it would be nice to use Depends() for the graph metadata here, as it's used elsewhere,
