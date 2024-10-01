@@ -1,6 +1,4 @@
 """FastAPI app."""
-import os
-
 from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
 from PLATER.services.app_trapi import APP
@@ -44,7 +42,7 @@ if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
         otlp_host = config.get("JAEGER_HOST", "http://localhost/").rstrip('/')
         otlp_port = config.get("JAEGER_PORT", "4317")
         otlp_endpoint = f'{otlp_host}:{otlp_port}'
-        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}/v1/traces')
+        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}')
         processor = BatchSpanProcessor(otlp_exporter)
 
     provider.add_span_processor(processor)
