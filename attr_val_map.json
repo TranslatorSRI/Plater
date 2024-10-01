@@ -1,11 +1,80 @@
 {
   "attribute_type_map": {
-      "equivalent_identifiers": "biolink:same_as",
-      "endogenous": "aragorn:endogenous"
-  },
-  "value_type_map": {
-      "equivalent_identifiers": "linkml:Uriorcurie",
-      "endogenous": "xsd:boolean",
-      "publications": "linkml:Uriorcurie"
+    "agent_type": {
+        "attribute_type_id": "biolink:agent_type",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "definition": {
+        "attribute_type_id": "dct:description",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "description": {
+        "attribute_type_id": "dct:description",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "expressed_in": {
+        "attribute_type_id": "biolink:expressed_in",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "frequency_qualifier": {
+        "attribute_type_id": "biolink:frequency_qualifier",
+        "value_type_id": "UO:0000105"
+    },
+    "knowledge_level": {
+        "attribute_type_id": "biolink:knowledge_level",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "object_aspect_qualifier": {
+        "attribute_type_id": "biolink:object_aspect_qualifier",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "object_direction_qualifier": {
+        "attribute_type_id": "biolink:object_direction_qualifier",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "onset_qualifier": {
+        "attribute_type_id": "biolink:onset_qualifier",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "p_value": {
+        "attribute_type_id": "biolink:p_value",
+        "value_type_id": "xsd:float"
+    },
+    "protein": {
+        "attribute_type_id": "biolink:Protein",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "publications": {
+        "attribute_type_id": "biolink:publications",
+        "value_type_id": "linkml:Uriorcurie"
+    },
+    "qualified_predicate": {
+        "attribute_type_id": "biolink:qualified_predicate",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "sex_qualifier": {
+        "attribute_type_id": "biolink:sex_qualifier",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "species_context_qualifier": {
+        "attribute_type_id": "biolink:species_context_qualifier",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "stage_qualifier": {
+        "attribute_type_id": "biolink:stage_qualifier",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "symbol": {
+        "attribute_type_id": "biolink:symbol",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "taxon": {
+        "attribute_type_id": "biolink:OrganismTaxon",
+        "value_type_id": "EDAM:data_0006"
+    },
+    "url": {
+        "attribute_type_id": "biolink:url",
+        "value_type_id": "xsd:string"
+    }
   }
 }

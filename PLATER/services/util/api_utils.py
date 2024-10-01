@@ -12,15 +12,13 @@ from PLATER.services.config import config
 
 def get_graph_interface():
     """Get graph interface."""
-    protocol = config.get('NEO4J_PROTOCOL', 'bolt')
     return GraphInterface(
         host=config.get('NEO4J_HOST', 'localhost'),
-        port=config.get('NEO4J_BOLT_PORT', '7687') if protocol == 'bolt' else config.get('NEO4J_HTTP_PORT', '7474'),
+        port=config.get('NEO4J_BOLT_PORT', '7687'),
         auth=(
             config.get('NEO4J_USERNAME'),
             config.get('NEO4J_PASSWORD')
-        ),
-        protocol=protocol
+        )
     )
 
 
