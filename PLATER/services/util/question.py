@@ -5,10 +5,8 @@ import time
 from secrets import token_hex
 from opentelemetry import trace
 from PLATER.services.util.graph_adapter import GraphInterface
-from reasoner_transpiler.cypher import get_query, set_custom_attribute_types, set_custom_attribute_value_types, \
-    set_custom_attribute_skip_list
+from reasoner_transpiler.cypher import get_query
 from PLATER.services.config import config, get_positive_int_from_config
-from PLATER.services.util.attribute_mapping import SKIP_LIST, ATTRIBUTE_TYPES, VALUE_TYPES
 from PLATER.services.util.logutil import LoggingUtil
 
 logger = LoggingUtil.init_logging(
@@ -18,18 +16,7 @@ logger = LoggingUtil.init_logging(
 )
 
 # get these configurable options from the config or use the default
-RESULTS_LIMIT = get_positive_int_from_config('RESULTS_LIMIT', None)
 SUBCLASS_DEPTH = get_positive_int_from_config('SUBCLASS_DEPTH', 1)
-
-# these are optional custom mappings that are applied in reasoner-transpiler
-# if set they override default or biolink derived attribute type ids and value type ids for attributes in TRAPI results
-if ATTRIBUTE_TYPES:
-    set_custom_attribute_types(ATTRIBUTE_TYPES)
-if VALUE_TYPES:
-    set_custom_attribute_value_types(VALUE_TYPES)
-# an optional list of attributes to skip/ignore when processing cypher results and formatting them into TRAPI
-if SKIP_LIST:
-    set_custom_attribute_skip_list(SKIP_LIST)
 
 
 class Question:
@@ -69,7 +56,6 @@ class Question:
 
         # compile a cypher query and return a string
         cypher = self.compile_cypher(**{"use_hints": True,
-                                        "limit": RESULTS_LIMIT,
                                         "subclass_depth": SUBCLASS_DEPTH})
 
         # convert the incoming TRAPI query into a string for logging and tracing
