@@ -24,7 +24,7 @@ class Question:
     QUERY_GRAPH_KEY = 'query_graph'
     KG_ID_KEY = 'ids'
     QG_ID_KEY = 'ids'
-    ANSWERS_KEY = 'results'
+    RESULTS_KEY = 'results'
     KNOWLEDGE_GRAPH_KEY = 'knowledge_graph'
     NODES_LIST_KEY = 'nodes'
     EDGES_LIST_KEY = 'edges'
