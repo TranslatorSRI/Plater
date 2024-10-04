@@ -1,4 +1,5 @@
 """FastAPI app."""
+import neo4j.exceptions
 from fastapi import Body, Depends, FastAPI, Response, Request
 from fastapi.responses import ORJSONResponse, RedirectResponse
 from typing import Any, Dict, List
@@ -113,24 +114,29 @@ async def reasoner_api(
     """Handle /query TRAPI request."""
     request_json = request.dict(by_alias=True)
     # use lookup as the default workflow
-    workflow = request_json.get('workflow') or [{"id": "lookup"}]
-    workflows = {wkfl['id']: wkfl for wkfl in workflow}
-
-    if 'lookup' in workflows:
-        question = Question(request_json["message"])
-        try:
+    workflows = request_json.get('workflow') or [{"id": "lookup"}]
+    workflow_ids = {wkfl['id']: wkfl for wkfl in workflows}
+    try:
+        if 'lookup' in workflow_ids:
+            question = Question(request_json["message"])
             response_message = await question.answer(graph_interface)
-            request_json.update({'message': response_message, 'workflow': workflow})
-        except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError) as e:
-            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
-    elif 'overlay_connect_knodes' in workflows:
-        overlay = Overlay(graph_interface=graph_interface)
-        response_message = await overlay.connect_k_nodes(request_json['message'])
-        request_json.update({'message': response_message, 'workflow': workflow})
-    elif 'annotate_nodes' in workflows:
-        overlay = Overlay(graph_interface=graph_interface)
-        response_message = await overlay.annotate_node(request_json['message'])
-        request_json.update({'message': response_message, 'workflow': workflow})
+            request_json.update({'message': response_message, 'workflow': workflows})
+        elif 'overlay_connect_knodes' in workflow_ids:
+            overlay = Overlay(graph_interface=graph_interface)
+            response_message = await overlay.connect_k_nodes(request_json['message'])
+            request_json.update({'message': response_message, 'workflow': workflows})
+        elif 'annotate_nodes' in workflow_ids:
+            overlay = Overlay(graph_interface=graph_interface)
+            response_message = await overlay.annotate_node(request_json['message'])
+            request_json.update({'message': response_message, 'workflow': workflows})
+    except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError) as e:
+        return CustomORJSONResponse(status_code=422, content={"description": str(e)}, media_type="application/json")
+    except neo4j.exceptions.Neo4jError as e:
+        error_response = {"errors": [{"code": e.code, "message": e.message}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
+    except neo4j.exceptions.DriverError as e:
+        error_response = {"errors": [{"message": str(e)}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
 
     if validate:
         try:
@@ -169,21 +175,29 @@ async def cypher(
             example={"query": "MATCH (n) RETURN count(n)"},
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> CypherResponse:
+) -> CustomORJSONResponse:
     """Handle cypher."""
     request = request.dict()
-    results = await graph_interface.run_cypher(
-        request["query"],
-        return_errors=True,
-    )
-    return results
+    try:
+        results = await graph_interface.run_cypher(
+            request["query"]
+        )
+        return CustomORJSONResponse(content=results, media_type="application/json")
+    except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError) as e:
+        return CustomORJSONResponse(status_code=422, content={"description": str(e)}, media_type="application/json")
+    except neo4j.exceptions.Neo4jError as e:
+        error_response = {"errors": [{"code": e.code, "message": e.message}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
+    except neo4j.exceptions.DriverError as e:
+        error_response = {"errors": [{"message": str(e)}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
 
 
 APP.add_api_route(
     "/cypher",
     cypher,
     methods=["POST"],
-    response_model=CypherResponse,
+    response_model=None,
     summary="Run a Neo4j cypher query.",
     description=(
         "Runs a cypher query against the Neo4j instance, and returns an "
