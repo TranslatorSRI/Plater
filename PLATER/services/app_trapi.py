@@ -6,7 +6,8 @@ from typing import Any, Dict, List
 from pydantic import ValidationError
 
 from reasoner_transpiler.exceptions import (
-    InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError
+    InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError,
+    NoPossibleResultsException
 )
 from PLATER.models.models_trapi_1_0 import (
     Message, ReasonerRequest, CypherRequest, SimpleSpecResponse, SimpleSpecElement, CypherResponse
@@ -47,6 +48,9 @@ if ATTRIBUTE_SKIP_LIST:
 # possibly responding that a query cannot possibly have results
 # if no meta kg is provided then all predicates are permitted
 set_predicates_in_graph(get_graph_metadata().predicates_in_graph)
+HAS_SUBCLASS_EDGES = True if 'biolink:subclass_of' in get_graph_metadata().predicates_in_graph else False
+if not HAS_SUBCLASS_EDGES:
+    logger.info(f'No subclass edges in the graph according to the meta_knowledge_graph, subclassing = OFF.')
 
 # get an example query for the /query endpoint, to be included in the open api spec
 # it would be nice to use Depends() for the graph metadata here, as it's used elsewhere,
@@ -108,6 +112,7 @@ async def reasoner_api(
         # it's here so that it's documented in the open api spec, and it's used by pyinstrument in profile_request
         profile: bool = False,
         validate: bool = False,
+        subclass: bool = True,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> CustomORJSONResponse:
 
@@ -118,8 +123,9 @@ async def reasoner_api(
     workflow_ids = {wkfl['id']: wkfl for wkfl in workflows}
     try:
         if 'lookup' in workflow_ids:
+            do_subclassing = subclass and HAS_SUBCLASS_EDGES
             question = Question(request_json["message"])
-            response_message = await question.answer(graph_interface)
+            response_message = await question.answer(graph_interface, subclass_inference=do_subclassing)
             request_json.update({'message': response_message, 'workflow': workflows})
         elif 'overlay_connect_knodes' in workflow_ids:
             overlay = Overlay(graph_interface=graph_interface)
@@ -129,8 +135,8 @@ async def reasoner_api(
             overlay = Overlay(graph_interface=graph_interface)
             response_message = await overlay.annotate_node(request_json['message'])
             request_json.update({'message': response_message, 'workflow': workflows})
-    except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError) as e:
-        return CustomORJSONResponse(status_code=422, content={"description": str(e)}, media_type="application/json")
+    except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError, NoPossibleResultsException) as e:
+        return CustomORJSONResponse(status_code=422, content={"message": str(e)}, media_type="application/json")
     except neo4j.exceptions.Neo4jError as e:
         error_response = {"errors": [{"code": e.code, "message": e.message}]}
         return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")

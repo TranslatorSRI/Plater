@@ -43,10 +43,11 @@ class Question:
     def compile_cypher(self, **kwargs):
         return get_query(self._transpiler_qgraph, **kwargs)
 
-    async def answer(self, graph_interface: GraphInterface):
+    async def answer(self, graph_interface: GraphInterface, subclass_inference=True):
         """
         Updates the query graph with answers from the neo4j backend
         :param graph_interface: interface for neo4j
+        :param subclass_inference: whether to search for additional results that match subclasses of query nodes
         :return: None
         """
         # get a reference to the current opentelemetry span
@@ -56,6 +57,7 @@ class Question:
 
         # compile a cypher query and return a string
         cypher = self.compile_cypher(**{"use_hints": True,
+                                        "subclass": subclass_inference,
                                         "subclass_depth": SUBCLASS_DEPTH})
 
         # convert the incoming TRAPI query into a string for logging and tracing
