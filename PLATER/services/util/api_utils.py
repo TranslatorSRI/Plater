@@ -10,9 +10,9 @@ from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.config import config
 
 
-def get_graph_interface():
+async def get_graph_interface():
     """Get graph interface."""
-    return GraphInterface(
+    graph_interface = GraphInterface(
         host=config.get('NEO4J_HOST', 'localhost'),
         port=config.get('NEO4J_BOLT_PORT', '7687'),
         auth=(
@@ -20,6 +20,8 @@ def get_graph_interface():
             config.get('NEO4J_PASSWORD')
         )
     )
+    await graph_interface.connect_to_neo4j()
+    return graph_interface
 
 
 def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plater API'):

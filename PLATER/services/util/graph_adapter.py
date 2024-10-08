@@ -3,7 +3,6 @@ import traceback
 import httpx
 import time
 import neo4j
-import asyncio
 
 import neo4j.exceptions
 from neo4j import unit_of_work
@@ -31,17 +30,19 @@ class Neo4jBoltDriver:
         self.database_name = database_name
         self.database_auth = auth
         self.graph_db_uri = f'bolt://{host}:{port}'
-        self.neo4j_driver = asyncio.run(self.get_async_neo4j_driver())
+        self.neo4j_driver = None
         self.sync_neo4j_driver = None
+        self._supports_apoc = None
+
+    async def connect_to_neo4j(self):
         logger.debug('PINGING NEO4J')
         self.ping()
         logger.debug('CHECKING IF NEO4J SUPPORTS APOC')
-        self._supports_apoc = None
         self.check_apoc_support()
         logger.debug(f'SUPPORTS APOC : {self._supports_apoc}')
-
-    async def get_async_neo4j_driver(self):
-        return neo4j.AsyncGraphDatabase.driver(self.graph_db_uri, auth=self.database_auth)
+        self.neo4j_driver = neo4j.AsyncGraphDatabase.driver(self.graph_db_uri,
+                                                            auth=self.database_auth,
+                                                            **{'telemetry_disabled': True})
 
     @staticmethod
     @unit_of_work(timeout=NEO4J_QUERY_TIMEOUT)
@@ -233,6 +234,8 @@ class Neo4jHTTPDriver:
                 'Content-Type': 'application/json',
                 'Authorization': 'Basic %s' % base64.b64encode(f"{auth[0]}:{auth[1]}".encode('utf-8')).decode('utf-8')
             }
+
+    async def connect_to_neo4j(self):
         # ping and raise error if neo4j doesn't respond.
         logger.debug('PINGING NEO4J')
         self.ping()
@@ -395,6 +398,9 @@ class GraphInterface:
             # self.summary = None
             self.toolkit = get_biolink_model_toolkit()
             self.bl_version = config.get('BL_VERSION', '4.2.1')
+
+        async def connect_to_neo4j(self):
+            await self.driver.connect_to_neo4j()
 
         def find_biolink_leaves(self, biolink_concepts: list):
             """
@@ -688,3 +694,7 @@ class GraphInterface:
     def __getattr__(self, item):
         # proxy function calls to the inner object.
         return getattr(self.instance, item)
+
+    @staticmethod
+    async def connect_to_neo4j():
+        await GraphInterface.instance.connect_to_neo4j()
