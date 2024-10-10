@@ -2,6 +2,7 @@ import requests
 import os
 import yaml
 
+
 def get_metadata(url):
     # get the metadata and check the version, get the number of nodes that should be in the graph
     metadata_response = requests.get(f'{url}metadata')
@@ -11,8 +12,19 @@ def get_metadata(url):
     return metadata
 
 
-def make_cypher_call(url, cypher):
-    # query the graph with cypher
+def send_trapi_query(url, trapi_query, profile=False, validate=False):
+    trapi_url = f'{url}query?'
+    if profile:
+        trapi_url += 'profile=true'
+    elif validate:
+        trapi_url += 'validate=true'
+    trapi_query_response = requests.post(trapi_url, json=trapi_query)
+    if trapi_query_response.status_code != 200:
+        trapi_query_response.raise_for_status()
+    return trapi_query_response.json()
+
+
+def send_cypher_query(url, cypher):
     cypher_query_payload = {"query": cypher}
     cypher_response = requests.post(f'{url}cypher', json=cypher_query_payload)
     if cypher_response.status_code != 200:
@@ -53,16 +65,13 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
     results['expected_number_of_edges'] = expected_number_of_edges
 
     # query the graph with cypher to check if the neo4j instance is up and has the right number of nodes
-    cypher_query_payload = {"query": f"MATCH (n) RETURN count(n)"}
-    cypher_response = requests.post(f'{url}cypher', json=cypher_query_payload)
-    if cypher_response.status_code != 200:
-        try:
-            cypher_response.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            results['validation_errors'].append(f'Running cypher query failed: {str(e)}')
-            return results
     try:
-        number_of_nodes = cypher_response.json()['results'][0]['data'][0]['row'][0]
+        cypher_response = send_cypher_query(url, "MATCH (n) RETURN count(n)")
+    except requests.exceptions.HTTPError as e:
+        results['validation_errors'].append(f'Running cypher query failed: {str(e)}')
+        return results
+    try:
+        number_of_nodes = cypher_response['results'][0]['data'][0]['row'][0]
         results['actual_number_of_nodes'] = number_of_nodes
     except KeyError:
         results['validation_errors'].append(f'Cypher query returned an invalid result.')
@@ -74,19 +83,15 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
         error_message = f'Metadata said there should be {expected_number_of_nodes} nodes, ' \
                         f'but cypher query returned: {number_of_nodes}.'
         results['validation_errors'].append(error_message)
-        return results
 
     # query the graph with cypher to check if the neo4j instance has the right number of edges
-    cypher_query_payload = {"query": f"MATCH (n)-[r]->(m) RETURN count(r)"}
-    cypher_response = requests.post(f'{url}cypher', json=cypher_query_payload)
-    if cypher_response.status_code != 200:
-        try:
-            cypher_response.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            results['validation_errors'].append(f'Running cypher query failed: {str(e)}')
-            return results
     try:
-        number_of_edges = cypher_response.json()['results'][0]['data'][0]['row'][0]
+        cypher_response = send_cypher_query(url, "MATCH (n)-[r]->(m) RETURN count(r)")
+    except requests.exceptions.HTTPError as e:
+        results['validation_errors'].append(f'Running cypher query failed: {str(e)}')
+        return results
+    try:
+        number_of_edges = cypher_response['results'][0]['data'][0]['row'][0]
         results['actual_number_of_edges'] = number_of_edges
     except KeyError:
         results['validation_errors'].append(f'Cypher query returned an invalid result.')
@@ -98,10 +103,13 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
         error_message = f'Metadata said there should be {expected_number_of_edges} edges, ' \
                         f'but cypher query returned: {number_of_edges}.'
         results['validation_errors'].append(error_message)
-        return results
 
     if run_warmup:
-        make_cypher_call(url, 'CALL apoc.warmup.run(True, True, True)')
+        try:
+            send_cypher_query(url, 'CALL apoc.warmup.run(True, True, True)')
+        except requests.exceptions.HTTPError as e:
+            results['validation_errors'].append(f'Running warmup cypher query failed: {str(e)}')
+            return results
 
     # get the open api spec and the example trapi query from it
     openapi_response = requests.get(f'{url}openapi.json')
@@ -116,36 +124,31 @@ def validate_plater(url, expected_version, expected_plater_version, expected_tra
     openapi_plater_version = openapi_spec['info']['version']
     if openapi_plater_version != expected_plater_version:
         results['validation_errors'].append(f'Expected plater version {expected_plater_version} but openapi says {openapi_plater_version}')
-        return results
 
     openapi_trapi_version = openapi_spec['info']['x-trapi']['version']
     if openapi_trapi_version != expected_trapi_version:
         results['validation_errors'].append(f'Expected TRAPI version {expected_trapi_version} but openapi says {openapi_trapi_version}')
-        return results
 
     example_trapi_query = openapi_spec['paths']['/query']['post']['requestBody']['content']['application/json']['example']
 
     # send the example trapi query and make sure it works
-    trapi_query_response = requests.post(f'{url}query', json=example_trapi_query)
-    if trapi_query_response.status_code != 200:
-        try:
-            cypher_response.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            results['validation_errors'].append(f'Sending a trapi query failed: {str(e)}')
-            return results
-    trapi_query_results = trapi_query_response.json()['message']
+    try:
+        trapi_query_response = send_trapi_query(url, example_trapi_query)
+    except requests.exceptions.HTTPError as e:
+        results['validation_errors'].append(f'Sending a trapi query failed: {str(e)}')
+        return results
+    trapi_query_results = trapi_query_response['message']
     if 'knowledge_graph' not in trapi_query_results or 'results' not in trapi_query_results:
         results['validation_errors'].append(f'Trapi query results were poorly formatted: {trapi_query_results}')
         return results
     if len(trapi_query_results['results']) == 0:
         results['validation_errors'].append(f'Example trapi query did not yield any results.')
-        return results
-    results['valid'] = True
+
+    results['valid'] = True if len(results['validation_errors']) == 0 else False
     return results
 
 
-def run_validation(deployments_to_validate=None):
-    deployments_to_validate = deployments_to_validate if deployments_to_validate else None
+def run_validation(deployments_to_validate=None, run_warmup=False):
     everything_is_good = True
     graph_deployment_spec_path = os.path.join(os.path.dirname(__file__), 'deployment_spec.yaml')
     with open(graph_deployment_spec_path) as graph_deployment_spec_file:
@@ -161,11 +164,12 @@ def run_validation(deployments_to_validate=None):
             trapi_version = deployment['trapi_version']
             plater_version = deployment['plater_version']
             for plater_id, graph_version in deployment['platers'].items():
+                print(f"Validating plater {automat_url}{plater_id}.")
                 validation_results = validate_plater(f'{automat_url}{plater_id}/',
                                                      graph_version,
                                                      plater_version,
                                                      trapi_version,
-                                                     run_warmup=False)
+                                                     run_warmup=run_warmup)
                 validation_errors = "\n".join(validation_results['validation_errors'])
                 if validation_errors:
                     everything_is_good = False
@@ -181,7 +185,10 @@ def run_validation(deployments_to_validate=None):
 
 if __name__ == '__main__':
     # to run for only certain environments
-    # run_validation(['dev', 'robokop'])
+    run_validation(['robokop'], run_warmup=True)
 
     # or all of them
-    run_validation()
+    # run_validation()
+
+
+

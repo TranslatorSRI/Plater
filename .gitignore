@@ -5,3 +5,4 @@ __pycache__
 kubernets
 *coverage
 .idea
+/deploy/performance_results

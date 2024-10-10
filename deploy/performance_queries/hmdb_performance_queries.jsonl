@@ -1,0 +1,1 @@
+{"query_name":"hmdb_example_1", "message":{"query_graph":{"nodes":{"n0":{"categories":["biolink:Pathway"],"ids":["SMPDB:SMP0000044"]},"n1":{"categories":["biolink:SmallMolecule"]}},"edges":{"e01":{"subject":"n0","object":"n1","predicates":["biolink:has_participant"]}}}},"workflow":[{"id":"lookup"}]}
