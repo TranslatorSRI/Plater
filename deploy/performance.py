@@ -62,8 +62,8 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
                                     print(f'Error occured after {duration} seconds: {e}.')
                                     plater_performance_results[plater][deployment_env][query_name]['errors'].append(str(e))
 
-                                average = sum(plater_performance_results[plater][deployment_env][query_name]['success_duration']) \
-                                          / len(plater_performance_results[plater][deployment_env][query_name]['success_duration'])
+                            success_durations = plater_performance_results[plater][deployment_env][query_name]['success_duration']
+                            average = sum(success_durations) / len(success_durations) if success_durations else "N/A"
                             print(f'Average time for {query_name} to {deployment_env}, {plater}: {average}')
     with open(f'./performance_results/performance_analysis_results_{random.randrange(100000)}.json', 'w') as p_out:
         p_out.write(json.dumps(plater_performance_results, indent=4))
@@ -72,11 +72,11 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
 if __name__ == '__main__':
 
     # environments = ['exp', 'dev', 'robokop']
-    environments = ['robokop']
+    environments = ['robokop', 'dev']
 
     performance_spec = {
          "robokopkg": {"files": ["./performance_queries/robokopkg_performance_queries.jsonl"],
-                       "queries": ["gene_to_chemical_qualifier_40"]}
+                       "queries": ["gene_to_chemical_qualifier_10"]}
         # "hmdb": {"files": ["./performance_queries/hmdb_performance_queries.jsonl"]}
     }
 
