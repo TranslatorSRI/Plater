@@ -32,7 +32,7 @@ if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
     plater_service_name = PLATER_TITLE
-    resource = Resource(attributes={
+    resource = Resource.create(attributes={
         SERVICE_NAME: config.get("OTEL_SERVICE_NAME", plater_service_name),
     })
     provider = TracerProvider(resource=resource)
