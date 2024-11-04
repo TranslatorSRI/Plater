@@ -26,7 +26,7 @@ deployments:
       hgnc: dee31cfce74e5944
       hmdb: 6715124699b6dbf0
       human-goa: 06f107a4e9e8e547
-      icees-kg: "4-11-2024"
+      icees-kg: "8-20-2024"
       intact: e5b936f966a02c2c
       monarch-kg: "2024-07-12"
       molepro: c8f64284fbeb81a9
@@ -39,7 +39,7 @@ deployments:
       viral-proteome: 8ca116ae0bba6945
   - deployment_environment: ci
     automat_url: https://automat.ci.transltr.io/
-    plater_version: v2.0.6
+    plater_version: v2.1.2
     trapi_version: 1.5.0
     platers:
       binding-db: 9164067231dc9b8c
@@ -66,7 +66,7 @@ deployments:
       viral-proteome: 8ca116ae0bba6945
   - deployment_environment: test
     automat_url: https://automat.test.transltr.io/
-    plater_version: v2.0.6
+    plater_version: v2.1.2
     trapi_version: 1.5.0
     platers:
       binding-db: 9164067231dc9b8c
@@ -135,7 +135,7 @@ deployments:
       hgnc: dee31cfce74e5944
       hmdb: 6715124699b6dbf0
       human-goa: 06f107a4e9e8e547
-      icees-kg: "4-11-2024"
+      icees-kg: "8-20-2024"
       intact: e5b936f966a02c2c
       monarch-kg: "2024-07-12"
       panther: c0189f14ba41da6c
