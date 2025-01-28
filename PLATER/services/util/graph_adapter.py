@@ -144,7 +144,8 @@ class Neo4jBoltDriver:
                                     "message": f'A driver error occurred: {e}'}]}
             raise e
         finally:
-            self.sync_neo4j_driver.close()
+            if self.sync_neo4j_driver:
+                self.sync_neo4j_driver.close()
             self.sync_neo4j_driver = None
 
     def ping(self, counter: int = 1, max_retries: int = 3):
