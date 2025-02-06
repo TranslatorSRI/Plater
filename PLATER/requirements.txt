@@ -13,4 +13,4 @@ opentelemetry-sdk==1.27.0
 opentelemetry-exporter-otlp-proto-grpc==1.27.0
 opentelemetry-instrumentation-fastapi==0.48b0
 pyinstrument==4.7.3
-neo4j==5.22.0
+neo4j==5.28.0
