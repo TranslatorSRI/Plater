@@ -35,7 +35,8 @@ class Neo4jBoltDriver:
     async def connect_to_neo4j(self, retries=0):
         self.neo4j_driver = neo4j.AsyncGraphDatabase.driver(self.graph_db_uri,
                                                             auth=self.database_auth,
-                                                            **{'telemetry_disabled': True})
+                                                            **{'telemetry_disabled': True,
+                                                               'max_connection_pool_size': 1000})
         try:
             await self.neo4j_driver.verify_connectivity()
         except Exception as e:  # currently the driver says it raises Exception, not something more specific
@@ -45,7 +46,8 @@ class Neo4jBoltDriver:
                 logger.error(f'Could not establish connection to neo4j, trying again... retry {retries + 1}')
                 await self.connect_to_neo4j(retries + 1)
             else:
-                raise neo4j.exceptions.ServiceUnavailable('Connection to Neo4j could not be established.')
+                logger.error(f'Could not establish connection to neo4j, error: {e}')
+                raise e
 
     @staticmethod
     @unit_of_work(timeout=NEO4J_QUERY_TIMEOUT)
