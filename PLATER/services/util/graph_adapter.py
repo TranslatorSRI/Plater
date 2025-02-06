@@ -33,16 +33,17 @@ class Neo4jBoltDriver:
         self._supports_apoc = None
 
     async def connect_to_neo4j(self, retries=0):
-        self.neo4j_driver = neo4j.AsyncGraphDatabase.driver(self.graph_db_uri,
-                                                            auth=self.database_auth,
-                                                            **{'telemetry_disabled': True,
-                                                               'max_connection_pool_size': 1000})
+        if not self.neo4j_driver:
+            self.neo4j_driver = neo4j.AsyncGraphDatabase.driver(self.graph_db_uri,
+                                                                auth=self.database_auth,
+                                                                **{'telemetry_disabled': True,
+                                                                   'max_connection_pool_size': 1000})
         try:
             await self.neo4j_driver.verify_connectivity()
         except Exception as e:  # currently the driver says it raises Exception, not something more specific
             await self.neo4j_driver.close()
-            if retries <= 3:
-                await asyncio.sleep(5)
+            if retries <= 25:
+                await asyncio.sleep(8)
                 logger.error(f'Could not establish connection to neo4j, trying again... retry {retries + 1}')
                 await self.connect_to_neo4j(retries + 1)
             else:
@@ -94,29 +95,38 @@ class Neo4jBoltDriver:
                   convert_to_dict=False,
                   convert_to_trapi=False,
                   qgraph=None):
-
-        async with self.neo4j_driver.session(database=self.database_name, default_access_mode=neo4j.READ_ACCESS) as session:
-            try:
+        try:
+            async with self.neo4j_driver.session(database=self.database_name,
+                                                 default_access_mode=neo4j.READ_ACCESS) as session:
                 run_async_result = await session.execute_read(self._async_cypher_tx_function,
                                                               query,
                                                               query_parameters=query_parameters,
                                                               convert_to_dict=convert_to_dict,
                                                               convert_to_trapi=convert_to_trapi,
                                                               qgraph=qgraph)
-            except neo4j.exceptions.Neo4jError as e:
-                logger.error(e)
-                if return_errors:
-                    return {"results": [],
-                            "errors": [{"code": e.code,
-                                        "message": e.message}]}
-                raise e
-            except neo4j.exceptions.DriverError as e:
-                logger.error(e)
-                if return_errors:
-                    return {"results": [],
-                            "errors": [{"message": f'A driver error occurred: {e}'}]}
-                raise e
-            return run_async_result
+        except neo4j.exceptions.ServiceUnavailable as e:
+            logger.error(f'Session could not establish connection to neo4j ({e}).. trying to connect again')
+            await self.connect_to_neo4j()
+            return await self.run(query,
+                                  query_parameters=query_parameters,
+                                  return_errors=return_errors,
+                                  convert_to_dict=convert_to_dict,
+                                  convert_to_trapi=convert_to_trapi,
+                                  qgraph=qgraph)
+        except neo4j.exceptions.Neo4jError as e:
+            logger.error(e)
+            if return_errors:
+                return {"results": [],
+                        "errors": [{"code": e.code,
+                                    "message": e.message}]}
+            raise e
+        except neo4j.exceptions.DriverError as e:
+            logger.error(e)
+            if return_errors:
+                return {"results": [],
+                        "errors": [{"message": f'A driver error occurred: {e}'}]}
+            raise e
+        return run_async_result
 
     def run_sync(self,
                  query,
