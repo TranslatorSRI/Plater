@@ -391,8 +391,9 @@ class GraphInterface:
 
             query += f'(m:`{category}`)' if category else '(m)'
 
-            query += ' return distinct type(r) as predicate, properties(r) as edge_properties, m.id as m_id, ' \
-                     'm.name as m_name, labels(m) as m_labels ORDER BY m_id'
+            query += ' return distinct type(r) as predicate, properties(r) as edge_properties, ' \
+                     'CASE WHEN id(m) = id(startNode(r)) THEN "<" ELSE ">" END AS edge_direction, ' \
+                     'm.id as m_id, m.name as m_name, labels(m) as m_labels ORDER BY m_id'
 
             if offset is not None:
                 query += f' OFFSET {offset}'
@@ -403,6 +404,7 @@ class GraphInterface:
             response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie,
                                                                                             'predicate': predicate})
             rows = [{'edge': {'predicate': record['predicate'],
+                              'direction': record['edge_direction'],
                               'properties': record['edge_properties']},
                      'adj_node': {'id': record['m_id'],
                                   'name': record['m_name'],
