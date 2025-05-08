@@ -28,6 +28,7 @@ class GraphMetadata:
             self.meta_kg = None
             self.meta_kg_response = None
             self.predicates_in_graph = set()
+            self.node_categories_in_graph = set()
             self._retrieve_meta_kg()
             self.sri_testing_data = None
             self._retrieve_sri_test_data()
@@ -59,8 +60,12 @@ class GraphMetadata:
                     MetaKnowledgeGraph.parse_obj(self.meta_kg)
                     logger.info('Successfully validated meta kg')
 
+                    self.node_categories_in_graph = set(self.meta_kg['nodes'].keys())
+                    logger.info(f'Used meta kg to determine node categories in graph: {self.node_categories_in_graph}')
+
                     for edge in self.meta_kg['edges']:
                         self.predicates_in_graph.add(edge['predicate'])
+                    logger.info(f'Used meta kg to determine predicates in graph: {self.predicates_in_graph}')
 
                     # create an already-encoded object that is ready to be returned quickly
                     self.meta_kg_response = jsonable_encoder(self.meta_kg)

@@ -40,12 +40,21 @@ class MockGraphInterface(GraphInterface):
                         'target_label': [target_type]})
         return flat_schema
 
-    async def get_node(self, node_type, curie):
+    async def get_node(self, curie):
+        # TODO node_list.json is no longer a valid representation of what this function returns
+        # that's not exactly what these tests test anyway but we might want to fix it for future tests
         node_list_file_path = os.path.join(os.path.dirname(__file__), 'data', 'node_list.json')
         with open(node_list_file_path) as j_file:
             return json.load(j_file)
 
-    async def get_single_hops(self, source_type, target_type, curie):
+    async def get_single_hops(self,
+                              curie: str,
+                              category: str = None,
+                              predicate: str = None,
+                              limit: int = None,
+                              offset: int = None):
+        # TODO single_hop_triplets.json is no longer a valid representation of what this function returns
+        # that's not exactly what these tests test anyway but we might want to fix it for future tests
         single_hop_triplets_file_path = os.path.join(os.path.dirname(__file__), 'data', 'single_hop_triplets.json')
         with open(single_hop_triplets_file_path) as j_file:
             return json.load(j_file)
@@ -102,18 +111,18 @@ APP.dependency_overrides[get_graph_metadata] = _graph_metadata
 @pytest.mark.asyncio
 async def test_node_response(graph_interface):
     async with AsyncClient(transport=ASGITransport(app=APP), base_url="http://test") as ac:
-        response = await ac.get("/chemical_substance/curie")
+        response = await ac.get("/node/curie")
     assert response.status_code == 200
-    graph_response = await graph_interface.get_node('chemical_substance', 'curie')
+    graph_response = await graph_interface.get_node('curie')
     assert response.json() == graph_response
 
 
 @pytest.mark.asyncio
 async def test_one_hop_response(graph_interface):
     async with AsyncClient(transport=ASGITransport(app=APP), base_url="http://test") as ac:
-        response = await ac.get("/chemical_substance/gene/CHEBI:11492")
+        response = await ac.get("/edges/CHEBI:11492")
     assert response.status_code == 200
-    graph_response = await graph_interface.get_single_hops('chemical_substance', 'gene', 'CHEBI:11492')
+    graph_response = await graph_interface.get_single_hops('CHEBI:11492')
     assert response.json() == graph_response
 
 

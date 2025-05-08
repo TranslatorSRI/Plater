@@ -165,19 +165,19 @@ async def test_driver_convert_to_dict():
 @pytest.mark.asyncio
 async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
     gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='bolt')
-    list_1 = [
+    set_1 = frozenset([
       "biolink:SmallMolecule",
       "biolink:MolecularEntity",
       "biolink:ChemicalEntity",
       "biolink:PhysicalEssence",
       "biolink:NamedThing",
       "biolink:Entity",
-      "biolink:PhysicalEssenceOrOccurrent"
-    ]
-    assert gi.find_biolink_leaves(list_1) == set(["biolink:SmallMolecule"])
-    include_mixins = ["biolink:SmallMolecule",
-                      "biolink:MolecularEntity",
-                      "biolink:ChemicalOrDrugOrTreatment"]
+      "biolink:PhysicalEssenceOrOccurrent"]
+    )
+    assert gi.find_biolink_leaves(set_1) == set(["biolink:SmallMolecule"])
+    include_mixins = frozenset(["biolink:SmallMolecule",
+                                "biolink:MolecularEntity",
+                                "biolink:ChemicalOrDrugOrTreatment"])
     assert gi.find_biolink_leaves(include_mixins) == set(["biolink:SmallMolecule"])
     GraphInterface.instance = None
 

@@ -1,5 +1,6 @@
 """FastAPI app."""
-import neo4j.exceptions
+import neo4j
+
 from fastapi import Body, Depends, FastAPI, Response, Request
 from fastapi.responses import ORJSONResponse, RedirectResponse
 from typing import Any, Dict, List
@@ -47,7 +48,9 @@ if ATTRIBUTE_SKIP_LIST:
 # to be used for filtering predicates from queries/predicate descendant expansion,
 # possibly responding that a query cannot possibly have results
 # if no meta kg is provided then all predicates are permitted
-set_predicates_in_graph(get_graph_metadata().predicates_in_graph)
+PREDICATES_IN_GRAPH = get_graph_metadata().predicates_in_graph
+set_predicates_in_graph(PREDICATES_IN_GRAPH)
+NODE_CATEGORIES_IN_GRAPH = get_graph_metadata().node_categories_in_graph
 HAS_SUBCLASS_EDGES = True if 'biolink:subclass_of' in get_graph_metadata().predicates_in_graph else False
 if not HAS_SUBCLASS_EDGES:
     logger.info(f'No subclass edges in the graph according to the meta_knowledge_graph, subclassing = OFF.')
@@ -227,52 +230,65 @@ APP.add_api_route(
 )
 
 
-async def one_hop(
-        source_type: str,
-        target_type: str,
+async def node(
         curie: str,
+        graph_interface: GraphInterface = Depends(get_graph_interface),
+) -> Dict:
+    """Handle node lookup."""
+    return await graph_interface.get_node(curie)
+
+APP.add_api_route(
+    "/node/{curie}",
+    node,
+    methods=["GET"],
+    response_model=Dict,
+    summary="Find a node by it's `curie` identifier.",
+    description="Returns information about a node matching `curie` and it's edges.",
+)
+
+
+async def one_hop(
+        curie: str,
+        category: str = None,
+        predicate: str = None,
+        limit: int = None,
+        offset: int = None,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> List[Dict]:
     """Handle one-hop."""
+
+    if predicate:
+        if not predicate.startswith('biolink'):
+            predicate = f'biolink:{predicate}'
+        if predicate not in PREDICATES_IN_GRAPH:
+            return []
+
+    if category:
+        if not category.startswith('biolink'):
+            category = f'biolink:{category}'
+        if category not in NODE_CATEGORIES_IN_GRAPH:
+            return []
+
     return await graph_interface.get_single_hops(
-        source_type,
-        target_type,
         curie,
+        category,
+        predicate,
+        limit,
+        offset
     )
 
 APP.add_api_route(
-    "/{source_type}/{target_type}/{curie}",
+    "/edges/{curie}",
     one_hop,
     methods=["GET"],
     response_model=List,
     summary=(
-        "Get one hop results from source type to target type. "
+        "Get edges connected to the node with the identifier `curie`. "
     ),
     description=(
-        "Returns one hop paths from `source_node_type`  with `curie` "
-        "to `target_node_type`."
+        "Returns edges connected to the node with the identifier `curie`. "
+        "Optionally, filter edges by predicate or adjacent node category."
     ),
-)
-
-
-async def node(
-        node_type: str,
-        curie: str,
-        graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> List[List[Dict]]:
-    """Handle node lookup."""
-    return await graph_interface.get_node(
-        node_type,
-        curie,
-    )
-
-APP.add_api_route(
-    "/{node_type}/{curie}",
-    node,
-    methods=["GET"],
-    response_model=List,
-    summary="Find `node` by `curie`",
-    description="Returns `node` matching `curie`.",
 )
 
 

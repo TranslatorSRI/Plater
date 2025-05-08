@@ -3,6 +3,7 @@ import neo4j
 import asyncio
 
 import neo4j.exceptions
+from functools import cache
 from neo4j import unit_of_work
 from opentelemetry import trace
 from collections import defaultdict
@@ -239,24 +240,24 @@ class GraphInterface:
         async def connect_to_neo4j(self):
             await self.driver.connect_to_neo4j()
 
-        def find_biolink_leaves(self, biolink_concepts: list):
+        @cache
+        def find_biolink_leaves(self, biolink_concepts: frozenset):
             """
             Given a list of biolink concepts, returns the leaves removing any parent concepts.
             :param biolink_concepts: list of biolink concepts
             :return: leave concepts.
             """
             ancestry_set = set()
-            all_concepts = set(biolink_concepts)
             # Keep track of things like "MacromolecularMachine" in current datasets.
             unknown_elements = set()
 
-            for x in all_concepts:
+            for x in biolink_concepts:
                 current_element = self.toolkit.get_element(x)
                 if not current_element:
                     unknown_elements.add(x)
                 ancestors = set(self.toolkit.get_ancestors(x, mixin=True, reflexive=False, formatted=True))
                 ancestry_set = ancestry_set.union(ancestors)
-            leaf_set = all_concepts - ancestry_set - unknown_elements
+            leaf_set = biolink_concepts - ancestry_set - unknown_elements
             return leaf_set
 
         def invert_predicate(self, biolink_predicate):
@@ -300,9 +301,9 @@ class GraphInterface:
                     #  avoids adding nodes with single ['biolink:NamedThing'] labels.
                     filter_named_thing = lambda x: list(filter(lambda y: y != 'biolink:NamedThing', x))
                     source_labels, predicate, target_labels = \
-                        self.find_biolink_leaves(filter_named_thing(schema_result['source_labels'])), \
+                        self.find_biolink_leaves(frozenset(filter_named_thing(schema_result['source_labels']))), \
                         schema_result['predicate'], \
-                        self.find_biolink_leaves(filter_named_thing(schema_result['target_labels']))
+                        self.find_biolink_leaves(frozenset(filter_named_thing(schema_result['target_labels'])))
                     for source_label in source_labels:
                         for target_label in target_labels:
                             self.schema[source_label][target_label].add(predicate)
@@ -343,48 +344,71 @@ class GraphInterface:
             response = await self.driver.run(query, convert_to_dict=True)
             return response
 
-        async def get_node(self, node_type: str, curie: str) -> list:
+        async def get_node(self, curie: str) -> dict:
             """
             Returns a node that matches curie as its ID.
-            :param node_type: Type of the node.
-            :type node_type:str
             :param curie: Curie.
             :type curie: str
             :return: value of the node in neo4j.
             :rtype: list
             """
-            if not node_type.startswith('biolink'):
-                return []
-            query = f"MATCH (c:`{node_type}`{{id: '{curie}'}}) return c"
-            response = await self.driver.run(query, convert_to_dict=True)
-            if response and 'c' in response[0]:
-                return [response[0]['c']]
+            query = f"MATCH (n:`biolink:NamedThing`{{id: $node_id}}) return n"
+            response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
+            if response and 'n' in response[0]:
+                node_object: neo4j.graph.Node = response[0]['n']
+                node_properties = dict(node_object.items())
+                return {
+                    'id': node_properties.pop('id'),
+                    'name': node_properties.pop('name'),
+                    'category': self.find_biolink_leaves(node_object.labels),
+                    'properties': node_properties
+                }
             else:
-                return []
+                return {}
 
-        async def get_single_hops(self, source_type: str, target_type: str, curie: str) -> list:
+        async def get_single_hops(self,
+                                  curie: str,
+                                  category: str = None,
+                                  predicate: str = None,
+                                  limit: int = None,
+                                  offset: int = None) -> list:
             """
-            Returns a triplets of source to target where source id is curie.
-            :param source_type: Type of the source node.
-            :type source_type: str
-            :param target_type: Type of target node.
-            :type target_type: str
+            Returns edges from the node with the curie id to other nodes, optionally filtered by node category or
+            predicates.
             :param curie: Curie of source node.
             :type curie: str
-            :return: list of triplets where each item contains source node, edge, target.
+            :param category: Type of target node.
+            :type category: str
+            :param category: Predicate.
+            :type category: str
+            :return: list of edges and nodes where each item contains information about the edge and the other node
+            it's connected to
             :rtype: list
             """
+            query = f'MATCH (n:`biolink:NamedThing`{{id: $node_id}})'
 
-            query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})-[e]->(b:`{target_type}`) return distinct c , e, b'
-            response = await self.driver.run(query, convert_to_dict=True)
-            rows = [[{key: value for key, value in record['c'].items()},
-                     {key: value for key, value in record['e'].items()},
-                     {key: value for key, value in record['b'].items()}] for record in response]
-            query = f'MATCH (c:`{source_type}`{{id: \'{curie}\'}})<-[e]-(b:`{target_type}`) return distinct b , e, c'
-            response = await self.driver.run(query, convert_to_dict=True)
-            rows += [[{key: value for key, value in record['b'].items()},
-                     {key: value for key, value in record['e'].items()},
-                     {key: value for key, value in record['c'].items()}] for record in response]
+            query += f'-[r:`{predicate}`]-' if predicate else '-[r]-'
+
+            query += f'(m:`{category}`)' if category else '(m)'
+
+            query += ' return distinct type(r) as predicate, properties(r) as edge_properties, m.id as m_id, ' \
+                     'm.name as m_name, labels(m) as m_labels ORDER BY m_id'
+
+            if offset is not None:
+                query += f' OFFSET {offset}'
+                # query += f' SKIP {offset}'
+            if limit is not None:
+                query += f' LIMIT {limit}'
+
+            response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie,
+                                                                                            'predicate': predicate})
+            rows = [{'edge': {'predicate': record['predicate'],
+                              'properties': record['edge_properties']},
+                     'adj_node': {'id': record['m_id'],
+                                  'name': record['m_name'],
+                                  'category': self.find_biolink_leaves(frozenset(record['m_labels']))}
+                     }
+                    for record in response]
             return rows
 
         async def run_cypher(self,
