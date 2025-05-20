@@ -1,7 +1,7 @@
 """FastAPI app."""
 import neo4j
 
-from fastapi import Body, Depends, FastAPI, Response, Request
+from fastapi import Body, Depends, FastAPI, Response, Request, Path, Query
 from fastapi.responses import ORJSONResponse, RedirectResponse
 from typing import Any, Dict, List
 from pydantic import ValidationError
@@ -59,6 +59,7 @@ if not HAS_SUBCLASS_EDGES:
 # it would be nice to use Depends() for the graph metadata here, as it's used elsewhere,
 # but because TRAPI_QUERY_EXAMPLE is included a function parameter, it's not possible
 TRAPI_QUERY_EXAMPLE = get_graph_metadata().get_example_qgraph()
+EDGE_EXAMPLE = get_graph_metadata().get_example_edge()
 
 
 async def get_meta_knowledge_graph(metadata_retriever: GraphMetadata = Depends(get_graph_metadata)) -> ORJSONResponse:
@@ -174,10 +175,6 @@ APP.add_api_route(
 )
 
 
-###########################################
-# The following endpoints all come from the old app_common.py file, which was previously a different sub-application.
-###########################################
-
 async def cypher(
         request: CypherRequest = Body(
             ...,
@@ -231,7 +228,7 @@ APP.add_api_route(
 
 
 async def node(
-        curie: str,
+        curie: str = Path(example=EDGE_EXAMPLE["subject_id"]),
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> Dict:
     """Handle node lookup."""
@@ -243,14 +240,16 @@ APP.add_api_route(
     methods=["GET"],
     response_model=Dict,
     summary="Find a node by it's `curie` identifier.",
-    description="Returns information about a node matching `curie` and it's edges.",
+    description="Returns information about a node matching `curie`.",
 )
 
 
 async def one_hop(
-        curie: str,
-        category: str = None,
-        predicate: str = None,
+        curie: str = Path(example=EDGE_EXAMPLE["subject_id"]),
+        category: str = Query(example=EDGE_EXAMPLE["object_category"],
+                              description="Optionally provide a category to filter adjacent nodes and their edges by."),
+        predicate: str = Query(example=EDGE_EXAMPLE["predicate"],
+                               description="Optionally provide a predicate to filter edges by."),
         limit: int = None,
         offset: int = None,
         graph_interface: GraphInterface = Depends(get_graph_interface),
@@ -288,6 +287,29 @@ APP.add_api_route(
     description=(
         "Returns edges connected to the node with the identifier `curie`. "
         "Optionally, filter edges by predicate or adjacent node category."
+    ),
+)
+
+
+async def one_hop_summary(
+        curie: str = Path(example=EDGE_EXAMPLE["subject_id"]),
+        graph_interface: GraphInterface = Depends(get_graph_interface),
+) -> Dict:
+    return await graph_interface.get_single_hop_summary(
+        curie,
+    )
+
+APP.add_api_route(
+    "/edge_summary/{curie}",
+    one_hop_summary,
+    methods=["GET"],
+    response_model=dict,
+    summary=(
+        "Get a summary of edges connected to the node with the identifier `curie`. "
+    ),
+    description=(
+        "Returns a list of the kinds edges connected to the node with the identifier `curie`. "
+        "Results are formatted like [[predicate, node_category, count], ...]."
     ),
 )
 

@@ -141,6 +141,13 @@ class GraphMetadata:
             }
             return example_trapi
 
+    def get_example_edge(self):
+        sri_test_data = self.get_sri_testing_data()
+        if not sri_test_data['edges']:
+            return {'error': 'Could not generate example without edges in sri_testing_data.'}
+        test_edge = sri_test_data['edges'][0]
+        return test_edge
+
     # the following code implements a singleton pattern so that only one metadata object is ever created
     instance = None
 

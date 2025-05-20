@@ -366,6 +366,24 @@ class GraphInterface:
             else:
                 return {}
 
+        async def get_single_hop_summary(self,
+                                         curie: str) -> dict:
+            """
+            Returns edges from the node with the curie id to other nodes, optionally filtered by node category or
+            predicates.
+            :param curie: Curie of source node.
+            :type curie: str
+            :return: list a list of kinds of edges connected to the curie node and counts of how many there are
+            :rtype: list
+            """
+            query = f'MATCH (n:`biolink:NamedThing`{{id: $node_id}})-[r]-(m) ' \
+                    f'RETURN type(r) as predicate, labels(m) as node_labels, count(r) as edge_count'
+            response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
+            summary = defaultdict(list)
+            for record in response:
+                summary[record['predicate']].append([self.find_biolink_leaves(frozenset(record['node_labels'])), record['edge_count']])
+            return dict(summary)
+
         async def get_single_hops(self,
                                   curie: str,
                                   category: str = None,
@@ -386,11 +404,8 @@ class GraphInterface:
             :rtype: list
             """
             query = f'MATCH (n:`biolink:NamedThing`{{id: $node_id}})'
-
             query += f'-[r:`{predicate}`]-' if predicate else '-[r]-'
-
             query += f'(m:`{category}`)' if category else '(m)'
-
             query += ' return distinct type(r) as predicate, properties(r) as edge_properties, ' \
                      'CASE WHEN elementId(m) = elementId(startNode(r)) THEN "<" ELSE ">" END AS edge_direction, ' \
                      'm.id as m_id, m.name as m_name, labels(m) as m_labels ORDER BY m_id'
