@@ -246,10 +246,12 @@ APP.add_api_route(
 
 async def one_hop(
         curie: str = Path(example=EDGE_EXAMPLE["subject_id"]),
-        category: str = Query(example=EDGE_EXAMPLE["object_category"],
-                              description="Optionally provide a category to filter adjacent nodes and their edges by."),
-        predicate: str = Query(example=EDGE_EXAMPLE["predicate"],
-                               description="Optionally provide a predicate to filter edges by."),
+        category: str | None = Query(example=EDGE_EXAMPLE["object_category"],
+                                     default=None,
+                                     description="Optionally provide a category to filter adjacent nodes and their edges by."),
+        predicate: str | None = Query(example=EDGE_EXAMPLE["predicate"],
+                                      default=None,
+                                      description="Optionally provide a predicate to filter edges by."),
         limit: int = None,
         offset: int = None,
         graph_interface: GraphInterface = Depends(get_graph_interface),
