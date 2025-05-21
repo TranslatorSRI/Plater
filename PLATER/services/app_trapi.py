@@ -262,13 +262,19 @@ async def one_hop(
         if not predicate.startswith('biolink'):
             predicate = f'biolink:{predicate}'
         if predicate not in PREDICATES_IN_GRAPH:
-            return []
+            return {
+                "query_curie": curie,
+                "edge_types": []
+            }
 
     if category:
         if not category.startswith('biolink'):
             category = f'biolink:{category}'
         if category not in NODE_CATEGORIES_IN_GRAPH:
-            return []
+            return {
+                "query_curie": curie,
+                "edge_types": []
+            }
 
     return await graph_interface.get_single_hops(
         curie,

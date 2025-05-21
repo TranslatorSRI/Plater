@@ -389,7 +389,7 @@ class GraphInterface:
                     "category": self.find_biolink_leaves(frozenset(record['node_labels'])),
                     "count": record["edge_count"]
                 })
-            return dict(summary)
+            return summary
 
         async def get_single_hops(self,
                                   curie: str,
