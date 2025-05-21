@@ -379,9 +379,16 @@ class GraphInterface:
             query = f'MATCH (n:`biolink:NamedThing`{{id: $node_id}})-[r]-(m) ' \
                     f'RETURN type(r) as predicate, labels(m) as node_labels, count(r) as edge_count'
             response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
-            summary = defaultdict(list)
+            summary = {
+                "query_curie": curie,
+                "edge_types": []
+            }
             for record in response:
-                summary[record['predicate']].append([self.find_biolink_leaves(frozenset(record['node_labels'])), record['edge_count']])
+                summary["edge_types"].append({
+                    "predicate": record["predicate"],
+                    "category": self.find_biolink_leaves(frozenset(record['node_labels'])),
+                    "count": record["edge_count"]
+                })
             return dict(summary)
 
         async def get_single_hops(self,
