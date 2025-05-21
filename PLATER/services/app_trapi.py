@@ -255,7 +255,7 @@ async def one_hop(
         limit: int = None,
         offset: int = None,
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> List[Dict]:
+) -> Dict:
     """Handle one-hop."""
 
     if predicate:
@@ -282,7 +282,7 @@ APP.add_api_route(
     "/edges/{curie}",
     one_hop,
     methods=["GET"],
-    response_model=List,
+    response_model=Dict,
     summary=(
         "Get edges connected to the node with the identifier `curie`. "
     ),
@@ -305,7 +305,7 @@ APP.add_api_route(
     "/edge_summary/{curie}",
     one_hop_summary,
     methods=["GET"],
-    response_model=dict,
+    response_model=Dict,
     summary=(
         "Get a summary of edges connected to the node with the identifier `curie`. "
     ),

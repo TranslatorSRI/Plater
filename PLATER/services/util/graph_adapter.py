@@ -396,7 +396,7 @@ class GraphInterface:
                                   category: str = None,
                                   predicate: str = None,
                                   limit: int = None,
-                                  offset: int = None) -> list:
+                                  offset: int = None) -> dict:
             """
             Returns edges from the node with the curie id to other nodes, optionally filtered by node category or
             predicates.
@@ -433,7 +433,11 @@ class GraphInterface:
                                   'category': self.find_biolink_leaves(frozenset(record['m_labels']))}
                      }
                     for record in response]
-            return rows
+            edges_response = {
+                "query_curie": curie,
+                "edges": rows
+            }
+            return edges_response
 
         async def run_cypher(self,
                              cypher: str,
