@@ -144,7 +144,11 @@ class GraphMetadata:
     def get_example_edge(self):
         sri_test_data = self.get_sri_testing_data()
         if not sri_test_data['edges']:
-            return {'error': 'Could not generate example without edges in sri_testing_data.'}
+            return {'subject_id': '',
+                    'subject_category': '',
+                    'predicate': '',
+                    'object_id': '',
+                    'object_category': ''}
         test_edge = sri_test_data['edges'][0]
         return test_edge
 
