@@ -142,15 +142,21 @@ class GraphMetadata:
             return example_trapi
 
     def get_example_edge(self):
+        example_edge = {"subject_id": "EXAMPLE:1",
+                        "subject_category": "biolink:NamedThing",
+                        "predicate": "biolink:related_to",
+                        "object_id": "EXAMPLE:2",
+                        "object_category": "biolink:NamedThing"}
         sri_test_data = self.get_sri_testing_data()
-        if not sri_test_data['edges']:
-            return {'subject_id': '',
-                    'subject_category': '',
-                    'predicate': '',
-                    'object_id': '',
-                    'object_category': ''}
-        test_edge = sri_test_data['edges'][0]
-        return test_edge
+        if not sri_test_data["edges"]:
+            return example_edge
+        for edge in sri_test_data["edges"]:
+            example_edge = edge
+            if example_edge["predicate"] == "biolink:subclass_of":
+                continue
+            else:
+                break
+        return example_edge
 
     # the following code implements a singleton pattern so that only one metadata object is ever created
     instance = None
