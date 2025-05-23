@@ -60,13 +60,13 @@ deployments:
       panther: c0189f14ba41da6c
       pharos: d3068b509bf17ff3
       reactome: 07a8dc1cac1936b5
-      robokopkg: 4901b2bc764444ea
+      robokopkg: 23f46efa87c2bad7
       string-db: 4ca5a0ce557e2c18
       ubergraph: e6b3204fd3a04413
       viral-proteome: 8ca116ae0bba6945
   - deployment_environment: test
     automat_url: https://automat.test.transltr.io/
-    plater_version: v2.1.2
+    plater_version: v2.1.4
     trapi_version: 1.5.0
     platers:
       binding-db: 9164067231dc9b8c
@@ -87,13 +87,13 @@ deployments:
       panther: c0189f14ba41da6c
       pharos: d3068b509bf17ff3
       reactome: 07a8dc1cac1936b5
-      robokopkg: 4901b2bc764444ea
+      robokopkg: 23f46efa87c2bad7
       string-db: 4ca5a0ce557e2c18
       ubergraph: e6b3204fd3a04413
       viral-proteome: 8ca116ae0bba6945
   - deployment_environment: prod
     automat_url: https://automat.transltr.io/
-    plater_version: v2.1.2
+    plater_version: v2.1.4
     trapi_version: 1.5.0
     platers:
       binding-db: 9164067231dc9b8c
@@ -114,7 +114,7 @@ deployments:
       panther: c0189f14ba41da6c
       pharos: d3068b509bf17ff3
       reactome: 07a8dc1cac1936b5
-      robokopkg: 4901b2bc764444ea
+      robokopkg: 23f46efa87c2bad7
       string-db: 4ca5a0ce557e2c18
       ubergraph: e6b3204fd3a04413
       viral-proteome: 8ca116ae0bba6945
