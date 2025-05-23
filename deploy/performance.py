@@ -59,7 +59,7 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
                                         cypher_query = performance_query["cypher_query"]
                                         cypher_response = send_cypher_query(url,
                                                                             cypher_query)
-                                        print(cypher_response)
+                                        # print(cypher_response)
                                         num_results = 1
                                     else:
                                         print("huh")
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         #              "queries": ["gene_to_chemical_qualifier_1"],
         #              "query_type": "trapi"},
         "robokopkg": {"files": ["./performance_queries/robokopkg_performance_cypher.jsonl"],
-                      "queries": ["gene_to_chemical_20"],
+                      "queries": ["gene_to_chemical_1"],
                       "query_type": "cypher"}
         # "hmdb": {"files": ["./performance_queries/hmdb_performance_queries.jsonl"]}
     }
