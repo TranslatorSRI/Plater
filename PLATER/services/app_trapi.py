@@ -254,14 +254,17 @@ async def one_hop(
                                       description="Optionally provide a predicate to filter edges by."),
         limit: int = None,
         offset: int = None,
+        count_only: bool = None,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> Dict:
-    """Handle one-hop."""
+    """Retrieve one-hop edges connected to `curie` with the predicate `predicate`
+    connected to nodes with the category `category`. Use limit and offset for pagination in the queries.
+    If count_only is true, only return how many edges there are."""
 
     if predicate:
         if not predicate.startswith('biolink'):
             predicate = f'biolink:{predicate}'
-        if predicate not in PREDICATES_IN_GRAPH:
+        if PREDICATES_IN_GRAPH and predicate not in PREDICATES_IN_GRAPH:
             return {
                 "query_curie": curie,
                 "edge_types": []
@@ -270,11 +273,21 @@ async def one_hop(
     if category:
         if not category.startswith('biolink'):
             category = f'biolink:{category}'
-        if category not in NODE_CATEGORIES_IN_GRAPH:
+        if NODE_CATEGORIES_IN_GRAPH and category not in NODE_CATEGORIES_IN_GRAPH:
             return {
                 "query_curie": curie,
                 "edge_types": []
             }
+
+    if count_only:
+        return await graph_interface.get_single_hops(
+            curie,
+            category,
+            predicate,
+            limit,
+            offset,
+            count_only=True
+        )
 
     return await graph_interface.get_single_hops(
         curie,

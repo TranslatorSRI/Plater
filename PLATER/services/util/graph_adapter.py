@@ -379,16 +379,27 @@ class GraphInterface:
             query = f'MATCH (n:`biolink:NamedThing`{{id: $node_id}})-[r]-(m) ' \
                     f'RETURN type(r) as predicate, labels(m) as node_labels, count(r) as edge_count'
             response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
+
+            summary_edges = defaultdict(dict)
+            for record in response:
+                predicate = record["predicate"]
+                edge_count = record["edge_count"]
+                leaf_categories = self.find_biolink_leaves(frozenset(record['node_labels']))
+                for category in leaf_categories:
+                    if category not in summary_edges[predicate]:
+                        summary_edges[predicate][category] = {
+                            "predicate": predicate,
+                            "category": category,
+                            "count": edge_count
+                        }
+                    else:
+                        summary_edges[predicate][category]["count"] += edge_count
             summary = {
                 "query_curie": curie,
-                "edge_types": []
+                # flatten the summary_edges dictionary of dictionaries into a list of the most nested values
+                "edge_types": [summary_edge for predicate_summary in summary_edges.values()
+                               for summary_edge in predicate_summary.values()]
             }
-            for record in response:
-                summary["edge_types"].append({
-                    "predicate": record["predicate"],
-                    "category": self.find_biolink_leaves(frozenset(record['node_labels'])),
-                    "count": record["edge_count"]
-                })
             return summary
 
         async def get_single_hops(self,
@@ -396,7 +407,8 @@ class GraphInterface:
                                   category: str = None,
                                   predicate: str = None,
                                   limit: int = None,
-                                  offset: int = None) -> dict:
+                                  offset: int = None,
+                                  count_only: bool = False) -> dict:
             """
             Returns edges from the node with the curie id to other nodes, optionally filtered by node category or
             predicates.
@@ -412,19 +424,36 @@ class GraphInterface:
             """
             query = f'MATCH (n:`biolink:NamedThing`{{id: $node_id}})'
             query += f'-[r:`{predicate}`]-' if predicate else '-[r]-'
-            query += f'(m:`{category}`)' if category else '(m)'
-            query += ' return distinct type(r) as predicate, properties(r) as edge_properties, ' \
-                     'CASE WHEN elementId(m) = elementId(startNode(r)) THEN "<" ELSE ">" END AS edge_direction, ' \
-                     'm.id as m_id, m.name as m_name, labels(m) as m_labels ORDER BY m_id'
+            query += f'(m:`{category}`)' if category else '(m) '
 
-            if offset is not None:
-                query += f' OFFSET {offset}'
-                # query += f' SKIP {offset}'
-            if limit is not None:
-                query += f' LIMIT {limit}'
+            if count_only:
+                query += 'return count(r) as edge_count'
+            else:
+                query += 'return distinct type(r) as predicate, properties(r) as edge_properties, ' \
+                         'CASE WHEN elementId(m) = elementId(startNode(r)) THEN "<" ELSE ">" END AS edge_direction, ' \
+                         'm.id as m_id, m.name as m_name, labels(m) as m_labels ORDER BY m_id'
+
+                if offset is not None:
+                    query += f' OFFSET {offset}'
+                    # query += f' SKIP {offset}'
+                if limit is not None:
+                    query += f' LIMIT {limit}'
 
             response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie,
                                                                                             'predicate': predicate})
+
+            if count_only:
+                edges_response = {
+                    "query_curie": curie,
+                    "edges": None,
+                    "pagination": {
+                        "count": response[0]['edge_count'],
+                        "offset": None,
+                        "limit": None
+                    }
+                }
+                return edges_response
+
             rows = [{'edge': {'predicate': record['predicate'],
                               'direction': record['edge_direction'],
                               'properties': record['edge_properties']},
@@ -435,7 +464,12 @@ class GraphInterface:
                     for record in response]
             edges_response = {
                 "query_curie": curie,
-                "edges": rows
+                "edges": rows,
+                "pagination": {
+                    "count": len(rows),
+                    "offset": offset,
+                    "limit": limit
+                }
             }
             return edges_response
 
