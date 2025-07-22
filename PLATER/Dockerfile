@@ -1,4 +1,4 @@
-FROM ghcr.io/translatorsri/renci-python-image:3.11
+FROM ghcr.io/translatorsri/renci-python-image:3.11.5
 
 ARG VERSION=master
 
