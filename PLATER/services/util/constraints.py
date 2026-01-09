@@ -5,6 +5,9 @@ from typing import List
 import re
 import numbers
 
+# Note - this is not used by Plater anymore
+# Attribute constraint handling was moved to reasoner-transpiler so that it could be incorporated
+# in neo4j cypher queries. Leaving this here for now, in case we change our minds.
 
 
 class Operator:

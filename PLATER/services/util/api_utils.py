@@ -10,23 +10,23 @@ from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.config import config
 
 
-def get_graph_interface():
+async def get_graph_interface():
     """Get graph interface."""
-    return GraphInterface(
-        host=config.get('NEO4J_HOST'),
-        port=config.get('NEO4J_HTTP_PORT'),
+    graph_interface = GraphInterface(
+        host=config.get('NEO4J_HOST', 'localhost'),
+        port=config.get('NEO4J_BOLT_PORT', '7687'),
         auth=(
             config.get('NEO4J_USERNAME'),
             config.get('NEO4J_PASSWORD')
-        ),
-        query_timeout=int(config.get('NEO4J_QUERY_TIMEOUT')),
-        bl_version=config.get('BL_VERSION')
+        )
     )
+    await graph_interface.connect_to_neo4j()
+    return graph_interface
 
 
 def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plater API'):
-    plater_version = os.environ.get('PLATER_VERSION', 'v1.6.5')
-    server_url = os.environ.get('PUBLIC_URL', '')
+    plater_version = config.get('PLATER_VERSION', 'v2.1.4')
+    server_url = config.get('PUBLIC_URL', '')
     if app.openapi_schema:
         return app.openapi_schema
     open_api_schema = get_openapi(
@@ -72,8 +72,8 @@ def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plate
         for cnf in servers_conf:
             if 'url' in cnf:
                 cnf['url'] = cnf['url'] + prefix
-                cnf['x-maturity'] = os.environ.get("MATURITY_VALUE", "maturity")
-                cnf['x-location'] = os.environ.get("LOCATION_VALUE", "location")
+                cnf['x-maturity'] = config.get("MATURITY_VALUE", "maturity")
+                cnf['x-location'] = config.get("LOCATION_VALUE", "location")
                 cnf['x-trapi'] = trapi_version
                 cnf['x-translator'] = {}
                 cnf['x-translator']['biolink-version'] = config.get("BL_VERSION", "4.1.6")
@@ -83,7 +83,7 @@ def construct_open_api_schema(app, trapi_version, prefix="", plater_title='Plate
     open_api_schema["info"]["x-trapi"] = x_trapi_extension
     if server_url:
         open_api_schema["info"]["x-trapi"]["test_data_location"] = {
-            os.environ.get("MATURITY_VALUE", "maturity"): {
+            config.get("MATURITY_VALUE", "maturity"): {
                 'url': server_url.strip('/') + "/sri_testing_data"
             }
         }

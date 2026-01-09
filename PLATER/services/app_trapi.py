@@ -1,12 +1,14 @@
 """FastAPI app."""
-from fastapi import Body, Depends, FastAPI, Response, Request
-from fastapi.encoders import jsonable_encoder
+import neo4j
+
+from fastapi import Body, Depends, FastAPI, Response, Request, Path, Query
 from fastapi.responses import ORJSONResponse, RedirectResponse
 from typing import Any, Dict, List
 from pydantic import ValidationError
 
 from reasoner_transpiler.exceptions import (
-    InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError
+    InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError,
+    NoPossibleResultsException
 )
 from PLATER.models.models_trapi_1_0 import (
     Message, ReasonerRequest, CypherRequest, SimpleSpecResponse, SimpleSpecElement, CypherResponse
@@ -15,6 +17,7 @@ from PLATER.models.shared import MetaKnowledgeGraph, SRITestData
 from PLATER.services.util.api_utils import (
     get_graph_interface, get_example, CustomORJSONResponse
 )
+from PLATER.services.util.attribute_mapping import ATTRIBUTE_SKIP_LIST, ATTRIBUTE_TYPES
 from PLATER.services.util.bl_helper import BLHelper, get_bl_helper
 from PLATER.services.util.graph_adapter import GraphInterface
 from PLATER.services.util.metadata import get_graph_metadata, GraphMetadata
@@ -23,6 +26,8 @@ from PLATER.services.util.question import Question
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 
+from reasoner_transpiler.attributes import set_custom_attribute_types, set_custom_attribute_skip_list
+from reasoner_transpiler.matching import set_predicates_in_graph
 
 APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs')
 
@@ -32,10 +37,29 @@ logger = LoggingUtil.init_logging(
     config.get('logging_format'),
 )
 
+# these are optional custom mappings that are applied in reasoner-transpiler
+# if set they override default attribute type mappings, or attributes on attributes in TRAPI results
+if ATTRIBUTE_TYPES:
+    set_custom_attribute_types(ATTRIBUTE_TYPES)
+# an optional list of attributes to skip/ignore when processing cypher results and formatting them into TRAPI
+if ATTRIBUTE_SKIP_LIST:
+    set_custom_attribute_skip_list(ATTRIBUTE_SKIP_LIST)
+# the set of all predicates in the meta_knowledge_graph,
+# to be used for filtering predicates from queries/predicate descendant expansion,
+# possibly responding that a query cannot possibly have results
+# if no meta kg is provided then all predicates are permitted
+PREDICATES_IN_GRAPH = get_graph_metadata().predicates_in_graph
+set_predicates_in_graph(PREDICATES_IN_GRAPH)
+NODE_CATEGORIES_IN_GRAPH = get_graph_metadata().node_categories_in_graph
+HAS_SUBCLASS_EDGES = True if 'biolink:subclass_of' in get_graph_metadata().predicates_in_graph else False
+if not HAS_SUBCLASS_EDGES:
+    logger.info(f'No subclass edges in the graph according to the meta_knowledge_graph, subclassing = OFF.')
+
 # get an example query for the /query endpoint, to be included in the open api spec
 # it would be nice to use Depends() for the graph metadata here, as it's used elsewhere,
 # but because TRAPI_QUERY_EXAMPLE is included a function parameter, it's not possible
 TRAPI_QUERY_EXAMPLE = get_graph_metadata().get_example_qgraph()
+EDGE_EXAMPLE = get_graph_metadata().get_example_edge()
 
 
 async def get_meta_knowledge_graph(metadata_retriever: GraphMetadata = Depends(get_graph_metadata)) -> ORJSONResponse:
@@ -92,30 +116,37 @@ async def reasoner_api(
         # it's here so that it's documented in the open api spec, and it's used by pyinstrument in profile_request
         profile: bool = False,
         validate: bool = False,
+        subclass: bool = True,
         graph_interface: GraphInterface = Depends(get_graph_interface),
 ) -> CustomORJSONResponse:
 
     """Handle /query TRAPI request."""
     request_json = request.dict(by_alias=True)
     # use lookup as the default workflow
-    workflow = request_json.get('workflow') or [{"id": "lookup"}]
-    workflows = {wkfl['id']: wkfl for wkfl in workflow}
-
-    if 'lookup' in workflows:
-        question = Question(request_json["message"])
-        try:
-            response_message = await question.answer(graph_interface)
-            request_json.update({'message': response_message, 'workflow': workflow})
-        except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError) as e:
-            return CustomORJSONResponse(status_code=400, content={"description": str(e)}, media_type="application/json")
-    elif 'overlay_connect_knodes' in workflows:
-        overlay = Overlay(graph_interface=graph_interface)
-        response_message = await overlay.connect_k_nodes(request_json['message'])
-        request_json.update({'message': response_message, 'workflow': workflow})
-    elif 'annotate_nodes' in workflows:
-        overlay = Overlay(graph_interface=graph_interface)
-        response_message = await overlay.annotate_node(request_json['message'])
-        request_json.update({'message': response_message, 'workflow': workflow})
+    workflows = request_json.get('workflow') or [{"id": "lookup"}]
+    workflow_ids = {wkfl['id']: wkfl for wkfl in workflows}
+    try:
+        if 'lookup' in workflow_ids:
+            do_subclassing = subclass and HAS_SUBCLASS_EDGES
+            question = Question(request_json["message"])
+            response_message = await question.answer(graph_interface, subclass_inference=do_subclassing)
+            request_json.update({'message': response_message, 'workflow': workflows})
+        elif 'overlay_connect_knodes' in workflow_ids:
+            overlay = Overlay(graph_interface=graph_interface)
+            response_message = await overlay.connect_k_nodes(request_json['message'])
+            request_json.update({'message': response_message, 'workflow': workflows})
+        elif 'annotate_nodes' in workflow_ids:
+            overlay = Overlay(graph_interface=graph_interface)
+            response_message = await overlay.annotate_node(request_json['message'])
+            request_json.update({'message': response_message, 'workflow': workflows})
+    except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError, NoPossibleResultsException) as e:
+        return CustomORJSONResponse(status_code=422, content={"message": str(e)}, media_type="application/json")
+    except neo4j.exceptions.Neo4jError as e:
+        error_response = {"errors": [{"code": e.code, "message": e.message}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
+    except neo4j.exceptions.DriverError as e:
+        error_response = {"errors": [{"message": str(e)}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
 
     if validate:
         try:
@@ -144,31 +175,35 @@ APP.add_api_route(
 )
 
 
-###########################################
-# The following endpoints all come from the old app_common.py file, which was previously a different sub-application.
-###########################################
-
 async def cypher(
         request: CypherRequest = Body(
             ...,
             example={"query": "MATCH (n) RETURN count(n)"},
         ),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> CypherResponse:
+) -> CustomORJSONResponse:
     """Handle cypher."""
     request = request.dict()
-    results = await graph_interface.run_cypher(
-        request["query"],
-        return_errors=True,
-    )
-    return results
+    try:
+        results = await graph_interface.run_cypher(
+            request["query"]
+        )
+        return CustomORJSONResponse(content=results, media_type="application/json")
+    except (InvalidPredicateError, InvalidQualifierError, InvalidQualifierValueError, UnsupportedError) as e:
+        return CustomORJSONResponse(status_code=422, content={"description": str(e)}, media_type="application/json")
+    except neo4j.exceptions.Neo4jError as e:
+        error_response = {"errors": [{"code": e.code, "message": e.message}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
+    except neo4j.exceptions.DriverError as e:
+        error_response = {"errors": [{"message": str(e)}]}
+        return CustomORJSONResponse(status_code=503, content=error_response, media_type="application/json")
 
 
 APP.add_api_route(
     "/cypher",
     cypher,
     methods=["POST"],
-    response_model=CypherResponse,
+    response_model=None,
     summary="Run a Neo4j cypher query.",
     description=(
         "Runs a cypher query against the Neo4j instance, and returns an "
@@ -192,52 +227,111 @@ APP.add_api_route(
 )
 
 
-async def one_hop(
-        source_type: str,
-        target_type: str,
-        curie: str,
+async def node(
+        curie: str = Path(example=EDGE_EXAMPLE["subject_id"]),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> List[Dict]:
-    """Handle one-hop."""
+) -> Dict:
+    """Handle node lookup."""
+    return await graph_interface.get_node(curie)
+
+APP.add_api_route(
+    "/node/{curie}",
+    node,
+    methods=["GET"],
+    response_model=Dict,
+    summary="Find a node by it's `curie` identifier.",
+    description="Returns information about a node matching `curie`.",
+)
+
+
+async def one_hop(
+        curie: str = Path(example=EDGE_EXAMPLE["subject_id"]),
+        category: str | None = Query(example=EDGE_EXAMPLE["object_category"],
+                                     default=None,
+                                     description="Optionally provide a category to filter adjacent nodes and their edges by."),
+        predicate: str | None = Query(example=EDGE_EXAMPLE["predicate"],
+                                      default=None,
+                                      description="Optionally provide a predicate to filter edges by."),
+        limit: int = None,
+        offset: int = None,
+        count_only: bool = None,
+        graph_interface: GraphInterface = Depends(get_graph_interface),
+) -> Dict:
+    """Retrieve one-hop edges connected to `curie` with the predicate `predicate`
+    connected to nodes with the category `category`. Use limit and offset for pagination in the queries.
+    If count_only is true, only return how many edges there are."""
+
+    if predicate:
+        if not predicate.startswith('biolink'):
+            predicate = f'biolink:{predicate}'
+        if PREDICATES_IN_GRAPH and predicate not in PREDICATES_IN_GRAPH:
+            return {
+                "query_curie": curie,
+                "edge_types": []
+            }
+
+    if category:
+        if not category.startswith('biolink'):
+            category = f'biolink:{category}'
+        if NODE_CATEGORIES_IN_GRAPH and category not in NODE_CATEGORIES_IN_GRAPH:
+            return {
+                "query_curie": curie,
+                "edge_types": []
+            }
+
+    if count_only:
+        return await graph_interface.get_single_hops(
+            curie,
+            category,
+            predicate,
+            limit,
+            offset,
+            count_only=True
+        )
+
     return await graph_interface.get_single_hops(
-        source_type,
-        target_type,
         curie,
+        category,
+        predicate,
+        limit,
+        offset
     )
 
 APP.add_api_route(
-    "/{source_type}/{target_type}/{curie}",
+    "/edges/{curie}",
     one_hop,
     methods=["GET"],
-    response_model=List,
+    response_model=Dict,
     summary=(
-        "Get one hop results from source type to target type. "
+        "Get edges connected to the node with the identifier `curie`. "
     ),
     description=(
-        "Returns one hop paths from `source_node_type`  with `curie` "
-        "to `target_node_type`."
+        "Returns edges connected to the node with the identifier `curie`. "
+        "Optionally, filter edges by predicate or adjacent node category."
     ),
 )
 
 
-async def node(
-        node_type: str,
-        curie: str,
+async def one_hop_summary(
+        curie: str = Path(example=EDGE_EXAMPLE["subject_id"]),
         graph_interface: GraphInterface = Depends(get_graph_interface),
-) -> List[List[Dict]]:
-    """Handle node lookup."""
-    return await graph_interface.get_node(
-        node_type,
+) -> Dict:
+    return await graph_interface.get_single_hop_summary(
         curie,
     )
 
 APP.add_api_route(
-    "/{node_type}/{curie}",
-    node,
+    "/edge_summary/{curie}",
+    one_hop_summary,
     methods=["GET"],
-    response_model=List,
-    summary="Find `node` by `curie`",
-    description="Returns `node` matching `curie`.",
+    response_model=Dict,
+    summary=(
+        "Get a summary of edges connected to the node with the identifier `curie`. "
+    ),
+    description=(
+        "Returns a list of the kinds edges connected to the node with the identifier `curie`. "
+        "Results are formatted like [[predicate, node_category, count], ...]."
+    ),
 )
 
 
@@ -309,7 +403,6 @@ APP.add_api_route(
 if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("false", "False")):
     from pyinstrument import Profiler
     from pyinstrument.renderers import SpeedscopeRenderer
-    from fastapi.responses import HTMLResponse
 
     @APP.middleware("http")
     async def profile_request(request: Request, call_next):
@@ -319,6 +412,7 @@ if config.get('PROFILER_ON', False) and (config.get('PROFILER_ON') not in ("fals
             profiler.start()
             await call_next(request)
             profiler.stop()
-            return HTMLResponse(profiler.output(renderer=SpeedscopeRenderer()))
+            speedscope_results = profiler.output(renderer=SpeedscopeRenderer())
+            return Response(content=speedscope_results, media_type='application/json')
         else:
             return await call_next(request)

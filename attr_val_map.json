@@ -1,11 +1,42 @@
 {
   "attribute_type_map": {
-      "equivalent_identifiers": "biolink:same_as",
-      "endogenous": "aragorn:endogenous"
-  },
-  "value_type_map": {
-      "equivalent_identifiers": "linkml:Uriorcurie",
-      "endogenous": "xsd:boolean",
-      "publications": "linkml:Uriorcurie"
+    "agent_type": {
+        "attribute_type_id": "biolink:agent_type"
+    },
+    "definition": {
+        "attribute_type_id": "biolink:description",
+        "value_type_id": "dct:description"
+    },
+    "description": {
+        "attribute_type_id": "biolink:description",
+        "value_type_id": "dct:description"
+    },
+    "expressed_in": {
+        "attribute_type_id": "biolink:expressed_in"
+    },
+    "knowledge_level": {
+        "attribute_type_id": "biolink:knowledge_level"
+    },
+    "p_value": {
+        "attribute_type_id": "biolink:p_value",
+        "value_type_id": "xsd:float"
+    },
+    "protein": {
+        "attribute_type_id": "biolink:Protein"
+    },
+    "publications": {
+        "attribute_type_id": "biolink:publications",
+        "value_type_id": "linkml:Uriorcurie"
+    },
+    "symbol": {
+        "attribute_type_id": "biolink:symbol"
+    },
+    "taxon": {
+        "attribute_type_id": "biolink:OrganismTaxon"
+    },
+    "url": {
+        "attribute_type_id": "biolink:url",
+        "value_type_id": "xsd:string"
+    }
   }
 }
