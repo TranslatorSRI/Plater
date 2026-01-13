@@ -1,5 +1,5 @@
 from PLATER.services.util.graph_backends.base import GraphInterface
-from PLATER.services.util.graph_backends.neo4j_adapter import convert_http_response_to_dict
+from PLATER.services.util.graph_backends.neo4j_adapter import Neo4jBackend, convert_http_response_to_dict
 from pytest_httpx import HTTPXMock
 import pytest
 
@@ -162,7 +162,8 @@ async def test_driver_convert_to_dict():
 
 @pytest.mark.asyncio
 async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
-    gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='bolt')
+    graph_backend = Neo4jBackend(host='localhost', port='7474', auth=('neo4j', ''))
+    gi = GraphInterface(graph_backend)
     set_1 = frozenset([
       "biolink:SmallMolecule",
       "biolink:MolecularEntity",
@@ -181,7 +182,8 @@ async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
-    gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='bolt')
+    graph_backend = Neo4jBackend(host='localhost', port='7474', auth=('neo4j', ''))
+    gi = GraphInterface(graph_backend)
     non_exist_predicate = "biolink:some_predicate"
     assert gi.invert_predicate(non_exist_predicate) is None
     symmetric_predicate = "biolink:related_to"
