@@ -144,10 +144,10 @@ To run the web server directly:
     WEB_HOST=0.0.0.0
     WEB_PORT=8080
     NEO4J_HOST=neo4j
+    NEO4J_BOLT_PORT=7687
     NEO4J_USERNAME=neo4j
     NEO4J_PASSWORD=<change_me>    
-    NEO4J_HTTP_PORT=7474
-    NEO4J_QUERY_TIMEOUT=600
+    GRAPH_QUERY_TIMEOUT=600
     PLATER_TITLE='Plater'
     PLATER_VERSION='1.5.1'
     BL_VERSION='4.1.6'
@@ -187,7 +187,7 @@ To run the web server directly:
  ### Miscellaneous
  ###### `/about` Endpoint 
  The `/about` endpoint can be used to present meta-data about the current PLATER instance. 
- This meta-data is served from `<repo-root>/PLATER/about.json` file. One can edit the contents of
+ This meta-data is served from `<repo-root>/PLATER/metadata/about.json` file. One can edit the contents of
  this file to suite needs. In containerized environment we recommend mounting this file as a volume.
  
  Eg:

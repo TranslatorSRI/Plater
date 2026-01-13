@@ -1,13 +1,10 @@
 import time
-import neo4j
-import asyncio
-
-import neo4j.exceptions
-from functools import cache
-from neo4j import unit_of_work
-from opentelemetry import trace
+from abc import ABC, abstractmethod
 from collections import defaultdict
-from reasoner_transpiler.cypher import transform_result, transform_edges_list
+from functools import cache
+from opentelemetry import trace
+
+from reasoner_transpiler.cypher import transform_edges_list
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.util.bl_helper import get_biolink_model_toolkit
@@ -16,229 +13,48 @@ logger = LoggingUtil.init_logging(__name__,
                                   config.get('logging_level'),
                                   config.get('logging_format'))
 
-NEO4J_QUERY_TIMEOUT = int(config.get('NEO4J_QUERY_TIMEOUT', 1600))
+class GraphBackend(ABC):
+    """
+    Abstract graph backend interface to support concrete implementations
+    such as Neo4jBackend and MemgraphBackend.
+    """
 
+    @abstractmethod
+    async def connect(self):
+        pass
 
-class Neo4jBoltDriver:
-
-    def __init__(self,
-                 host: str,
-                 port: str,
-                 auth: tuple,
-                 database_name: str = 'neo4j'):
-        self.database_name = database_name
-        self.database_auth = auth
-        self.graph_db_uri = f'bolt://{host}:{port}'
-        self.neo4j_driver = None
-        self.sync_neo4j_driver = None
-        self._supports_apoc = None
-
-    async def connect_to_neo4j(self, retries=0):
-        if not self.neo4j_driver:
-            self.neo4j_driver = neo4j.AsyncGraphDatabase.driver(self.graph_db_uri,
-                                                                auth=self.database_auth,
-                                                                **{'telemetry_disabled': True,
-                                                                   'max_connection_pool_size': 1000})
-        try:
-            await self.neo4j_driver.verify_connectivity()
-        except Exception as e:  # currently the driver says it raises Exception, not something more specific
-            await self.neo4j_driver.close()
-            if retries <= 25:
-                await asyncio.sleep(8)
-                logger.error(f'Could not establish connection to neo4j, trying again... retry {retries + 1}')
-                await self.connect_to_neo4j(retries + 1)
-            else:
-                logger.error(f'Could not establish connection to neo4j, error: {e}')
-                raise e
-
-    @staticmethod
-    @unit_of_work(timeout=NEO4J_QUERY_TIMEOUT)
-    async def _async_cypher_tx_function(tx,
-                                        cypher,
-                                        query_parameters=None,
-                                        convert_to_dict=False,
-                                        convert_to_trapi=False,
-                                        qgraph=None):
-        if not query_parameters:
-            query_parameters = {}
-
-        neo4j_result: neo4j.AsyncResult = await tx.run(cypher, parameters=query_parameters)
-        if convert_to_trapi:
-            neo4j_record = await neo4j_result.single()
-            return transform_result(neo4j_record, qgraph)
-        elif convert_to_dict:
-            results = []
-            async for record in neo4j_result:
-                results.append({key: value for key, value in record.items()})
-            return results
-        return await convert_bolt_results_to_cypher_result(neo4j_result)
-
-    @staticmethod
-    def _sync_cypher_tx_function(tx,
-                                 cypher,
-                                 query_parameters=None,
-                                 convert_to_dict=False):
-        if not query_parameters:
-            query_parameters = {}
-        neo4j_result: neo4j.Result = tx.run(cypher, parameters=query_parameters)
-        if convert_to_dict:
-            results = []
-            for record in neo4j_result:
-                results.append({key: value for key, value in record.items()})
-            return results
-        else:
-            return neo4j_result
-
-    async def run(self,
-                  query,
-                  query_parameters=None,
-                  return_errors=False,
-                  convert_to_dict=False,
-                  convert_to_trapi=False,
-                  qgraph=None):
-        try:
-            async with self.neo4j_driver.session(database=self.database_name,
-                                                 default_access_mode=neo4j.READ_ACCESS) as session:
-                run_async_result = await session.execute_read(self._async_cypher_tx_function,
-                                                              query,
-                                                              query_parameters=query_parameters,
-                                                              convert_to_dict=convert_to_dict,
-                                                              convert_to_trapi=convert_to_trapi,
-                                                              qgraph=qgraph)
-        except neo4j.exceptions.ServiceUnavailable as e:
-            logger.error(f'Session could not establish connection to neo4j ({e}).. trying to connect again')
-            await self.connect_to_neo4j()
-            return await self.run(query,
-                                  query_parameters=query_parameters,
-                                  return_errors=return_errors,
-                                  convert_to_dict=convert_to_dict,
-                                  convert_to_trapi=convert_to_trapi,
-                                  qgraph=qgraph)
-        except neo4j.exceptions.Neo4jError as e:
-            logger.error(e)
-            if return_errors:
-                return {"results": [],
-                        "errors": [{"code": e.code,
-                                    "message": e.message}]}
-            raise e
-        except neo4j.exceptions.DriverError as e:
-            logger.error(e)
-            if return_errors:
-                return {"results": [],
-                        "errors": [{"message": f'A driver error occurred: {e}'}]}
-            raise e
-        return run_async_result
-
-    def run_sync(self,
-                 query,
-                 query_parameters=None,
-                 return_errors=False,
-                 convert_to_dict=False):
-        if not self.sync_neo4j_driver:
-            self.sync_neo4j_driver = neo4j.GraphDatabase.driver(self.graph_db_uri, auth=self.database_auth)
-        try:
-            with self.sync_neo4j_driver.session(database=self.database_name, default_access_mode=neo4j.READ_ACCESS) as session:
-
-                run_sync_result = session.execute_read(self._sync_cypher_tx_function,
-                                                       query,
-                                                       query_parameters=query_parameters,
-                                                       convert_to_dict=convert_to_dict)
-                return run_sync_result
-
-        except neo4j.exceptions.Neo4jError as e:
-            if return_errors:
-                logger.error(e)
-                return {"results": [],
-                        "errors": [{"code": e.code,
-                                    "message": e.message}]}
-            raise e
-        except (neo4j.exceptions.DriverError, neo4j.exceptions.ServiceUnavailable) as e:
-            if return_errors:
-                logger.error(e)
-                return {"results": [],
-                        "errors": [{"code": "",
-                                    "message": f'A driver error occurred: {e}'}]}
-            raise e
-        finally:
-            if self.sync_neo4j_driver:
-                self.sync_neo4j_driver.close()
-            self.sync_neo4j_driver = None
-
-    def check_apoc_support(self):
-        apoc_version_query = 'call apoc.version()'
-        if self._supports_apoc is None:
-            try:
-                self.run_sync(apoc_version_query)
-                self._supports_apoc = True
-            except neo4j.exceptions.ClientError:
-                self._supports_apoc = False
-        return self._supports_apoc
-
+    @abstractmethod
     async def close(self):
-        await self.neo4j_driver.close()
+        pass
 
+    @abstractmethod
+    async def run(self, *args, **kwargs):
+        pass
 
-# this is kind of hacky but in order to return the same pydantic model result for both drivers
-# convert the raw bolt cypher response to something that's formatted like the http json response
-async def convert_bolt_results_to_cypher_result(result: neo4j.AsyncResult):
-    cypher_result = {
-        "results": [
-            {
-                "columns": result.keys(),
-                "data": [{"row": [values for values in list(data.values())], "meta": []}
-                         for data in await result.data()]
-            }
-        ],
-        "errors": []
-    }
-    return cypher_result
+    @abstractmethod
+    def run_sync(self, *args, **kwargs):
+        pass
 
-
-def convert_http_response_to_dict(response: dict) -> list:
-    """
-    Converts a neo4j result to a structured result.
-    :param response: neo4j http raw result.
-    :type response: dict
-    :return: reformatted dict
-    :rtype: dict
-    """
-    results = response.get('results')
-    array = []
-    if results:
-        for result in results:
-            cols = result.get('columns')
-            if cols:
-                data_items = result.get('data')
-                for item in data_items:
-                    new_row = {}
-                    row = item.get('row')
-                    for col_name, col_value in zip(cols, row):
-                        new_row[col_name] = col_value
-                    array.append(new_row)
-    return array
+    @abstractmethod
+    def supports_apoc(self) -> bool:
+        pass
 
 
 class GraphInterface:
     """
-    Singleton class for interfacing with the graph.
+    Singleton class for graph interfacing and access via its GraphBackend instance.
     """
 
     class _GraphInterface:
-        def __init__(self, host, port, auth, protocol='bolt'):
-            self.protocol = protocol
-            if protocol == 'bolt':
-                self.driver = Neo4jBoltDriver(host=host, port=port, auth=auth)
-            else:
-                raise Exception(f'Unsupported graph interface protocol: {protocol}')
+        def __init__(self, backend: GraphBackend):
+            self.backend = backend
             self.schema = None
-            # used to keep track of derived inverted predicates
             self.inverted_predicates = defaultdict(lambda: defaultdict(set))
-            # self.summary = None
             self.toolkit = get_biolink_model_toolkit()
             self.bl_version = config.get('BL_VERSION', '4.2.1')
 
-        async def connect_to_neo4j(self):
-            await self.driver.connect_to_neo4j()
+        async def connect(self):
+            await self.backend.connect()
 
         @cache
         def find_biolink_leaves(self, biolink_concepts: frozenset):
@@ -265,13 +81,11 @@ class GraphInterface:
             element = self.toolkit.get_element(biolink_predicate)
             if element is None:
                 return None
-            # If its symmetric
             if element.symmetric:
                 return biolink_predicate
-            # if neither symmetric nor an inverse is found
             if not element.inverse:
+                # if neither symmetric nor an inverse is found
                 return None
-            # if an inverse is found
             return self.toolkit.get_element(element['inverse']).slot_uri
 
         def get_schema(self):
@@ -288,7 +102,7 @@ class GraphInterface:
                 """
                 logger.info(f"Starting schema query {query} on graph... this might take a few.")
                 before_time = time.time()
-                schema_query_results = self.driver.run_sync(query, convert_to_dict=True)
+                schema_query_results = self.backend.run_sync(query, convert_to_dict=True)
                 after_time = time.time()
                 logger.info(f"Completed schema query ({after_time - before_time} seconds). Preparing initial schema.")
                 # iterate through results (multiple sets of source label, predicate, target label arrays)
@@ -302,8 +116,8 @@ class GraphInterface:
                     filter_named_thing = lambda x: list(filter(lambda y: y != 'biolink:NamedThing', x))
                     source_labels, predicate, target_labels = \
                         self.find_biolink_leaves(frozenset(filter_named_thing(schema_result['source_labels']))), \
-                        schema_result['predicate'], \
-                        self.find_biolink_leaves(frozenset(filter_named_thing(schema_result['target_labels'])))
+                            schema_result['predicate'], \
+                            self.find_biolink_leaves(frozenset(filter_named_thing(schema_result['target_labels'])))
                     for source_label in source_labels:
                         for target_label in target_labels:
                             self.schema[source_label][target_label].add(predicate)
@@ -341,7 +155,7 @@ class GraphInterface:
                                 type(x) as predicate
                             RETURN DISTINCT source_label, predicate, target_label
                         """
-            response = await self.driver.run(query, convert_to_dict=True)
+            response = await self.backend.run(query, convert_to_dict=True)
             return response
 
         async def get_node(self, curie: str) -> dict:
@@ -353,9 +167,9 @@ class GraphInterface:
             :rtype: list
             """
             query = f"MATCH (n:`biolink:NamedThing`{{id: $node_id}}) return n"
-            response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
+            response = await self.backend.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
             if response and 'n' in response[0]:
-                node_object: neo4j.graph.Node = response[0]['n']
+                node_object = response[0]['n']
                 node_properties = dict(node_object.items())
                 return {
                     'id': node_properties.pop('id'),
@@ -378,7 +192,7 @@ class GraphInterface:
             """
             query = f'MATCH (n:`biolink:NamedThing`{{id: $node_id}})-[r]-(m) ' \
                     f'RETURN type(r) as predicate, labels(m) as node_labels, count(r) as edge_count'
-            response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
+            response = await self.backend.run(query, convert_to_dict=True, query_parameters={'node_id': curie})
 
             summary_edges = defaultdict(dict)
             for record in response:
@@ -439,7 +253,7 @@ class GraphInterface:
                 if limit is not None:
                     query += f' LIMIT {limit}'
 
-            response = await self.driver.run(query, convert_to_dict=True, query_parameters={'node_id': curie,
+            response = await self.backend.run(query, convert_to_dict=True, query_parameters={'node_id': curie,
                                                                                             'predicate': predicate})
 
             if count_only:
@@ -492,7 +306,6 @@ class GraphInterface:
             :return: unprocessed neo4j response.
             :rtype: list
             """
-            # get a reference to the current opentelemetry span
             otel_span = trace.get_current_span()
             if not otel_span or not otel_span.is_recording():
                 otel_span = None
@@ -501,7 +314,8 @@ class GraphInterface:
                                     attributes={
                                         'cypher_query': cypher
                                     })
-            cypher_results = await self.driver.run(cypher,
+
+            cypher_results = await self.backend.run(cypher,
                                                    convert_to_dict=convert_to_dict,
                                                    convert_to_trapi=convert_to_trapi,
                                                    qgraph=qgraph,
@@ -534,25 +348,25 @@ class GraphInterface:
             if object_node_type and predicate:
                 query = f"MATCH (subject:`{subject_node_type}`)-[edge:`{predicate}`]->(object:`{object_node_type}`) " \
                         f"{qualifiers_check} return subject, edge, object limit {num_examples}"
-                response = self.driver.run_sync(query, convert_to_dict=True)
+                response = self.backend.run_sync(query, convert_to_dict=True)
                 return response
             elif object_node_type:
                 query = f"MATCH (subject:`{subject_node_type}`)-[edge]->(object:`{object_node_type}`) " \
                         f"{qualifiers_check} return subject, edge, object limit {num_examples}"
-                response = self.driver.run_sync(query, convert_to_dict=True)
+                response = self.backend.run_sync(query, convert_to_dict=True)
                 return response
             else:
                 query = f"MATCH (subject:`{subject_node_type}`) " \
                         f"return subject limit {num_examples}"
-                response = self.driver.run_sync(query, convert_to_dict=True)
+                response = self.backend.run_sync(query, convert_to_dict=True)
                 return response
 
-        def supports_apoc(self):
+        def supports_apoc(self) -> bool:
             """
             Returns true if apoc is supported by backend database.
             :return: bool true if neo4j supports apoc.
             """
-            return self.driver.check_apoc_support()
+            return self.backend.supports_apoc()
 
         async def run_apoc_cover(self, ids: list):
             """
@@ -569,7 +383,7 @@ class GraphInterface:
                     WITH [elementId(rel), startNode(rel).id, type(rel), endNode(rel).id, properties(rel)] as row
                     return collect(row) as apoc_cover_edges
                     """
-            result = await self.driver.run(query, convert_to_dict=True)
+            result = await self.backend.run(query, convert_to_dict=True)
             result_edges = result[0]['apoc_cover_edges']
             # utilize the transpiler function to transform the list of edges into a map TRAPI edges
             # apoc_cover_kg_edges is a dict like {edge_id: trapi_edge}
@@ -599,25 +413,22 @@ class GraphInterface:
                             }}
                 ]) as result
             """
-            return await self.driver.run(query, **kwargs)
+            return await self.backend.run(query, **kwargs)
 
         async def close(self):
-            await self.driver.close()
+            await self.backend.close()
 
     instance = None
 
-    def __init__(self, host, port, auth, protocol='bolt'):
+    def __init__(self, backend: GraphBackend):
         # create a new instance if not already created.
         if not GraphInterface.instance:
-            GraphInterface.instance = GraphInterface._GraphInterface(host=host,
-                                                                     port=port,
-                                                                     auth=auth,
-                                                                     protocol=protocol)
+            GraphInterface.instance = GraphInterface._GraphInterface(backend)
 
     def __getattr__(self, item):
         # proxy function calls to the inner object.
         return getattr(self.instance, item)
 
     @staticmethod
-    async def connect_to_neo4j():
-        await GraphInterface.instance.connect_to_neo4j()
+    async def connect():
+        await GraphInterface.instance.connect()

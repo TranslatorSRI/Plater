@@ -6,21 +6,23 @@ import orjson
 from fastapi import Response
 from fastapi.openapi.utils import get_openapi
 
-from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.graph_backends.base import GraphInterface
+from PLATER.services.util.graph_backends.neo4j_adapter import Neo4jBackend
 from PLATER.services.config import config
 
 
 async def get_graph_interface():
     """Get graph interface."""
-    graph_interface = GraphInterface(
+    graph_backend = Neo4jBackend(
         host=config.get('NEO4J_HOST', 'localhost'),
         port=config.get('NEO4J_BOLT_PORT', '7687'),
         auth=(
             config.get('NEO4J_USERNAME'),
             config.get('NEO4J_PASSWORD')
-        )
-    )
-    await graph_interface.connect_to_neo4j()
+        ))
+    graph_interface = GraphInterface(graph_backend)
+
+    await graph_interface.connect()
     return graph_interface
 
 

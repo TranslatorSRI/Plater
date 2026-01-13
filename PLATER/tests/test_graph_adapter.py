@@ -1,9 +1,7 @@
-import json
-from collections import defaultdict
-from PLATER.services.util.graph_adapter import GraphInterface, convert_http_response_to_dict
+from PLATER.services.util.graph_backends.base import GraphInterface
+from PLATER.services.util.graph_backends.neo4j_adapter import convert_http_response_to_dict
 from pytest_httpx import HTTPXMock
 import pytest
-import os
 
 # TODO - implement these tests for Bolt
 

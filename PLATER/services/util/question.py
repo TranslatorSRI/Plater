@@ -4,7 +4,7 @@ import time
 
 from secrets import token_hex
 from opentelemetry import trace
-from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.graph_backends.base import GraphInterface
 from reasoner_transpiler.cypher import get_query
 from PLATER.services.config import config, get_positive_int_from_config
 from PLATER.services.util.logutil import LoggingUtil
