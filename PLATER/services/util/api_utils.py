@@ -6,20 +6,39 @@ import orjson
 from fastapi import Response
 from fastapi.openapi.utils import get_openapi
 
+from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.util.graph_backends.base import GraphInterface
 from PLATER.services.util.graph_backends.neo4j_adapter import Neo4jBackend
+from PLATER.services.util.graph_backends.memgraph_adapter import MemgraphBackend
 from PLATER.services.config import config
 
+logger = LoggingUtil.init_logging(__name__,
+                                  config.get('logging_level'),
+                                  config.get('logging_format'))
 
 async def get_graph_interface():
     """Get graph interface."""
-    graph_backend = Neo4jBackend(
-        host=config.get('NEO4J_HOST', 'localhost'),
-        port=config.get('NEO4J_BOLT_PORT', '7687'),
-        auth=(
-            config.get('NEO4J_USERNAME'),
-            config.get('NEO4J_PASSWORD')
-        ))
+    graph_db = config.get('GRAPH_DB', 'neo4j')
+    logger.info(f'config db: {config.get('GRAPH_DB')}, graph_db: {graph_db}')
+    if graph_db == 'memgraph':
+        mg_username = config.get('MEMGRAPH_USERNAME', None)
+        mg_password = config.get('MEMGRAPH_PASSWORD', None)
+        if mg_username and mg_password:
+            auth = (mg_username, mg_password)
+        else:
+            auth = None
+        graph_backend = MemgraphBackend(
+            host=config.get('MEMGRAPH_HOST', 'localhost'),
+            port=config.get('MEMGRAPH_BOLT_PORT', '7687'),
+            auth=auth)
+    else:
+        graph_backend = Neo4jBackend(
+            host=config.get('NEO4J_HOST', 'localhost'),
+            port=config.get('NEO4J_BOLT_PORT', '7687'),
+            auth=(
+                config.get('NEO4J_USERNAME'),
+                config.get('NEO4J_PASSWORD')
+            ))
     graph_interface = GraphInterface(graph_backend)
 
     await graph_interface.connect()

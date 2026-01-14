@@ -18,7 +18,7 @@ class GraphBackend(ABC):
     Abstract graph backend interface to support concrete implementations
     such as Neo4jBackend and MemgraphBackend.
     """
-
+    supports_element_id: bool = False
     @abstractmethod
     async def connect(self):
         pass
@@ -29,10 +29,6 @@ class GraphBackend(ABC):
 
     @abstractmethod
     async def run(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    def run_sync(self, *args, **kwargs):
         pass
 
     @abstractmethod
@@ -88,7 +84,7 @@ class GraphInterface:
                 return None
             return self.toolkit.get_element(element['inverse']).slot_uri
 
-        def get_schema(self):
+        async def get_schema(self):
             """
             Gets the schema of the graph. To be used by. Also generates graph summary
             :return: Dict of structure source label as outer most keys, target labels as inner keys and list of predicates
@@ -102,7 +98,7 @@ class GraphInterface:
                 """
                 logger.info(f"Starting schema query {query} on graph... this might take a few.")
                 before_time = time.time()
-                schema_query_results = self.backend.run_sync(query, convert_to_dict=True)
+                schema_query_results = await self.backend.run(query, convert_to_dict=True)
                 after_time = time.time()
                 logger.info(f"Completed schema query ({after_time - before_time} seconds). Preparing initial schema.")
                 # iterate through results (multiple sets of source label, predicate, target label arrays)
@@ -243,8 +239,19 @@ class GraphInterface:
             if count_only:
                 query += 'return count(r) as edge_count'
             else:
-                query += 'return distinct type(r) as predicate, properties(r) as edge_properties, ' \
-                         'CASE WHEN elementId(m) = elementId(startNode(r)) THEN "<" ELSE ">" END AS edge_direction, ' \
+                if self.backend.supports_element_id:
+                    direction_expr = (
+                        'CASE WHEN elementId(m) = elementId(startNode(r)) '
+                        'THEN "<" ELSE ">" END AS edge_direction'
+                    )
+                else:
+                    # Memgraph-safe fallback using node IDs since memgraph does not support elementId()
+                    direction_expr = (
+                        'CASE WHEN m.id = startNode(r).id '
+                        'THEN "<" ELSE ">" END AS edge_direction'
+                    )
+                query += f'return distinct type(r) as predicate, properties(r) as edge_properties, ' \
+                         f'{direction_expr}, ' \
                          'm.id as m_id, m.name as m_name, labels(m) as m_labels ORDER BY m_id'
 
                 if offset is not None:
@@ -324,7 +331,7 @@ class GraphInterface:
                 otel_span.add_event("neo4j_query_end")
             return cypher_results
 
-        def get_examples(self,
+        async def get_examples(self,
                          subject_node_type,
                          object_node_type=None,
                          predicate=None,
@@ -348,17 +355,17 @@ class GraphInterface:
             if object_node_type and predicate:
                 query = f"MATCH (subject:`{subject_node_type}`)-[edge:`{predicate}`]->(object:`{object_node_type}`) " \
                         f"{qualifiers_check} return subject, edge, object limit {num_examples}"
-                response = self.backend.run_sync(query, convert_to_dict=True)
+                response = await self.backend.run(query, convert_to_dict=True)
                 return response
             elif object_node_type:
                 query = f"MATCH (subject:`{subject_node_type}`)-[edge]->(object:`{object_node_type}`) " \
                         f"{qualifiers_check} return subject, edge, object limit {num_examples}"
-                response = self.backend.run_sync(query, convert_to_dict=True)
+                response = await self.backend.run(query, convert_to_dict=True)
                 return response
             else:
                 query = f"MATCH (subject:`{subject_node_type}`) " \
                         f"return subject limit {num_examples}"
-                response = self.backend.run_sync(query, convert_to_dict=True)
+                response = await self.backend.run(query, convert_to_dict=True)
                 return response
 
         def supports_apoc(self) -> bool:

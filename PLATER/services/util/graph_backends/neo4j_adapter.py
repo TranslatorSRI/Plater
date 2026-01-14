@@ -7,16 +7,18 @@ from neo4j import unit_of_work
 from PLATER.services.config import config
 from PLATER.services.util.logutil import LoggingUtil
 from PLATER.services.util.graph_backends.base import GraphBackend
+from PLATER.services.util.graph_backends.graph_utils import convert_bolt_results_to_cypher_result
 from reasoner_transpiler.cypher import transform_result
 
 logger = LoggingUtil.init_logging(__name__,
                                   config.get('logging_level'),
                                   config.get('logging_format'))
 
-NEO4J_QUERY_TIMEOUT = int(config.get('NEO4J_QUERY_TIMEOUT', 1600))
+NEO4J_QUERY_TIMEOUT = int(config.get('GRAPH_QUERY_TIMEOUT', 1600))
 
 
 class Neo4jBackend(GraphBackend):
+    supports_element_id = True
 
     def __init__(self, host: str, port: str, auth: tuple, database_name='neo4j'):
         self.database_name = database_name
@@ -67,7 +69,7 @@ class Neo4jBackend(GraphBackend):
                 results.append({k: v for k, v in record.items()})
             return results
 
-        return await _convert_bolt_results_to_cypher_result(neo4j_result)
+        return await convert_bolt_results_to_cypher_result(neo4j_result)
 
     @staticmethod
     def _sync_cypher_tx_function(tx,
@@ -182,21 +184,6 @@ class Neo4jBackend(GraphBackend):
         if self.neo4j_driver:
             await self.neo4j_driver.close()
 
-
-# this is kind of hacky but in order to return the same pydantic model result for both drivers
-# convert the raw bolt cypher response to something that's formatted like the http json response
-async def _convert_bolt_results_to_cypher_result(result: neo4j.AsyncResult):
-    cypher_result = {
-        "results": [
-            {
-                "columns": result.keys(),
-                "data": [{"row": [values for values in list(data.values())], "meta": []}
-                         for data in await result.data()]
-            }
-        ],
-        "errors": []
-    }
-    return cypher_result
 
 def convert_http_response_to_dict(response: dict) -> list:
     """
