@@ -4,7 +4,14 @@
 
 ## About 
 
-Suppose you have constructed a biolink-compliant knowledge graph, and want to deploy it as a TRAPI endpoint with limited fuss.  Plater is a web server that automatically exposes a Neo4j instance through [TRAPI](https://github.com/NCATSTranslator/ReasonerAPI) compliant endpoints. Plater brings several tools together in a web server to achieve this. It Uses [Reasoner Pydantic models](https://github.com/TranslatorSRI/reasoner-pydantic) for frontend validation and [Reasoner transpiler](https://github.com/ranking-agent/reasoner-transpiler) for transforming TRAPI to and from cypher and querying the Neo4j backend. The Neo4j database can be populated by using [KGX](https://github.com/biolink/kgx) upload, which is able to consume numerous graph input formats. By pointing Plater to Neo4j we can easily stand up a Knowledge Provider that provides the “lookup” operation and meta_knowledge_graph, as well as providing a platform to distribute common code implementing future operations across any endpoint built using Plater. In addition, with some configuration (x-trapi parameters etc...) options we can easily register our new instance to [Smart api](https://smart-api.info/). 
+Suppose you have constructed a biolink-compliant knowledge graph, and want to deploy it as a TRAPI endpoint with limited fuss.  
+Plater is a web server that automatically exposes a Neo4j or Memgraph instance through [TRAPI](https://github.com/NCATSTranslator/ReasonerAPI) compliant endpoints. 
+Plater brings several tools together in a web server to achieve this. It Uses [Reasoner Pydantic models](https://github.com/TranslatorSRI/reasoner-pydantic) for frontend validation 
+and [Reasoner transpiler](https://github.com/ranking-agent/reasoner-transpiler) for transforming TRAPI to and from cypher and querying the Neo4j or Memgraph backend. The Neo4j or Memgraph database 
+can be populated by using [KGX](https://github.com/biolink/kgx) upload, which is able to consume numerous graph input formats. By pointing Plater to Neo4j or Memgraph 
+we can easily stand up a Knowledge Provider that provides the “lookup” operation and meta_knowledge_graph, as well as providing a platform to 
+distribute common code implementing future operations across any endpoint built using Plater. In addition, with some configuration 
+(x-trapi parameters etc...) options we can easily register our new instance to [Smart api](https://smart-api.info/). 
 
 Another tool that comes in handy with Plater is [Automat](https://github.com/RENCI-AUTOMAT/Automat-server), which helps expose multiple Plater servers at a single public url and proxies queries towards them. [Here](https://automat.renci.org) is an example of running Automat instance.
 
@@ -15,43 +22,47 @@ Another tool that comes in handy with Plater is [Automat](https://github.com/REN
 ### Node and Edge lookup
 --------------------
 
-#### Neo4j Data Structure
+#### Neo4j or Memgraph Data Structure
 
 ##### Nodes
 Nodes are expected to have the following core structure:
       
-1. id : as neo4j node property with label `id`
+1. id : as neo4j or memgraph node property with label `id`
 2. category : Array of biolink types as neo4j node labels, it is required for every node to have at least the node label "biolink:NamedThing".
 3. Additional attributes can be added and will be exposed. (more details on "Matching a TRAPI query" section)
 
 ##### Edges 
 Edges need to have the following properties structure:
-1. subject: as a neo4j edge property with label `subject`
-2. object: as neo4j edge property with label `object`
-3. predicate: as neo4j edge type  
-5. id: as neo4j edge property with label `id`
+1. subject: as a neo4j or memgraph edge property with label `subject`
+2. object: as a neo4j or memgraph  edge property with label `object`
+3. predicate: as a neo4j or memgraph edge type  
+5. id: as a neo4j or memgraph edge property with label `id`
 6. Additional attributes will be returned in the TRAPI response attributes section. (more details on "Matching a TRAPI query" section)
 
 #### Matching a TRAPI query 
 
 
-PLATER matches nodes in neo4j using node labels. It expects nodes in neo4j to be labeled using [biolink types](https://biolink.github.io/biolink-model/docs/). Nodes in neo4j can have multiple labels. When looking a node from an incoming TRAPI query graph, the node type(s) are extracted for a node, and by traversing the biolink model, all subtypes and mixins that go with the query node type(s) will be used to lookup nodes. 
+PLATER matches nodes in neo4j or memgraph using node labels. It expects nodes in neo4j or memgraph to be labeled using [biolink types](https://biolink.github.io/biolink-model/docs/). 
+Nodes in neo4j or memgraph can have multiple labels. When looking a node from an incoming TRAPI query graph, the node type(s) are extracted 
+for a node, and by traversing the biolink model, all subtypes and mixins that go with the query node type(s) will be used to lookup nodes. 
 
-It's recommended that when encoding nodes labels in neo4j that we use the biolink class genealogy. For instance a node that is known to be a `biolink:SmallMolecule` can be assigned all of these classes ` ["biolink:SmallMolecule", "biolink:MolecularEntity", "biolink:ChemicalEntity",
+It's recommended that when encoding nodes labels in neo4j that we use the biolink class genealogy. For instance a node that is known to be 
+a `biolink:SmallMolecule` can be assigned all of these classes ` ["biolink:SmallMolecule", "biolink:MolecularEntity", "biolink:ChemicalEntity",
       "biolink:PhysicalEssence",
       "biolink:NamedThing",
       "biolink:Entity",
       "biolink:PhysicalEssenceOrOccurrent"]` . 
 
-By doing such encoding, during lookup the incoming query is can be more laxed (ask for `biolink:NamedThing`) or more specific (ask for `biolink:SmallMolecule ` etc...), and PLATER would be able to use the encoded label information to find matching node(s).
+By doing such encoding, during lookup the incoming query can be more laxed (ask for `biolink:NamedThing`) or more specific (ask for `biolink:SmallMolecule ` etc...), and PLATER would be able to use the encoded label information to find matching node(s).
 
-Similarly, for edges, edge labels in neo4j are used to perform edge lookup. Predicate hierarchy in biolink would be consulted to find subclasses of the query predicate type(s) and those would be used in an `OR` combinatorial fashion to find results. 
+Similarly, for edges, edge labels in neo4j or memgraph are used to perform edge lookup. Predicate hierarchy in biolink would be consulted to find 
+subclasses of the query predicate type(s) and those would be used in an `OR` combinatorial fashion to find results. 
  
  
 
 #### Subclass Inference
 
-Plater does subclass inference if subclass edges are encoded into neo4j graph. For eg , let A be a super class of B and C. And let B, C are related to D and E respectively :
+Plater does subclass inference if subclass edges are encoded into the graph. For eg , let A be a super class of B and C. And let B, C are related to D and E respectively :
 
 ```
 (A) <- biolink:subclass_of - (B) - biolink:decreases_activity_of -> (D)
@@ -78,7 +89,7 @@ Plater tries to resolve attibute types and value types for edges and nodes in th
     }
 
     ```
-    To explain this a little further, suppose we have an attribute called "equivalent_identifiers" stored in neo4j. Our attr_val_map.json would be : 
+    To explain this a little further, suppose we have an attribute called "equivalent_identifiers" stored in the graph. Our attr_val_map.json would be: 
 
     ```
     {
@@ -112,9 +123,9 @@ Plater tries to resolve attibute types and value types for edges and nodes in th
             }
     ```
   
-2. In cases where there are attributes in neo4j that are not specified in attr_val_map.json, PLATER will try to resolve a biolink class by using the original attribute name using Biolink model toolkit. 
+2. In cases where there are attributes in the graph that are not specified in attr_val_map.json, PLATER will try to resolve a biolink class by using the original attribute name using Biolink model toolkit. 
 3. If the above steps fail the attribute will be presented having `"attribute_type_id": "biolink:Attribute"` and `"value_type_id": "EDAM:data_0006"`
-4. If there are attributes that is not needed for presentation through TRAPI [Skip_attr.json](https://github.com/TranslatorSRI/Plater/blob/master/skip_attr.json) can be used to specify attribute names in neo4j to skip.
+4. If there are attributes that is not needed for presentation through TRAPI [Skip_attr.json](https://github.com/TranslatorSRI/Plater/blob/master/skip_attr.json) can be used to specify attribute names in neo4j or memgraph to skip.
    KGX loading adds a new attributes `provided_by` and `knowledge_source` to nodes and edges respectively, which are the file name used to load the graph. By default, we have included these to the skip list. 
  
 ### Provenance 
@@ -143,6 +154,7 @@ To run the web server directly:
    ```bash   
     WEB_HOST=0.0.0.0
     WEB_PORT=8080
+    GRAPH_DB=neo4j
     NEO4J_HOST=neo4j
     NEO4J_BOLT_PORT=7687
     NEO4J_USERNAME=neo4j
