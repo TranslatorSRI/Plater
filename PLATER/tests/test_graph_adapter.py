@@ -1,5 +1,6 @@
 from PLATER.services.util.graph_backends.base import GraphInterface
 from PLATER.services.util.graph_backends.neo4j_adapter import Neo4jBackend, convert_http_response_to_dict
+from PLATER.services.util.graph_backends.memgraph_adapter import MemgraphBackend
 from pytest_httpx import HTTPXMock
 import pytest
 
@@ -193,3 +194,8 @@ async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
     predicate_no_inverse_and_not_symmetric = "biolink:has_part"
     assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) is None
     GraphInterface.instance = None
+
+def test_memgraph_backend_capabilities():
+    backend = MemgraphBackend(host="localhost", port="7687")
+    assert backend.supports_element_id is False
+    assert backend.supports_apoc() is False
