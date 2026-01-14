@@ -19,7 +19,6 @@ logger = LoggingUtil.init_logging(__name__,
 async def get_graph_interface():
     """Get graph interface."""
     graph_db = config.get('GRAPH_DB', 'neo4j')
-    logger.info(f'config db: {config.get('GRAPH_DB')}, graph_db: {graph_db}')
     if graph_db == 'memgraph':
         mg_username = config.get('MEMGRAPH_USERNAME', None)
         mg_password = config.get('MEMGRAPH_PASSWORD', None)
