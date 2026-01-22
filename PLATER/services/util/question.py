@@ -73,14 +73,14 @@ class Question:
         trapi_query = str(orjson.dumps(self._question_json), "utf-8")
         # create a probably-unique id to be associated with this query in the logs
         query_logging_id = token_hex(10)
-        logger.info(f"querying neo4j for query {query_logging_id}, trapi: {trapi_query}")
-        logger.info(f"cypher query: {cypher}")
+        logger.info(f"querying {graph_db} for query {query_logging_id}, trapi: {trapi_query}")
+
         start_time = time.time()
         result_qgraph = await graph_interface.run_cypher(cypher,
                                                          convert_to_trapi=True,
                                                          qgraph=self._transpiler_qgraph)
         neo4j_duration = time.time() - start_time
-        logger.info(f"returned results from neo4j for {query_logging_id}, neo4j_duration: {neo4j_duration}")
+        logger.info(f"returned results from {graph_db} for {query_logging_id}, neo4j_duration: {neo4j_duration}")
         if otel_span is not None:
             otel_span.set_attributes(
                 {
