@@ -4,10 +4,11 @@ import time
 
 from secrets import token_hex
 from opentelemetry import trace
-from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.graph_backends.base import GraphInterface
 from reasoner_transpiler.cypher import get_query
 from PLATER.services.config import config, get_positive_int_from_config
 from PLATER.services.util.logutil import LoggingUtil
+from PLATER.services.config import config
 
 logger = LoggingUtil.init_logging(
     __name__,
@@ -55,22 +56,31 @@ class Question:
         if not otel_span or not otel_span.is_recording():
             otel_span = None
 
-        # compile a cypher query and return a string
-        cypher = self.compile_cypher(**{"use_hints": True,
-                                        "subclass": subclass_inference,
-                                        "subclass_depth": SUBCLASS_DEPTH})
+        graph_db = config.get('GRAPH_DB', 'neo4j')
+        if graph_db == 'memgraph':
+            # compile a cypher query and return a string
+            cypher = self.compile_cypher(**{"use_hints": False,
+                                            "dialect": "memgraph",
+                                            "subclass": subclass_inference,
+                                            "subclass_depth": SUBCLASS_DEPTH})
+        else:
+            # compile a cypher query and return a string
+            cypher = self.compile_cypher(**{"use_hints": True,
+                                            "subclass": subclass_inference,
+                                            "subclass_depth": SUBCLASS_DEPTH})
 
         # convert the incoming TRAPI query into a string for logging and tracing
         trapi_query = str(orjson.dumps(self._question_json), "utf-8")
         # create a probably-unique id to be associated with this query in the logs
         query_logging_id = token_hex(10)
-        logger.info(f"querying neo4j for query {query_logging_id}, trapi: {trapi_query}")
+        logger.info(f"querying {graph_db} for query {query_logging_id}, trapi: {trapi_query}")
+
         start_time = time.time()
         result_qgraph = await graph_interface.run_cypher(cypher,
                                                          convert_to_trapi=True,
                                                          qgraph=self._transpiler_qgraph)
         neo4j_duration = time.time() - start_time
-        logger.info(f"returned results from neo4j for {query_logging_id}, neo4j_duration: {neo4j_duration}")
+        logger.info(f"returned results from {graph_db} for {query_logging_id}, neo4j_duration: {neo4j_duration}")
         if otel_span is not None:
             otel_span.set_attributes(
                 {

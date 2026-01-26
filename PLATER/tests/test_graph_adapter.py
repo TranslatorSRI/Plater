@@ -1,9 +1,8 @@
-import json
-from collections import defaultdict
-from PLATER.services.util.graph_adapter import GraphInterface, convert_http_response_to_dict
+from PLATER.services.util.graph_backends.base import GraphInterface
+from PLATER.services.util.graph_backends.neo4j_adapter import Neo4jBackend, convert_http_response_to_dict
+from PLATER.services.util.graph_backends.memgraph_adapter import MemgraphBackend
 from pytest_httpx import HTTPXMock
 import pytest
-import os
 
 # TODO - implement these tests for Bolt
 
@@ -164,7 +163,8 @@ async def test_driver_convert_to_dict():
 
 @pytest.mark.asyncio
 async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
-    gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='bolt')
+    graph_backend = Neo4jBackend(host='localhost', port='7474', auth=('neo4j', ''))
+    gi = GraphInterface(graph_backend)
     set_1 = frozenset([
       "biolink:SmallMolecule",
       "biolink:MolecularEntity",
@@ -183,7 +183,8 @@ async def test_graph_interface_biolink_leaves(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
-    gi = GraphInterface('localhost', '7474', auth=('neo4j', ''), protocol='bolt')
+    graph_backend = Neo4jBackend(host='localhost', port='7474', auth=('neo4j', ''))
+    gi = GraphInterface(graph_backend)
     non_exist_predicate = "biolink:some_predicate"
     assert gi.invert_predicate(non_exist_predicate) is None
     symmetric_predicate = "biolink:related_to"
@@ -193,3 +194,8 @@ async def test_graph_interface_predicate_inverse(httpx_mock: HTTPXMock):
     predicate_no_inverse_and_not_symmetric = "biolink:has_part"
     assert gi.invert_predicate(predicate_no_inverse_and_not_symmetric) is None
     GraphInterface.instance = None
+
+def test_memgraph_backend_capabilities():
+    backend = MemgraphBackend(host="localhost", port="7687")
+    assert backend.supports_element_id is False
+    assert backend.supports_apoc() is False

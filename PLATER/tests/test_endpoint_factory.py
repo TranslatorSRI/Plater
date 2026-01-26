@@ -3,7 +3,7 @@ from httpx import AsyncClient, ASGITransport
 import pytest
 import json
 from functools import reduce
-from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.graph_backends.base import GraphInterface
 from PLATER.services.util.metadata import GraphMetadata
 import os
 

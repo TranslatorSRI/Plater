@@ -19,7 +19,7 @@ from PLATER.services.util.api_utils import (
 )
 from PLATER.services.util.attribute_mapping import ATTRIBUTE_SKIP_LIST, ATTRIBUTE_TYPES
 from PLATER.services.util.bl_helper import BLHelper, get_bl_helper
-from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.graph_backends.base import GraphInterface
 from PLATER.services.util.metadata import get_graph_metadata, GraphMetadata
 from PLATER.services.util.overlay import Overlay
 from PLATER.services.util.question import Question

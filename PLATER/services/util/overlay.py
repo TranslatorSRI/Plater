@@ -1,4 +1,4 @@
-from PLATER.services.util.graph_adapter import GraphInterface
+from PLATER.services.util.graph_backends.base import GraphInterface
 from PLATER.services.util.question import Question
 from reasoner_transpiler.attributes import ATTRIBUTE_TYPES
 from reasoner_transpiler.cypher import transform_attributes
