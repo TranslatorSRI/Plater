@@ -223,7 +223,33 @@ APP.add_api_route(
     methods=["GET"],
     response_model=Any,
     summary="Metadata about the knowledge graph.",
-    description="Returns JSON with metadata about the data sources in this knowledge graph.",
+    description="Returns JSON with metadata about the knowledge graph.",
+)
+
+async def graph_metadata(metadata_retriever: GraphMetadata = Depends(get_graph_metadata)) -> Any:
+    """Handle /metadata."""
+    return metadata_retriever.get_graph_metadata()
+
+APP.add_api_route(
+    "/graph-metadata",
+    graph_metadata,
+    methods=["GET"],
+    response_model=Any,
+    summary="Metadata about the knowledge graph.",
+    description="Returns JSON with metadata about the knowledge graph.",
+)
+
+async def schema(metadata_retriever: GraphMetadata = Depends(get_graph_metadata)) -> Any:
+    """Handle /metadata."""
+    return metadata_retriever.get_schema()
+
+APP.add_api_route(
+    "/schema",
+    schema,
+    methods=["GET"],
+    response_model=Any,
+    summary="The schema of the contents of the knowledge graph.",
+    description="Returns a JSON schema for the knowledge graph.",
 )
 
 
@@ -321,7 +347,7 @@ async def one_hop_summary(
     )
 
 APP.add_api_route(
-    "/edge_summary/{curie}",
+    "/edge-summary/{curie}",
     one_hop_summary,
     methods=["GET"],
     response_model=Dict,
@@ -332,6 +358,16 @@ APP.add_api_route(
         "Returns a list of the kinds edges connected to the node with the identifier `curie`. "
         "Results are formatted like [[predicate, node_category, count], ...]."
     ),
+)
+
+# !!! NOTE - this is here to support backward compatibility for "/edge_summary/"
+#   it should be removed when all new platers are deployed and application usage switches to "/edge-summary/"
+APP.add_api_route(
+    "/edge_summary/{curie}",
+    one_hop_summary,
+    methods=["GET"],
+    response_model=Dict,
+    include_in_schema=False,  # this means it won't be shown in the openapi docs
 )
 
 

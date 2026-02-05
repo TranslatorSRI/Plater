@@ -25,6 +25,10 @@ class GraphMetadata:
         def __init__(self):
             self.metadata = None
             self._retrieve_metadata()
+            self.graph_metadata = None
+            self._retrieve_graph_metadata()
+            self.schema = None
+            self._retrieve_schema()
             self.meta_kg = None
             self.meta_kg_response = None
             self.predicates_in_graph = set()
@@ -45,6 +49,20 @@ class GraphMetadata:
             if not self.metadata:
                 with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'about.json')) as f:
                     self.metadata = json.load(f)
+
+        def get_graph_metadata(self):
+            return self.graph_metadata
+
+        def _retrieve_graph_metadata(self):
+            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'graph_metadata.json')) as f:
+                self.graph_metadata = json.load(f)
+
+        def get_schema(self):
+            return self.schema
+
+        def _retrieve_schema(self):
+            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'schema.json')) as f:
+                self.schema = json.load(f)
 
         def get_meta_kg(self):
             return self.meta_kg
