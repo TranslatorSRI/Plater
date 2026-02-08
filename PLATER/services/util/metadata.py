@@ -22,6 +22,21 @@ class GraphMetadata:
 
     class _GraphMetadata:
 
+        METADATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'metadata')
+
+        # Attempt to load a json file from the METADATA_DIR but return default as the content otherwise
+        @staticmethod
+        def _load_json(filename, default):
+            filepath = os.path.join(GraphMetadata._GraphMetadata.METADATA_DIR, filename)
+            try:
+                with open(filepath) as f:
+                    data = json.load(f)
+                    if data:
+                        return data
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                logger.warning(f'Could not load {filename}: {e}, using default')
+            return default
+
         def __init__(self):
             self.metadata = None
             self._retrieve_metadata()
@@ -43,26 +58,19 @@ class GraphMetadata:
             return self.metadata
 
         def _retrieve_metadata(self):
-            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'metadata.json')) as f:
-                self.metadata = json.load(f)
-
-            if not self.metadata:
-                with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'about.json')) as f:
-                    self.metadata = json.load(f)
+            self.metadata = self._load_json('metadata.json', {})
 
         def get_graph_metadata(self):
             return self.graph_metadata
 
         def _retrieve_graph_metadata(self):
-            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'graph_metadata.json')) as f:
-                self.graph_metadata = json.load(f)
+            self.graph_metadata = self._load_json('graph_metadata.json', {})
 
         def get_schema(self):
             return self.schema
 
         def _retrieve_schema(self):
-            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'schema.json')) as f:
-                self.schema = json.load(f)
+            self.schema = self._load_json('schema.json', {})
 
         def get_meta_kg(self):
             return self.meta_kg
@@ -71,31 +79,33 @@ class GraphMetadata:
             return self.meta_kg_response
 
         def _retrieve_meta_kg(self):
-            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'meta_knowledge_graph.json')) as f:
-                self.meta_kg = json.load(f)
-                try:
-                    # validate the meta kg with the pydantic model
-                    MetaKnowledgeGraph.parse_obj(self.meta_kg)
-                    logger.info('Successfully validated meta kg')
+            self.meta_kg = self._load_json('meta_knowledge_graph.json', {"nodes": {}, "edges": []})
+            try:
+                # validate the meta kg with the pydantic model
+                MetaKnowledgeGraph.parse_obj(self.meta_kg)
+                logger.info('Successfully validated meta kg')
 
-                    self.node_categories_in_graph = set(self.meta_kg['nodes'].keys())
-                    logger.info(f'Used meta kg to determine node categories in graph: {self.node_categories_in_graph}')
+                self.node_categories_in_graph = set(self.meta_kg['nodes'].keys())
+                logger.info(f'Used meta kg to determine node categories in graph: {self.node_categories_in_graph}')
 
-                    for edge in self.meta_kg['edges']:
-                        self.predicates_in_graph.add(edge['predicate'])
-                    logger.info(f'Used meta kg to determine predicates in graph: {self.predicates_in_graph}')
+                for edge in self.meta_kg['edges']:
+                    self.predicates_in_graph.add(edge['predicate'])
+                logger.info(f'Used meta kg to determine predicates in graph: {self.predicates_in_graph}')
 
-                    # create an already-encoded object that is ready to be returned quickly
-                    self.meta_kg_response = jsonable_encoder(self.meta_kg)
-                except ValidationError as e:
-                    logger.error(f'Error validating meta kg: {e}')
+                # create an already-encoded object that is ready to be returned quickly
+                self.meta_kg_response = jsonable_encoder(self.meta_kg)
+            except ValidationError as e:
+                logger.error(f'Error validating meta kg: {e}')
 
         def get_sri_testing_data(self):
             return self.sri_testing_data
 
         def _retrieve_sri_test_data(self):
-            with open(os.path.join(os.path.dirname(__file__), '..', '..', 'metadata', 'sri_testing_data.json')) as f:
-                self.sri_testing_data = json.load(f)
+            self.sri_testing_data = self._load_json('sri_testing_data.json', {
+                "version": "",
+                "source_type": "primary",
+                "edges": [],
+            })
 
             # version is technically not part of the spec anymore
             # but this ensures validation with the model until it's removed
