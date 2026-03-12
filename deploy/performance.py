@@ -17,9 +17,15 @@ def quick_jsonl_file_iterator(json_file):
                 yield {}
 
 
-def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iterations):
+def save_results(results, output_path):
+    with open(output_path, 'w') as p_out:
+        p_out.write(json.dumps(results, indent=4))
+
+
+def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iterations, output_path):
     """Run all queries in performance_spec against a single endpoint URL."""
     print(f'Running performance analysis for: {endpoint_name} ({url})')
+    query_count = 0
     for spec_name, query_details in performance_spec.items():
         if spec_name not in results:
             results[spec_name] = {}
@@ -66,9 +72,13 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
                         print(f'Error occured after {duration} seconds: {e}.')
                         results[spec_name][endpoint_name][query_name]['errors'].append(str(e))
 
+                query_count += 1
                 success_durations = results[spec_name][endpoint_name][query_name]['success_duration']
                 average = sum(success_durations) / len(success_durations) if success_durations else "N/A"
                 print(f'Average time for {query_name} to {endpoint_name}, {spec_name}: {average}')
+                if query_count % 10 == 0:
+                    print(f'Saving intermediate results ({query_count} queries completed)...')
+                    save_results(results, output_path)
 
 
 def run_performance_analysis(deployments_to_validate=None, performance_spec=None, iterations=3,
@@ -79,11 +89,13 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
     or use deployments_to_validate to filter from the deployment_spec.yaml file.
     """
     plater_performance_results = {}
+    os.makedirs('./performance_results', exist_ok=True)
+    output_path = f'./performance_results/performance_analysis_results_{random.randrange(100000)}.json'
 
     if endpoints:
         for endpoint_name, url in endpoints.items():
             run_queries_for_endpoint(endpoint_name, url, performance_spec,
-                                     plater_performance_results, iterations)
+                                     plater_performance_results, iterations, output_path)
     else:
         graph_deployment_spec_path = os.path.join(os.path.dirname(__file__), 'deployment_spec.yaml')
         with open(graph_deployment_spec_path) as graph_deployment_spec_file:
@@ -95,11 +107,9 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
                 for plater in performance_spec:
                     url = automat_url + plater + "/" if "localhost" not in automat_url else automat_url
                     run_queries_for_endpoint(deployment_env, url, performance_spec,
-                                             plater_performance_results, iterations)
+                                             plater_performance_results, iterations, output_path)
 
-    os.makedirs('./performance_results', exist_ok=True)
-    with open(f'./performance_results/performance_analysis_results_{random.randrange(100000)}.json', 'w') as p_out:
-        p_out.write(json.dumps(plater_performance_results, indent=4))
+    save_results(plater_performance_results, output_path)
 
 
 if __name__ == '__main__':
