@@ -50,10 +50,11 @@ if ATTRIBUTE_SKIP_LIST:
 # if no meta kg is provided then all predicates are permitted
 PREDICATES_IN_GRAPH = get_graph_metadata().predicates_in_graph
 set_predicates_in_graph(PREDICATES_IN_GRAPH)
-NODE_CATEGORIES_IN_GRAPH = get_graph_metadata().node_categories_in_graph
-HAS_SUBCLASS_EDGES = True if 'biolink:subclass_of' in get_graph_metadata().predicates_in_graph else False
-if not HAS_SUBCLASS_EDGES:
+HAS_SUBCLASS_EDGES = True
+if PREDICATES_IN_GRAPH and 'biolink:subclass_of' not in PREDICATES_IN_GRAPH:
+    HAS_SUBCLASS_EDGES = False
     logger.info(f'No subclass edges in the graph according to the meta_knowledge_graph, subclassing = OFF.')
+NODE_CATEGORIES_IN_GRAPH = get_graph_metadata().node_categories_in_graph
 
 # get an example query for the /query endpoint, to be included in the open api spec
 # it would be nice to use Depends() for the graph metadata here, as it's used elsewhere,
