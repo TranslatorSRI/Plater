@@ -3,7 +3,7 @@ pyaml==20.4.0
 pytest==8.3.3
 pytest-asyncio==0.24.0
 uvicorn==0.24.0
-reasoner-transpiler==2.4.0
+reasoner-transpiler==2.4.1
 reasoner-pydantic==5.0.6
 httpx==0.27.2
 pytest-httpx==0.32.0
