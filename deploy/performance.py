@@ -3,7 +3,9 @@ import yaml
 import json
 import time
 import random
+import threading
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from validate import send_cypher_query, send_trapi_query
 
@@ -22,7 +24,8 @@ def save_results(results, output_path):
         p_out.write(json.dumps(results, indent=4))
 
 
-def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iterations, output_path):
+def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iterations, output_path,
+                              save_lock=None):
     """Run all queries in performance_spec against a single endpoint URL."""
     print(f'Running performance analysis for: {endpoint_name} ({url})')
     query_count = 0
@@ -77,8 +80,12 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
                 average = sum(success_durations) / len(success_durations) if success_durations else "N/A"
                 print(f'Average time for {query_name} to {endpoint_name}, {spec_name}: {average}')
                 if query_count % 10 == 0:
-                    print(f'Saving intermediate results ({query_count} queries completed)...')
-                    save_results(results, output_path)
+                    print(f'Saving intermediate results ({query_count} queries completed for {endpoint_name})...')
+                    if save_lock:
+                        with save_lock:
+                            save_results(results, output_path)
+                    else:
+                        save_results(results, output_path)
 
 
 def run_performance_analysis(deployments_to_validate=None, performance_spec=None, iterations=3,
@@ -92,10 +99,12 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
     os.makedirs('./performance_results', exist_ok=True)
     output_path = f'./performance_results/performance_analysis_results_{random.randrange(100000)}.json'
 
+    save_lock = threading.Lock()
+
+    # Build list of (endpoint_name, url) pairs to run in parallel
+    endpoint_tasks = []
     if endpoints:
-        for endpoint_name, url in endpoints.items():
-            run_queries_for_endpoint(endpoint_name, url, performance_spec,
-                                     plater_performance_results, iterations, output_path)
+        endpoint_tasks = list(endpoints.items())
     else:
         graph_deployment_spec_path = os.path.join(os.path.dirname(__file__), 'deployment_spec.yaml')
         with open(graph_deployment_spec_path) as graph_deployment_spec_file:
@@ -106,8 +115,23 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
             if not deployments_to_validate or deployment_env in deployments_to_validate:
                 for plater in performance_spec:
                     url = automat_url + plater + "/" if "localhost" not in automat_url else automat_url
-                    run_queries_for_endpoint(deployment_env, url, performance_spec,
-                                             plater_performance_results, iterations, output_path)
+                    endpoint_tasks.append((deployment_env, url))
+
+    with ThreadPoolExecutor(max_workers=len(endpoint_tasks) or 1) as executor:
+        futures = {
+            executor.submit(
+                run_queries_for_endpoint, name, url, performance_spec,
+                plater_performance_results, iterations, output_path, save_lock
+            ): name
+            for name, url in endpoint_tasks
+        }
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                future.result()
+                print(f'Completed all queries for: {name}')
+            except Exception as e:
+                print(f'Error running queries for {name}: {e}')
 
     save_results(plater_performance_results, output_path)
 
@@ -136,12 +160,15 @@ if __name__ == '__main__':
     # or pass TRAPI endpoints directly (no deployment spec needed)
     trapi_endpoints = {
         "neo4j_plater": "https://robokop-automat.apps.renci.org/robokopkg/",
-        "memgraph_plater": "https://automat.renci.org/robokopkg-memgraph/",
+        #"memgraph_plater": "https://automat.renci.org/robokopkg-memgraph/",
+        "gandalf_dev": "https://automat-dev.apps.renci.org/robokopkg/",
+        "gandalf_ci": "https://automat.ci.transltr.io/robokopkg/",
+
     }
     trapi_spec = {
-        "robokopkg": {"files": ["./performance_queries/robokop_one_hop_trapi.jsonl"],
-                      "queries": ["robokop_small_Behavior_affects"],
+        "robokopkg": {"files": ["./performance_queries/robokop_one_hop_trapi.jsonl",
+                                "./performance_queries/robokop_two_hop_trapi.jsonl"],
                       "query_type": "trapi"}
     }
-    run_performance_analysis(performance_spec=trapi_spec, endpoints=trapi_endpoints, iterations=1)
+    run_performance_analysis(performance_spec=trapi_spec, endpoints=trapi_endpoints, iterations=3)
 
