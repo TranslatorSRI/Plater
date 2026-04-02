@@ -32,7 +32,8 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
     for spec_name, query_details in performance_spec.items():
         if spec_name not in results:
             results[spec_name] = {}
-        results[spec_name][endpoint_name] = {}
+        if endpoint_name not in results[spec_name]:
+            results[spec_name][endpoint_name] = {}
         query_files = query_details["files"]
         queries = query_details.get("queries")
         for q_file in query_files:
@@ -42,6 +43,15 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
                 query_name = performance_query.pop('query_name')
                 if queries and query_name not in queries:
                     continue
+                if query_name in results[spec_name][endpoint_name]:
+                    previous = results[spec_name][endpoint_name][query_name]
+                    has_forbidden = any('403 Client Error: Forbidden' in e for e in previous.get('errors', []))
+                    if not has_forbidden:
+                        print(f'Skipping already completed query {query_name} for {endpoint_name}: {spec_name}')
+                        query_count += 1
+                        continue
+                    print(f'Retrying query {query_name} for {endpoint_name}: {spec_name} (had 403 Forbidden)')
+                    results[spec_name][endpoint_name].pop(query_name)
                 results[spec_name][endpoint_name][query_name] = {'success_duration': [],
                                                                   'num_results': [],
                                                                   'response_size_bytes': [],
@@ -89,15 +99,28 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
 
 
 def run_performance_analysis(deployments_to_validate=None, performance_spec=None, iterations=3,
-                             endpoints=None):
+                             endpoints=None, resume_from=None):
     """Run performance analysis.
 
     Either pass endpoints (a dict of {name: url}) to run TRAPI queries directly,
     or use deployments_to_validate to filter from the deployment_spec.yaml file.
+
+    If resume_from is provided (a file number like 10844), load previous results
+    from that file and skip any queries that were already completed.
     """
     plater_performance_results = {}
     os.makedirs('./performance_results', exist_ok=True)
-    output_path = f'./performance_results/performance_analysis_results_{random.randrange(100000)}.json'
+
+    if resume_from is not None:
+        resume_path = f'./performance_results/performance_analysis_results_{resume_from}.json'
+        if os.path.exists(resume_path):
+            with open(resume_path) as f:
+                plater_performance_results = json.load(f)
+            print(f'Resuming from {resume_path}')
+        else:
+            print(f'Warning: resume file {resume_path} not found, starting fresh.')
+
+    output_path = f'./performance_results/performance_analysis_results_{resume_from or random.randrange(100000)}.json'
 
     save_lock = threading.Lock()
 
@@ -138,6 +161,12 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
 
 if __name__ == '__main__':
 
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--resume-from', type=str, default=None,
+                        help='File number of a previous run to resume from (e.g. 10844)')
+    args = parser.parse_args()
+
     # environments = ['exp', 'dev', 'robokop']
     # environments = ['robokop']
 
@@ -163,12 +192,14 @@ if __name__ == '__main__':
         #"memgraph_plater": "https://automat.renci.org/robokopkg-memgraph/",
         "gandalf_dev": "https://automat-dev.apps.renci.org/robokopkg/",
         "gandalf_ci": "https://automat.ci.transltr.io/robokopkg/",
+        #"gandalf_test": "https://automat.test.transltr.io/robokopkg/",
 
     }
     trapi_spec = {
-        "robokopkg": {"files": ["./performance_queries/robokop_one_hop_trapi.jsonl",
+        "robokopkg": {"files": [
                                 "./performance_queries/robokop_two_hop_trapi.jsonl"],
                       "query_type": "trapi"}
     }
-    run_performance_analysis(performance_spec=trapi_spec, endpoints=trapi_endpoints, iterations=3)
+    run_performance_analysis(performance_spec=trapi_spec, endpoints=trapi_endpoints, iterations=3,
+                             resume_from=args.resume_from)
 
