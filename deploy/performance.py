@@ -25,7 +25,7 @@ def save_results(results, output_path):
 
 
 def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iterations, output_path,
-                              save_lock=None):
+                              save_lock=None, save_responses=False):
     """Run all queries in performance_spec against a single endpoint URL."""
     print(f'Running performance analysis for: {endpoint_name} ({url})')
     query_count = 0
@@ -54,6 +54,8 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
                     results[spec_name][endpoint_name].pop(query_name)
                 results[spec_name][endpoint_name][query_name] = {'success_duration': [],
                                                                   'num_results': [],
+                                                                  'num_kg_nodes': [],
+                                                                  'num_kg_edges': [],
                                                                   'response_size_bytes': [],
                                                                   'errors': []}
                 for i in range(iterations):
@@ -66,20 +68,34 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
                                                               profile=False,
                                                               validate=False)
                             num_results = len(trapi_response['message']['results'])
+                            num_kg_nodes = len(trapi_response['message'].get('knowledge_graph', {}).get('nodes', {}))
+                            num_kg_edges = len(trapi_response['message'].get('knowledge_graph', {}).get('edges', {}))
                             response_size = len(json.dumps(trapi_response, separators=(',', ':')).encode('utf-8'))
                         elif query_details["query_type"] == "cypher":
                             cypher_query = performance_query["cypher_query"]
                             cypher_response = send_cypher_query(url,
                                                                 cypher_query)
                             num_results = 1
+                            num_kg_nodes = "N/A"
+                            num_kg_edges = "N/A"
                             response_size = len(json.dumps(cypher_response, separators=(',', ':')).encode('utf-8'))
                         else:
-                            print("huh")
+                            raise NotImplementedError(f'Query type {query_details["query_type"]} not implemented.')
+
                         duration = time.time() - start_time
                         print(f'Got back {num_results} results ({response_size} bytes) in {duration}s.')
                         results[spec_name][endpoint_name][query_name]['success_duration'].append(duration)
                         results[spec_name][endpoint_name][query_name]['num_results'].append(num_results)
+                        results[spec_name][endpoint_name][query_name]['num_kg_nodes'].append(num_kg_nodes)
+                        results[spec_name][endpoint_name][query_name]['num_kg_edges'].append(num_kg_edges)
                         results[spec_name][endpoint_name][query_name]['response_size_bytes'].append(response_size)
+                        if save_responses:
+                            response_dir = os.path.join('./performance_results', 'responses', endpoint_name)
+                            os.makedirs(response_dir, exist_ok=True)
+                            response_data = trapi_response if query_details["query_type"] == "trapi" else cypher_response
+                            response_file = os.path.join(response_dir, f'{query_name}_iter{i+1}.json')
+                            with open(response_file, 'w') as rf:
+                                json.dump(response_data, rf, separators=(',', ':'))
                     except requests.exceptions.HTTPError as e:
                         duration = time.time() - start_time
                         print(f'Error occured after {duration} seconds: {e}.')
@@ -99,7 +115,7 @@ def run_queries_for_endpoint(endpoint_name, url, performance_spec, results, iter
 
 
 def run_performance_analysis(deployments_to_validate=None, performance_spec=None, iterations=3,
-                             endpoints=None, resume_from=None):
+                             endpoints=None, resume_from=None, save_responses=False):
     """Run performance analysis.
 
     Either pass endpoints (a dict of {name: url}) to run TRAPI queries directly,
@@ -144,7 +160,7 @@ def run_performance_analysis(deployments_to_validate=None, performance_spec=None
         futures = {
             executor.submit(
                 run_queries_for_endpoint, name, url, performance_spec,
-                plater_performance_results, iterations, output_path, save_lock
+                plater_performance_results, iterations, output_path, save_lock, save_responses
             ): name
             for name, url in endpoint_tasks
         }
@@ -165,6 +181,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--resume-from', type=str, default=None,
                         help='File number of a previous run to resume from (e.g. 10844)')
+    parser.add_argument('--save-responses', action='store_true',
+                        help='Save full response bodies to performance_results/responses/')
     args = parser.parse_args()
 
     # environments = ['exp', 'dev', 'robokop']
@@ -193,13 +211,13 @@ if __name__ == '__main__':
         "gandalf_dev": "https://automat-dev.apps.renci.org/robokopkg/",
         "gandalf_ci": "https://automat.ci.transltr.io/robokopkg/",
         #"gandalf_test": "https://automat.test.transltr.io/robokopkg/",
-
     }
     trapi_spec = {
-        "robokopkg": {"files": [
-                                "./performance_queries/robokop_two_hop_trapi.jsonl"],
+        "robokopkg": {"files": ["./performance_queries/robokop_two_hop_trapi.jsonl"],
+                      # "queries": [
+                      #    "robokop_two_hop_ChemicalEntity_affects",
+                      # ],
                       "query_type": "trapi"}
     }
-    run_performance_analysis(performance_spec=trapi_spec, endpoints=trapi_endpoints, iterations=3,
-                             resume_from=args.resume_from)
-
+    run_performance_analysis(performance_spec=trapi_spec, endpoints=trapi_endpoints, iterations=1,
+                             resume_from=args.resume_from, save_responses=args.save_responses)
