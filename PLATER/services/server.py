@@ -42,11 +42,7 @@ if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
         otlp_host = config.get("JAEGER_HOST", "http://localhost/").rstrip('/')
         otlp_port = config.get("JAEGER_PORT", "4317")
         otlp_endpoint = f'{otlp_host}:{otlp_port}'
-        # In both SDK versions 1.27 and 1.28, OTLPSpanExporter does not respect http:// scheme in endpoint
-        # and uses secure channel automatically. OTEL_EXPORTER_OTLP_INSECURE env var is introduced to force 
-        # insecure channel for environments on http:// endpoints.
-        otlp_insecure = config.get("OTEL_EXPORTER_OTLP_INSECURE", "false").lower() == "true"
-        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}', insecure=otlp_insecure)
+        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}')
         processor = BatchSpanProcessor(otlp_exporter)
 
     provider.add_span_processor(processor)
