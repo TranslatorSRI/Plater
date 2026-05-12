@@ -9,11 +9,11 @@ httpx==0.27.2
 pytest-httpx==0.32.0
 pydantic==1.10.2
 orjson==3.10.7
-opentelemetry-sdk==1.41.1
-opentelemetry-exporter-otlp-proto-grpc==1.41.1
-opentelemetry-exporter-otlp-proto-common==1.41.1
-opentelemetry-proto==1.41.1
-opentelemetry-api==1.41.1
-opentelemetry-instrumentation-fastapi==0.62b1
+opentelemetry-sdk==1.28.2
+opentelemetry-exporter-otlp-proto-grpc==1.28.2
+opentelemetry-exporter-otlp-proto-common==1.28.2
+opentelemetry-proto==1.28.2
+opentelemetry-api==1.28.2
+opentelemetry-instrumentation-fastapi==0.49b2
 pyinstrument==4.7.3
 neo4j-rust-ext==5.28.0
