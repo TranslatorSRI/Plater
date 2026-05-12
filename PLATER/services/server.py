@@ -42,7 +42,8 @@ if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
         otlp_host = config.get("JAEGER_HOST", "http://localhost/").rstrip('/')
         otlp_port = config.get("JAEGER_PORT", "4317")
         otlp_endpoint = f'{otlp_host}:{otlp_port}'
-        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}')
+        otlp_insecure = config.get("OTEL_EXPORTER_OTLP_INSECURE", "false").lower() == "true"
+        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}', insecure=otlp_insecure)
         processor = BatchSpanProcessor(otlp_exporter)
 
     provider.add_span_processor(processor)
