@@ -1,4 +1,5 @@
 """FastAPI app."""
+from contextlib import asynccontextmanager
 import neo4j
 
 from fastapi import Body, Depends, FastAPI, Response, Request, Path, Query
@@ -29,7 +30,57 @@ from PLATER.services.util.logutil import LoggingUtil
 from reasoner_transpiler.attributes import set_custom_attribute_types, set_custom_attribute_skip_list
 from reasoner_transpiler.matching import set_predicates_in_graph
 
-APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs')
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
+        _setup_tracing()
+    yield
+    # Retrieve provider from global OTEL registry and shutdown for cleanup if needed
+    from opentelemetry import trace
+    provider = trace.get_tracer_provider()
+    if hasattr(provider, 'shutdown'):
+        provider.shutdown()
+
+
+APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs', lifespan=lifespan)
+
+def _setup_tracing():
+    """
+    Initialize OpenTelemetry tracing post-fork inside each worker. 
+    Called from lifespan which runs in each worker after gunicorn forks.
+    See https://oneuptime.com/blog/post/2026-02-06-troubleshoot-fastapi-uvicorn-reload/view and 
+    https://opentelemetry.io/docs/zero-code/python/troubleshooting/ for reference.
+    """
+    from opentelemetry import trace
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    PLATER_TITLE = config.get('PLATER_TITLE', 'Plater API')
+    resource = Resource.create(attributes={
+        SERVICE_NAME: config.get("OTEL_SERVICE_NAME", PLATER_TITLE),
+    })
+    provider = TracerProvider(resource=resource)
+
+    OTEL_USE_CONSOLE_EXPORTER = config.get("OTEL_USE_CONSOLE_EXPORTER", "False") not in ("false", "False")
+
+    if OTEL_USE_CONSOLE_EXPORTER:
+        from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+        processor = BatchSpanProcessor(ConsoleSpanExporter())
+    else:
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        otlp_host = config.get("JAEGER_HOST", "http://localhost").rstrip('/')
+        otlp_port = config.get("JAEGER_PORT", "4317")
+        otlp_endpoint = f'{otlp_host}:{otlp_port}'
+        processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint))
+
+    provider.add_span_processor(processor)
+    trace.set_tracer_provider(provider)
+
+    FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls="docs,openapi.json")
+
 
 logger = LoggingUtil.init_logging(
     __name__,
