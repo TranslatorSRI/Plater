@@ -31,11 +31,19 @@ from reasoner_transpiler.attributes import set_custom_attribute_types, set_custo
 from reasoner_transpiler.matching import set_predicates_in_graph
 
 
+logger = LoggingUtil.init_logging(
+    __name__,
+    config.get('logging_level'),
+    config.get('logging_format'),
+)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("*** LIFESPAN STARTUP CALLED ***")
     if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
         _setup_tracing()
     yield
+    logger.info("*** LIFESPAN SHUTDOWN CALLED ***")
     # Retrieve provider from global OTEL registry and shutdown for cleanup if needed
     from opentelemetry import trace
     provider = trace.get_tracer_provider()
@@ -44,7 +52,7 @@ async def lifespan(app: FastAPI):
 
 
 APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs', lifespan=lifespan)
-
+logger.info(f"*** APP created, lifespan_context: {APP.router.lifespan_context} ***")
 def _setup_tracing():
     """
     Initialize OpenTelemetry tracing post-fork inside each worker. 
@@ -81,12 +89,6 @@ def _setup_tracing():
 
     FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls="docs,openapi.json")
 
-
-logger = LoggingUtil.init_logging(
-    __name__,
-    config.get('logging_level'),
-    config.get('logging_format'),
-)
 
 # these are optional custom mappings that are applied in reasoner-transpiler
 # if set they override default attribute type mappings, or attributes on attributes in TRAPI results
