@@ -39,9 +39,14 @@ logger = LoggingUtil.init_logging(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("*** LIFESPAN STARTUP CALLED ***")
-    if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
-        _setup_tracing()
+    logger.info(f"*** LIFESPAN STARTUP CALLED - OTEL_ENABLED: {config.get('OTEL_ENABLED')} ***")
+    try:
+        if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
+            _setup_tracing(app)
+            logger.info("*** _setup_tracing completed successfully ***")
+    except Exception as e:
+        logger.error(f"*** LIFESPAN ERROR: {e} ***", exc_info=True)
+            
     yield
     logger.info("*** LIFESPAN SHUTDOWN CALLED ***")
     # Retrieve provider from global OTEL registry and shutdown for cleanup if needed
@@ -53,7 +58,7 @@ async def lifespan(app: FastAPI):
 
 APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs', lifespan=lifespan)
 logger.info(f"*** APP created, lifespan_context: {APP.router.lifespan_context} ***")
-def _setup_tracing():
+def _setup_tracing(app: FastAPI):
     """
     Initialize OpenTelemetry tracing post-fork inside each worker. 
     Called from lifespan which runs in each worker after gunicorn forks.
@@ -66,6 +71,7 @@ def _setup_tracing():
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+    logger.info("*** _setup_tracing() CALLED ***")
     PLATER_TITLE = config.get('PLATER_TITLE', 'Plater API')
     resource = Resource.create(attributes={
         SERVICE_NAME: config.get("OTEL_SERVICE_NAME", PLATER_TITLE),
@@ -87,7 +93,7 @@ def _setup_tracing():
     provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
 
-    FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls="docs,openapi.json")
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=provider, excluded_urls="docs,openapi.json")
 
 
 # these are optional custom mappings that are applied in reasoner-transpiler

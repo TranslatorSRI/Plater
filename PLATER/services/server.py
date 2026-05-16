@@ -3,8 +3,13 @@ from starlette.middleware.cors import CORSMiddleware
 from PLATER.services.config import config
 from PLATER.services.app_trapi import APP
 from PLATER.services.util.api_utils import construct_open_api_schema
-import logging
-logger = logging.getLogger(__name__)
+from PLATER.services.util.logutil import LoggingUtil
+
+logger = LoggingUtil.init_logging(
+    __name__,
+    config.get('logging_level'),
+    config.get('logging_format'),
+)
 
 PLATER_TITLE = config.get('PLATER_TITLE', 'Plater API')
 logger.info(f"*** in server.py before setting openapi_schema, lifespan_context: {APP.router.lifespan_context} ***")
