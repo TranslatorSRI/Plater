@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"*** LIFESPAN STARTUP CALLED - OTEL_ENABLED: {config.get('OTEL_ENABLED')} ***")
     try:
         if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
-            _setup_tracing(app)
+            _setup_tracing()
             logger.info("*** _setup_tracing completed successfully ***")
     except Exception as e:
         logger.error(f"*** LIFESPAN ERROR: {e} ***", exc_info=True)
@@ -58,7 +58,8 @@ async def lifespan(app: FastAPI):
 
 APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs', lifespan=lifespan)
 logger.info(f"*** APP created, lifespan_context: {APP.router.lifespan_context} ***")
-def _setup_tracing(app: FastAPI):
+
+def _setup_tracing():
     """
     Initialize OpenTelemetry tracing post-fork inside each worker. 
     Called from lifespan which runs in each worker after gunicorn forks.
@@ -84,16 +85,21 @@ def _setup_tracing(app: FastAPI):
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
         processor = BatchSpanProcessor(ConsoleSpanExporter())
     else:
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        # Use HTTP exporter to avoid gRPC channel fork issues
+        # Refer to https://oneuptime.com/blog/post/2026-02-06-troubleshoot-fastapi-uvicorn-reload/view
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
         otlp_host = config.get("JAEGER_HOST", "http://localhost").rstrip('/')
-        otlp_port = config.get("JAEGER_PORT", "4317")
-        otlp_endpoint = f'{otlp_host}:{otlp_port}'
+        otlp_port = config.get("JAEGER_PORT", "4318")
+        otlp_endpoint = f'{otlp_host}:{otlp_port}/v1/traces'
         processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint))
 
     provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
 
-    FastAPIInstrumentor.instrument_app(app, tracer_provider=provider, excluded_urls="docs,openapi.json")
+    FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls="docs,openapi.json")
+    logger.info(f"*** instrument_app done, _is_instrumented: {getattr(APP, '_is_instrumented_by_opentelemetry', False)} ***")
+
 
 
 # these are optional custom mappings that are applied in reasoner-transpiler
