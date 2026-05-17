@@ -29,14 +29,13 @@ from PLATER.services.util.logutil import LoggingUtil
 from reasoner_transpiler.attributes import set_custom_attribute_types, set_custom_attribute_skip_list
 from reasoner_transpiler.matching import set_predicates_in_graph
 
+APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs')
 
 logger = LoggingUtil.init_logging(
     __name__,
     config.get('logging_level'),
     config.get('logging_format'),
 )
-
-APP = FastAPI(openapi_url='/openapi.json', docs_url='/docs')
 
 # these are optional custom mappings that are applied in reasoner-transpiler
 # if set they override default attribute type mappings, or attributes on attributes in TRAPI results

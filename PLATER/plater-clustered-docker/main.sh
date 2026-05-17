@@ -18,7 +18,7 @@ function webServer {
         --workers ${NUM_WORKERS} \
         --timeout ${WORKER_TIMEOUT} \
         -k uvicorn.workers.UvicornWorker \
-	--config /home/plater/Plater/gunicorn.conf.py
+        --config /home/plater/Plater/gunicorn.conf.py
     else
         uvicorn PLATER.services.server:APP --host ${WEB_HOST} --port ${WEB_PORT} --reload
     fi
