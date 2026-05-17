@@ -1,5 +1,4 @@
 # gunicorn.conf.py
-import os
 
 def post_fork(server, worker):
     """
@@ -11,7 +10,6 @@ def post_fork(server, worker):
     from PLATER.services.config import config
 
     if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
-
         from opentelemetry import trace
         from opentelemetry.sdk.resources import SERVICE_NAME, Resource
         from opentelemetry.sdk.trace import TracerProvider
@@ -43,3 +41,4 @@ def post_fork(server, worker):
 
         from PLATER.services.app_trapi import APP
         FastAPIInstrumentor.instrument_app(APP, excluded_urls="docs,openapi.json")
+
