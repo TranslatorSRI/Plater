@@ -9,16 +9,8 @@ def post_fork(server, worker):
     Refer to https://oneuptime.com/blog/post/2026-02-06-troubleshoot-fastapi-uvicorn-reload/view
     """
     from PLATER.services.config import config
-    from PLATER.services.util.logutil import LoggingUtil
-
-    logger = LoggingUtil.init_logging(
-        __name__,
-        config.get('logging_level'),
-        config.get('logging_format'),
-    )
 
     if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
-        logger.info(f"*** post_fork: initializing OTEL in worker {worker.pid} ***")
 
         from opentelemetry import trace
         from opentelemetry.sdk.resources import SERVICE_NAME, Resource
@@ -51,4 +43,3 @@ def post_fork(server, worker):
 
         from PLATER.services.app_trapi import APP
         FastAPIInstrumentor.instrument_app(APP, excluded_urls="docs,openapi.json")
-        logger.info(f"*** post_fork: OTEL initialized in worker {worker.pid} ***")
