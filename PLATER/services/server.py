@@ -21,4 +21,6 @@ APP.add_middleware(
 
 if __name__ == '__main__':
     import uvicorn
+    from PLATER.services.otel import setup_otel
+    setup_otel()
     uvicorn.run(APP, host='0.0.0.0', port=8080)
