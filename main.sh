@@ -6,7 +6,7 @@ source .env
 set +a
 
 if [ "$MODE" == "deploy" ]; then
-    gunicorn PLATER.services.server:APP -b ${WEB_HOST}:${WEB_PORT} -w 4 -k uvicorn.workers.UvicornWorker
+    gunicorn PLATER.services.server:APP -b ${WEB_HOST}:${WEB_PORT} -w 4 -k uvicorn.workers.UvicornWorker --config gunicorn.conf.py
 else
     uvicorn PLATER.services.server:APP --host ${WEB_HOST} --port ${WEB_PORT} --reload
 fi
