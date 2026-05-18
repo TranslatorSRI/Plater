@@ -18,37 +18,9 @@ APP.add_middleware(
     allow_headers=["*"],
 )
 
-if config.get("OTEL_ENABLED", "False") not in ("false", "False"):
-    from opentelemetry import trace
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-    OTEL_USE_CONSOLE_EXPORTER = config.get("OTEL_USE_CONSOLE_EXPORTER", "False") not in ("false", "False")
-    if OTEL_USE_CONSOLE_EXPORTER:
-        from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-    else:
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-
-    plater_service_name = PLATER_TITLE
-    resource = Resource.create(attributes={
-        SERVICE_NAME: config.get("OTEL_SERVICE_NAME", plater_service_name),
-    })
-    provider = TracerProvider(resource=resource)
-    if OTEL_USE_CONSOLE_EXPORTER:
-        processor = BatchSpanProcessor(ConsoleSpanExporter())
-    else:
-        otlp_host = config.get("JAEGER_HOST", "http://localhost/").rstrip('/')
-        otlp_port = config.get("JAEGER_PORT", "4317")
-        otlp_endpoint = f'{otlp_host}:{otlp_port}'
-        otlp_exporter = OTLPSpanExporter(endpoint=f'{otlp_endpoint}')
-        processor = BatchSpanProcessor(otlp_exporter)
-
-    provider.add_span_processor(processor)
-    trace.set_tracer_provider(provider)
-    FastAPIInstrumentor.instrument_app(APP, tracer_provider=provider, excluded_urls="docs,openapi.json")
 
 if __name__ == '__main__':
     import uvicorn
+    from PLATER.services.otel import setup_otel
+    setup_otel()
     uvicorn.run(APP, host='0.0.0.0', port=8080)
